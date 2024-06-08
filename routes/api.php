@@ -5,6 +5,7 @@ use App\Http\Controllers\FamilyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\WalletController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/menu/create', [MenuController::class, 'createMenu']);
     Route::post('/menu/update/{id}', [MenuController::class, 'updateMenu']);
+    Route::post('/menu/delete/{id}', [MenuController::class, 'deleteMenu']);
+
+    // Wallet Routes
+
+    Route::post('/wallet/create', [WalletController::class, 'createWallet']);
+    Route::post('/wallet/update/{id}', [WalletController::class, 'updateWallet']);
+    Route::post('/wallet/delete/{id}', [WalletController::class, 'deleteWallet']);
 
 
     // Family Route

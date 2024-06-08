@@ -73,7 +73,20 @@ class MenuController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Family updated successfully.'
+            'message' => 'Menu updated successfully.'
         ], 200);
     }
+
+    public function deleteMenu($id)
+    {
+        $menu = Menu::find($id);
+        if (is_null($user)) {
+            return response()->json(['message' => 'Menu not found'], 404);
+        }
+
+        $menu->delete();
+
+        return response()->json(['message' => 'Menu deleted successfully'], 200);
+    }
+
 }
