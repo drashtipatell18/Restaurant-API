@@ -5,6 +5,7 @@ use App\Http\Controllers\FamilyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\MenuController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/update-user/{id}', [UserController::class, 'updateUser']);
     Route::delete('/delete-user/{id}', [UserController::class, 'destroyUser']);
     Route::get('/search-user', [UserController::class, 'search']);
+
+     // Menu Routes
+
+    Route::post('/menu/create', [MenuController::class, 'createMenu']);
+    Route::post('/menu/update/{id}', [MenuController::class, 'updateMenu']);
+
 
     // Family Route
     Route::post('/family/create', [FamilyController::class, 'createFamily']);
