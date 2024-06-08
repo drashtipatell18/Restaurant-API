@@ -63,3 +63,5 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
 Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
 Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
+Route::get('/sector/getAll', [SectorController::class, 'getSection']);
+Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);

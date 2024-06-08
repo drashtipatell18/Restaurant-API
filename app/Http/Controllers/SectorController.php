@@ -85,4 +85,18 @@ class SectorController extends Controller
             'message' => 'Sector deleted successfully.'
         ], 200);
     }
+
+    public function getSection()
+    {
+        $sections = Sector::all('id', 'name')->all();
+        return response()->json([
+            'success' => true,
+            'sectors' => $sections
+        ], 200);
+    }
+
+    public function getSectionWithTable(Request $request)
+    {
+        
+    }
 }
