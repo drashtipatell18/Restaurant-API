@@ -208,7 +208,7 @@ class FamilyController extends Controller
     public function getMultipleSubFamily(Request $request)
     {
         $validateRequest = Validator::make($request->all(), [
-            'families' => 'required|array',
+            'families' => 'array',
             'families.*' => 'integer|exists:families,id' // Ensure each family ID is an integer and exists in the families table
         ]);
 
@@ -223,10 +223,21 @@ class FamilyController extends Controller
 
         $data = [];
 
-        foreach ($request->families as $key => $value) {
-            $family = Family::where('id', $value)->first()->name;
-            $subfamilies = Subfamily::where('family_id', $value)->get()->select('id', 'name');
-            array_push($data, ['id' => $value, 'name' => $family, 'sub_family' => $subfamilies]); 
+        if(isset($request->families) && is_array($request->families))
+        {
+            foreach ($request->families as $key => $value) {
+                $family = Family::where('id', $value)->first()->name;
+                $subfamilies = Subfamily::where('family_id', $value)->get()->select('id', 'name');
+                array_push($data, ['id' => $value, 'name' => $family, 'sub_family' => $subfamilies]); 
+            }
+        }
+        else
+        {
+            $families = Family::all()->select('id', 'name');
+            foreach ($families as $family) {
+                $subfamilies = Subfamily::where('family_id', $family['id'])->get()->select('id', 'name');
+                array_push($data, ['id' => $family['id'], 'name' => $family['name'], 'sub_family' => $subfamilies]); 
+            }
         }
         
         return response()->json([
