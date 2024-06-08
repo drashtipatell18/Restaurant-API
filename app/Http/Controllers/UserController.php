@@ -58,6 +58,11 @@ class UserController extends Controller
     
     public function updateUser(Request $request, $id)
     {
+<<<<<<< Updated upstream
+=======
+        // $user = Auth::user();
+
+>>>>>>> Stashed changes
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
@@ -91,9 +96,9 @@ class UserController extends Controller
             'email' => $request->email,
             'role_id' => $request->role_id,
             'password' => Hash::make($request->password),
-            'image' => $filename,
-        ]);
     
+        ]);
+
         return response()->json([
             'message' => 'User updated successfully',
             'user' => $users,

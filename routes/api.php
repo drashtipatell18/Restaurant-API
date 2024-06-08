@@ -18,9 +18,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Roles Routes
-// Route::get("/roles", [RoleController::class, 'getRole']);
+
 Route::middleware('auth:sanctum')->group(function () {
+
+    // Roles Routes
+
     Route::get('/roles', [RoleController::class, 'getRole']);
 
     // Register Routes
@@ -35,7 +37,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('family/create', [FamilyController::class, 'createFamily']);
 
 });
-
 
 
 // User Routes
