@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
+use function Laravel\Prompts\select;
+
 class FamilyController extends Controller
 {
     // Family
@@ -201,6 +203,35 @@ class FamilyController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Sub Family Deleted Successfully."
+        ], 200);
+    }
+    public function getMultipleSubFamily(Request $request)
+    {
+        $validateRequest = Validator::make($request->all(), [
+            'families' => 'required|array',
+            'families.*' => 'integer|exists:families,id' // Ensure each family ID is an integer and exists in the families table
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        $data = [];
+
+        foreach ($request->families as $key => $value) {
+            $family = Family::where('id', $value)->first()->name;
+            $subfamilies = Subfamily::where('family_id', $value)->get()->select('id', 'name');
+            array_push($data, ['id' => $value, 'name' => $family, 'sub_family' => $subfamilies]); 
+        }
+        
+        return response()->json([
+            'success'=>true,
+            'data'=>$data
         ], 200);
     }
 }
