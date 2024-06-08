@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FamilyController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SectorController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\WalletController;
@@ -58,6 +59,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subfamily/update/{id}', [FamilyController::class, 'updateSubFamily']);
     Route::post('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
 
+    // Sector
+    Route::post('/sector/create', [SectorController::class, 'createSector']);
+    Route::delete('/sector/delete/{id}', [SectorController::class, 'deleteSector']);
+
 });
 
 
@@ -66,3 +71,5 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
 Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
 Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
+Route::get('/sector/getAll', [SectorController::class, 'getSection']);
+Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
