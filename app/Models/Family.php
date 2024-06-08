@@ -10,5 +10,10 @@ class Family extends Model
 {
     protected $table = 'families';
     protected $fillable = ['name'];
+
+    public function subfamily()
+    {
+        return $this->hasMany(Subfamily::class);
+    }
 }
 
