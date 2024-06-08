@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FamilyController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SectorController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subfamily/create', [FamilyController::class, 'createSubFamily']);
     Route::post('/subfamily/update/{id}', [FamilyController::class, 'updateSubFamily']);
     Route::post('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
+
+    // Sector
+    Route::post('/sector/create', [SectorController::class, 'createSector']);
 
 });
 
