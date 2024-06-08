@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Roles Routes
-Route::get("/roles", [RoleController::class, 'getRole']);
+// Route::get("/roles", [RoleController::class, 'getRole']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/roles', [RoleController::class, 'getRole']);
+});
 
 // User Routes
 Route::post('/auth/login', [AuthController::class, 'login']);
