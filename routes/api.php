@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sector
     Route::post('/sector/create', [SectorController::class, 'createSector']);
+    Route::delete('/sector/delete/{id}', [SectorController::class, 'deleteSector']);
 
 });
 
