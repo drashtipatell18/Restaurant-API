@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FamilyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -24,10 +25,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Register Routes
 
-Route::get('/users', [UserController::class, 'index']);
-Route::post('/create-user', [UserController::class, 'storeUser']);
-Route::put('/update-user', [UserController::class, 'updateUser']);
-Route::delete('/delete-user', [UserController::class, 'destroyUser']);
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/create-user', [UserController::class, 'storeUser']);
+    Route::put('/update-user/{id}', [UserController::class, 'updateUser']);
+    Route::delete('/delete-user', [UserController::class, 'destroyUser']);
+
+    // Family Route
+    Route::post('family/create', [FamilyController::class, 'createFamily']);
 
 });
 
