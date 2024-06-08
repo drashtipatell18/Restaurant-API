@@ -18,17 +18,20 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Roles Routes
-// Route::get("/roles", [RoleController::class, 'getRole']);
+
 Route::middleware('auth:sanctum')->group(function () {
+
+    // Roles Routes
+
     Route::get('/roles', [RoleController::class, 'getRole']);
 
     // Register Routes
 
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/create-user', [UserController::class, 'storeUser']);
-    Route::put('/update-user/{id}', [UserController::class, 'updateUser']);
-    Route::delete('/delete-user', [UserController::class, 'destroyUser']);
+    Route::post('/update-user/{id}', [UserController::class, 'updateUser']);
+    Route::delete('/delete-user/{id}', [UserController::class, 'destroyUser']);
+    Route::get('/search-user', [UserController::class, 'search']);
 
     // Family Route
     Route::post('/family/create', [FamilyController::class, 'createFamily']);
@@ -41,7 +44,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
 
 });
-
 
 
 // User Routes
