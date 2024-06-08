@@ -42,4 +42,6 @@ class FamilyController extends Controller
             'message' => 'Family added successfully.'
         ], 200);
     }
+
+    
 }

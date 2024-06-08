@@ -114,11 +114,10 @@ class UserController extends Controller
 
     public function search(Request $request)
     {
-        $roleId = $request->input('role_id'); //
-
+        $roleIds = $request->input('role_ids', []);
         $usersQuery = User::query();
-        if ($roleId) {
-            $usersQuery->where('role_id', $roleId);
+        if (!empty($roleIds)) {
+            $usersQuery->whereIn('role_id', $roleIds);
         }
         $users = $usersQuery->get();
         return response()->json($users, 200);
