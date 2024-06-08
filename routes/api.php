@@ -31,7 +31,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/delete-user', [UserController::class, 'destroyUser']);
 
     // Family Route
-    Route::post('family/create', [FamilyController::class, 'createFamily']);
+    Route::post('/family/create', [FamilyController::class, 'createFamily']);
+    Route::post('/family/update/{id}', [FamilyController::class, 'updateFamily']);
+    Route::delete("/family/delete/{id}", [FamilyController::class, 'deleteFamily']);
+
+    // Sub Family
+    Route::post('/subfamily/create', [FamilyController::class, 'createSubFamily']);
+    Route::post('/subfamily/update/{id}', [FamilyController::class, 'updateSubFamily']);
+    Route::post('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
 
 });
 
@@ -39,3 +46,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // User Routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
+Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);

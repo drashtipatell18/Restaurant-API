@@ -11,4 +11,9 @@ class Subfamily extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'subfamilies';
     protected $fillable = ['family_id','name'];
+
+    public function family()
+    {
+        return $this->belongsTo(Family::class, 'family_id');
+    }
 }
