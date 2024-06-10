@@ -86,7 +86,7 @@ class SectorController extends Controller
         ], 200);
     }
 
-    public function getSection()
+    public function getSector()
     {
         $sections = Sector::all('id', 'name')->all();
         return response()->json([
@@ -97,6 +97,41 @@ class SectorController extends Controller
 
     public function getSectionWithTable(Request $request)
     {
-        
+        $validateRequest = Validator::make($request->all(), [
+            'sectors' => 'array',
+            'sectors.*' => 'integer|exists:sectors,id'
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        if(isset($request->sectors) && is_array($request->sectors))
+        {
+            $sectors = Sector::all('id', 'name')->whereIn('id', $request->sectors);
+            $data = [];
+            foreach ($sectors as $sector) {
+                $table = Table::where('sector_id', $sector['id'])->get(['id', 'name', 'status']);
+                $pushdata = ['id' => $sector['id'], 'name' => $sector['name'], 'tables' => $table];
+                array_push($data, $pushdata);
+            }
+            return response()->json(["success" => true, "data" => $data], 200);
+        }
+        else
+        {
+            $sectors = Sector::all('id', 'name');
+            $data = [];
+            foreach ($sectors as $sector) {
+                $table = Table::where('sector_id', $sector['id'])->get(['id', 'name', 'status']);
+                $pushdata = ['id' => $sector['id'], 'name' => $sector['name'], 'tables' => $table];
+                array_push($data, $pushdata);
+            }
+            return response()->json(["success" => true, "data" => $data], 200);
+        }
     }
 }
