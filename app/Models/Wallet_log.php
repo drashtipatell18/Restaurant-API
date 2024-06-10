@@ -11,4 +11,9 @@ class Wallet_log extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'wallet_logs';
     protected $fillable = ['transcation_id','wallet_id','credit_amount','transcation_type'];
+
+    public function wallet()
+    {
+    return $this->belongsTo(Wallet::class);
+    }
 }

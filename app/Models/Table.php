@@ -9,6 +9,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Table extends Model
 {
     use HasFactory,SoftDeletes;
-    protected $table = 'tables';
+    protected $table = 'restauranttables';
     protected $fillable = ['user_id','sector_id','name','status'];
 }
