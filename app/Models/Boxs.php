@@ -11,4 +11,10 @@ class Boxs extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'boxs';
     protected $fillable = ['user_id','name'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+   
 }

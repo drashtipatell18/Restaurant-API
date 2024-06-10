@@ -11,7 +11,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletLogController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\BoxController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -60,6 +60,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/wallet-log/update/{id}', [WalletLogController::class, 'updateWalletLog']);
     Route::delete('/wallet-log/delete/{id}', [WalletLogController::class, 'deleteWalletLog']);
 
+    // Boxs Routes
+
+    Route::post('/box/create', [BoxController::class, 'createBox']);
+    Route::post('/box/update/{id}', [BoxController::class, 'updateBox']);
+    Route::delete('/box/delete/{id}', [BoxController::class, 'deleteBox']);
+    Route::post('/box-serach', [BoxController::class, 'Boxsearch']);
 
     // Family Route
     Route::post('/family/create', [FamilyController::class, 'createFamily']);
