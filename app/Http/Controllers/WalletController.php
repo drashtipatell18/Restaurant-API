@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
 use App\Models\Wallet;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class WalletController extends Controller
@@ -69,7 +67,7 @@ class WalletController extends Controller
     public function deleteWallet($id)
     {
         $wallet = Wallet::find($id);
-        if (is_null($user)) {
+        if (is_null($wallet)) {
             return response()->json(['message' => 'Wallet not found'], 404);
         }
 
