@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FamilyController;
+use App\Http\Controllers\ProductionCenterController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -42,6 +43,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subfamily/create', [FamilyController::class, 'createSubFamily']);
     Route::post('/subfamily/update/{id}', [FamilyController::class, 'updateSubFamily']);
     Route::post('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
+
+     // Production Center
+     Route::get('/production-centers', [ProductionCenterController::class, 'viewProductionCenter']);
+     Route::post('/create/production-centers', [ProductionCenterController::class, 'storeProductionCenter']);
+     Route::post('/update/production-centers/{id}', [ProductionCenterController::class, 'updateProductionCenter']);
+     Route::get('/delete/production-centers/{id}', [ProductionCenterController::class, 'destroyProductionCenter']);
+     Route::post('/search/production-centers', [ProductionCenterController::class, 'ProductionCentersearch']);
 
 });
 
