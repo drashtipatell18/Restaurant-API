@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\Item_Menu_Join;
+use App\Models\Menu;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +31,7 @@ class ItemController extends Controller
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
-            'photo' => 'file|required|between:10,2048|mimes:jpg,png,jpeg,webp'
+            'photo' => 'file|required|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
         if($validateRequest->fails())
@@ -58,7 +60,16 @@ class ItemController extends Controller
         $filename = time() . '.' . $image->getClientOriginalExtension();
         $image->move(public_path('images'), $filename);
 
-        $item = Item::create($request->all());
+        $item = Item::create([
+            "name" => $request->name,
+            "code" => $request->code,
+            "production_center_id" => $request->production_center_id,
+            "cost_price" => $request->cost_price,
+            "sale_price" => $request->sale_price,
+            "family_id" => $request->family_id,
+            "sub_family_id" => $request->sub_family_id,
+            "image" => $filename
+        ]);
 
         return response()->json([
             'success' => true,
@@ -85,7 +96,7 @@ class ItemController extends Controller
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
-            'photo' => 'file|between:10,2048|mimes:jpg,png,jpeg,webp'
+            'photo' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
         if($validateRequest->fails())
@@ -208,6 +219,48 @@ class ItemController extends Controller
         return response()->json([
             'success' => true,
             'items' => $items
+        ], 200);
+    }
+
+    public function addToMenu(Request $request)
+    {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if($role != "admin")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
+
+        $validateRequest = Validator::make($request->all(), [
+            'item_ids' => 'required|array',
+            'item_ids.*' => 'integer|exists:items,id',
+            'menu_id' => 'required|exists:menus,id'
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+        $menu = Menu::find($request->menu_id);
+        for($i = 0; $i < count($request->item_ids); $i++)
+        {
+            $item = Item::find($request->item_ids[$i]);
+
+            Item_Menu_Join::create([
+                'menu_id' => $menu->id,
+                'item_id' => $item->id
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Items added to menu successfully"
         ], 200);
     }
 }
