@@ -17,4 +17,9 @@ class Wallet extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function wallet_logs()
+    {
+        return $this->hasMany(Wallet_log::class);
+    }
 }
