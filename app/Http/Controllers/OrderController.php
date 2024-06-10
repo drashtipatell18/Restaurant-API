@@ -7,6 +7,7 @@ use App\Models\OrderDetails;
 use App\Models\OrderMaster;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
@@ -105,7 +106,11 @@ class OrderController extends Controller
         foreach ($orders as $order) {
             $orderDetails = OrderDetails::all()->where('order_master_id', $order->id);
             $order['total'] = OrderDetails::where('order_master_id', $order->id)->sum('amount');
-            $order['order_details'] = $orderDetails;
+            $order['order_details'] = DB::table('order_details')
+                ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
+                ->where('order_master_id', $order->id)
+                ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
+                ->get();
         }
 
         return response()->json($orders, 200);
