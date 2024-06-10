@@ -69,6 +69,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sector
     Route::post('/sector/create', [SectorController::class, 'createSector']);
     Route::delete('/sector/delete/{id}', [SectorController::class, 'deleteSector']);
+    Route::post('/sector/addTables', [SectorController::class, 'addTables']);
+    Route::post('/table/updateStatus', [SectorController::class, 'updateTableStatus']);
 
 });
 
@@ -78,5 +80,5 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
 Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
 Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
-Route::get('/sector/getAll', [SectorController::class, 'getSection']);
+Route::get('/sector/getAll', [SectorController::class, 'getSector']);
 Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
