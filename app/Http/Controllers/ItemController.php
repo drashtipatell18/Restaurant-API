@@ -31,7 +31,7 @@ class ItemController extends Controller
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
-            'photo' => 'file|required|between:10,2048|mimes:jpg,png,jpeg,webp'
+            'photo' => 'file|required|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
         if($validateRequest->fails())
@@ -96,7 +96,7 @@ class ItemController extends Controller
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
-            'photo' => 'file|between:10,2048|mimes:jpg,png,jpeg,webp'
+            'photo' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
         if($validateRequest->fails())
