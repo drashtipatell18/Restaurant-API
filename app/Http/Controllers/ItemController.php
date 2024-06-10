@@ -31,7 +31,7 @@ class ItemController extends Controller
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
-            'photo' => 'file|required|between:10,2048|mimes:jpg,png,jpeg,webp'
+            'image' => 'file|required|between:10,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
         if($validateRequest->fails())
@@ -44,19 +44,19 @@ class ItemController extends Controller
         }
 
         $filename = '';
-        if (!$request->hasFile('photo')) 
+        if (!$request->hasFile('image')) 
         {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
                 'errors' => [
-                    'photo' => [
-                        'photo is required as file'
+                    'image' => [
+                        'image is required as file'
                     ]
                 ]
             ], 403);
         }
-        $image = $request->file('photo');
+        $image = $request->file('image');
         $filename = time() . '.' . $image->getClientOriginalExtension();
         $image->move(public_path('images'), $filename);
 
