@@ -79,6 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/item/create', [ItemController::class, 'createItem']);
     Route::post('/item/update/{id}', [ItemController::class, 'updateItem']);
     Route::delete('/item/delete/{id}', [ItemController::class, 'deleteItem']);
+    Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
 });
 
 
@@ -89,6 +90,7 @@ Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily'])
 Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
 Route::get('/sector/getAll', [SectorController::class, 'getSector']);
 Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
+Route::post('/menu/get', [MenuController::class, 'getMenu']);
 Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
 Route::get('/item/getAll', [ItemController::class, 'getAll']);
 Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
