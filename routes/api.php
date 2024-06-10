@@ -8,6 +8,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletLogController;
 use Illuminate\Http\Request;
@@ -90,6 +91,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/item/update/{id}', [ItemController::class, 'updateItem']);
     Route::delete('/item/delete/{id}', [ItemController::class, 'deleteItem']);
     Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
+
+    // Orders
+    Route::post('/order/place_new', [OrderController::class, 'placeOrder']);
 });
 
 
