@@ -115,4 +115,31 @@ class OrderController extends Controller
 
         return response()->json($orders, 200);
     }
+
+    public function deleteOrder($id)
+    {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+
+        $order = OrderMaster::find($id);
+        $orderDetails = OrderDetails::where('order_master_id', $id)->get();
+
+        foreach ($orderDetails as $orderDetail) 
+        {
+            $orderDetail->delete();
+        }
+
+        $order->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order deleted successfully'
+        ], 200);
+    }
 }
