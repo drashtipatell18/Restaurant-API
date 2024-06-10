@@ -7,6 +7,7 @@ use App\Http\Controllers\SectorController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WalletLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,13 +41,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/menu/create', [MenuController::class, 'createMenu']);
     Route::post('/menu/update/{id}', [MenuController::class, 'updateMenu']);
-    Route::post('/menu/delete/{id}', [MenuController::class, 'deleteMenu']);
+    Route::delete('/menu/delete/{id}', [MenuController::class, 'deleteMenu']);
 
     // Wallet Routes
 
     Route::post('/wallet/create', [WalletController::class, 'createWallet']);
     Route::post('/wallet/update/{id}', [WalletController::class, 'updateWallet']);
-    Route::post('/wallet/delete/{id}', [WalletController::class, 'deleteWallet']);
+    Route::delete('/wallet/delete/{id}', [WalletController::class, 'deleteWallet']);
+
+    // WalletLog Routes
+
+    Route::post('/wallet-log/create', [WalletLogController::class, 'createWalletLog']);
+    Route::post('/wallet-log/update/{id}', [WalletLogController::class, 'updateWalletLog']);
+    Route::delete('/wallet-log/delete/{id}', [WalletLogController::class, 'deleteWalletLog']);
 
 
     // Family Route
@@ -57,7 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sub Family
     Route::post('/subfamily/create', [FamilyController::class, 'createSubFamily']);
     Route::post('/subfamily/update/{id}', [FamilyController::class, 'updateSubFamily']);
-    Route::post('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
+    Route::delete('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
 
     // Sector
     Route::post('/sector/create', [SectorController::class, 'createSector']);
