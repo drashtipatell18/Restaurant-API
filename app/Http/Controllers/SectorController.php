@@ -134,4 +134,88 @@ class SectorController extends Controller
             return response()->json(["success" => true, "data" => $data], 200);
         }
     }
+
+    public function updateTableStatus(Request $request)
+    {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if($role != "admin")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
+        $validateRequest = Validator::make($request->all(), [
+            'table_id' => 'required|exists:restauranttables,id',
+            'status' => 'required|in:available,busy'
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        $table = Table::find($request->table_id);
+        $table->status = $request->status;
+        $table->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Table updated to ' . $table->status
+        ], 200);
+    }
+
+    public function addTables(Request $request)
+    {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if($role != "admin")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
+
+        $validateRequest = Validator::make($request->all(), [
+            'sector_id' => 'required|exists:sectors,id',
+            'noOfTables' => 'required|integer|min:1'
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        $lastTableName = Table::all()->where('sector_id', $request->sector_id)->last();
+
+        $lastTable = explode(' ', $lastTableName->name);
+        $lastNo = $lastTable[1];
+
+        $tables = [];
+
+        for($i = 0; $i < $request->noOfTables; $i++)
+        {
+            $table = Table::create([
+                'user_id' => Auth()->user()->id,
+                'sector_id' => $request->sector_id,
+                'name'=>'Table ' . (++$lastNo)
+            ]);
+
+            array_push($tables, $table);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tables added successfully',
+            'tables' => $tables
+        ], 200);
+    }
 }
