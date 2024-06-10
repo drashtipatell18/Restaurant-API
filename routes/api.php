@@ -94,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Orders
     Route::post('/order/place_new', [OrderController::class, 'placeOrder']);
+    Route::get('/order/getAll', [OrderController::class, 'getAll']);
 });
 
 

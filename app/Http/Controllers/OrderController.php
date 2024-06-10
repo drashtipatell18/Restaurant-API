@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\OrderDetails;
 use App\Models\OrderMaster;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -12,6 +13,15 @@ class OrderController extends Controller
 {
     public function placeOrder(Request $request)
     {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+
         if(!$request->has('order_master'))
         {
             return response()->json([
@@ -78,5 +88,26 @@ class OrderController extends Controller
             'message' => "Order placed successfully",
             'details' => $response
         ], 200);
+    }
+
+    public function getAll()
+    {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+
+        $orders = OrderMaster::all();
+        foreach ($orders as $order) {
+            $orderDetails = OrderDetails::all()->where('order_master_id', $order->id);
+            $order['total'] = OrderDetails::where('order_master_id', $order->id)->sum('amount');
+            $order['order_details'] = $orderDetails;
+        }
+
+        return response()->json($orders, 200);
     }
 }
