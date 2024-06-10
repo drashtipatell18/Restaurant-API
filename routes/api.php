@@ -35,7 +35,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/create-user', [UserController::class, 'storeUser']);
     Route::post('/update-user/{id}', [UserController::class, 'updateUser']);
     Route::delete('/delete-user/{id}', [UserController::class, 'destroyUser']);
-    Route::get('/search-user', [UserController::class, 'search']);
+    Route::get('/get-user/{id}', [UserController::class, 'getUser']);
+    Route::post('/search-user', [UserController::class, 'Rolesearch']);
+    Route::post('/search-user-month', [UserController::class, 'Monthsearch']);
 
      // Menu Routes
 

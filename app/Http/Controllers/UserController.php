@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class UserController extends Controller
 {
@@ -112,7 +113,7 @@ class UserController extends Controller
         return response()->json(['message' => 'User deleted successfully'], 200);
     }
 
-    public function search(Request $request)
+    public function Rolesearch(Request $request)
     {
         $roleIds = $request->input('role_ids', []);
         $usersQuery = User::query();
@@ -121,7 +122,43 @@ class UserController extends Controller
         }
         $users = $usersQuery->get();
         return response()->json($users, 200);
+    }   
+    
+    public function getUser($id){
+        $user = User::find($id);
+        return response()->json($user, 200);
+
     }
+    public function Monthsearch(Request $request)
+    {
+        $startMonth = $request->input('start_month');
+        $endMonth = $request->input('end_month');
+        $year = $request->input('year', Carbon::now()->year); // Default to current year
+        // Validate input
+        if (is_null($startMonth) || is_null($endMonth) || is_null($year)) {
+            return response()->json(['error' => 'Year, start month, and end month are required'], 400);
+        }
+    
+        if ($startMonth < 1 || $startMonth > 12 || $endMonth < 1 || $endMonth > 12) {
+            return response()->json(['error' => 'Invalid month provided'], 400);
+        }
+    
+        $usersQuery = User::query();
+    
+        // Define the date range based on input
+        $startDate = Carbon::create($year, $startMonth, 1)->startOfDay();
+        $endDate = Carbon::create($year, $endMonth)->endOfMonth()->endOfDay();
+    
+        // Add the date range condition
+        $usersQuery->whereBetween('created_at', [$startDate, $endDate]);
+    
+        // Fetch the users
+        $users = $usersQuery->get();
+    
+        // Return the users as JSON response
+        return response()->json($users, 200);
+    }
+
 }
 
 
