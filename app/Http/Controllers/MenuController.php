@@ -80,7 +80,7 @@ class MenuController extends Controller
     public function deleteMenu($id)
     {
         $menu = Menu::find($id);
-        if (is_null($user)) {
+        if (is_null($menu)) {
             return response()->json(['message' => 'Menu not found'], 404);
         }
 

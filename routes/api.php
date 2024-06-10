@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FamilyController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\UserController;
@@ -65,6 +66,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/sector/addTables', [SectorController::class, 'addTables']);
     Route::post('/table/updateStatus', [SectorController::class, 'updateTableStatus']);
 
+    // Items
+    Route::post('/item/create', [ItemController::class, 'createItem']);
+    Route::post('/item/update/{id}', [ItemController::class, 'updateItem']);
+    Route::delete('/item/delete/{id}', [ItemController::class, 'deleteItem']);
 });
 
 
@@ -75,3 +80,4 @@ Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily'])
 Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
 Route::get('/sector/getAll', [SectorController::class, 'getSector']);
 Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
+Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
