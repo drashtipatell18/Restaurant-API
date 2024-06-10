@@ -181,4 +181,33 @@ class ItemController extends Controller
             'item' => $item
         ], 200);
     }
+
+    public function getAll()
+    {
+        $items = Item::all();
+        return response()->json(['success' => true, 'items' => $items]);
+    }
+
+    public function getSubFamilyWiseItem(Request $request)
+    {
+        $validateRequest = Validator::make($request->all(), [
+            'subfamilies' => 'array',
+            'subfamilies.*' => 'integer|exists:subfamilies,id' // Ensure each family ID is an integer and exists in the families table
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        $items = Item::all()->whereIn('sub_family_id', $request->subfamilies);
+        return response()->json([
+            'success' => true,
+            'items' => $items
+        ], 200);
+    }
 }

@@ -100,3 +100,5 @@ Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMul
 Route::get('/sector/getAll', [SectorController::class, 'getSector']);
 Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
 Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
+Route::get('/item/getAll', [ItemController::class, 'getAll']);
+Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
