@@ -103,8 +103,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Orders
     Route::post('/order/place_new', [OrderController::class, 'placeOrder']);
+    Route::post('/order/addItem', [OrderController::class, 'addItem']);
     Route::get('/order/getAll', [OrderController::class, 'getAll']);
     Route::delete('/order/delete/{id}', [OrderController::class, 'deleteOrder']);
+    Route::get('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
 });
 
 
