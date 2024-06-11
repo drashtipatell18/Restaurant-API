@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Validator;
 
 class BoxController extends Controller
 {
+    public function index()
+    {
+        $boxs = Boxs::all();
+        return response()->json($boxs, 200);
+    }
+
     public function createBox(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
