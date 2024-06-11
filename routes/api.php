@@ -41,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-user/{id}', [UserController::class, 'getUser']);
     Route::post('/search-user', [UserController::class, 'Rolesearch']);
     Route::post('/search-user-month', [UserController::class, 'Monthsearch']);
+    Route::get('/get-users', [UserController::class, 'index']);
 
      // Menu Routes
 
