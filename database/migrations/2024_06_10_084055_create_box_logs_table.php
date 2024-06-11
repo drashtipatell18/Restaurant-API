@@ -20,6 +20,7 @@ return new class extends Migration
             $table->unsignedBigInteger('close_by')->nullable();
             $table->dateTime('close_time')->nullable();
             $table->decimal('close_amount',10,2)->nullable();
+            $table->decimal('collected_amount', 10, 2)->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->foreign('box_id')->references('id')->on('boxs')->onUpdate('cascade')->onDelete('cascade');

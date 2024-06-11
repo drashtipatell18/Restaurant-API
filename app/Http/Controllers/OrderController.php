@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoxLogs;
+use App\Models\Boxs;
 use App\Models\Item;
 use App\Models\OrderDetails;
 use App\Models\OrderMaster;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -15,7 +18,7 @@ class OrderController extends Controller
     public function placeOrder(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" && $role != "cashier")
         {
             return response()->json([
                 'success' => false,
@@ -53,6 +56,27 @@ class OrderController extends Controller
             'delivery_cost' => $request->order_master['delivery_cost']
         ];
 
+        if($role == "cashier")
+        {
+            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $log = BoxLogs::where('box_id', $box->id)->get()->last();
+
+            if($log == null)
+            {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Box not opened'
+                ], 403);
+            }
+            else if($log->close_time != null)
+            {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Box not opened'
+                ], 403);
+            }
+        }
+
         if(isset($request->order_master['table_id']))
         {
             $orderMaster['table_id'] = $request->order_master['table_id'];
@@ -61,7 +85,7 @@ class OrderController extends Controller
         {
             $orderMaster['user_id'] = $request->order_master['user_id'];
         }
-        if(isset($request->order_master['box_id']))
+        if($role != "cashier" && isset($request->order_master['box_id']))
         {
             $orderMaster['box_id'] = $request->order_master['box_id'];
         }
@@ -69,9 +93,15 @@ class OrderController extends Controller
         {
             $orderMaster['tip'] = $request->order_master['tip'];
         }
+        
+        if($role == "cashier")
+        {
+            $orderMaster['box_id'] = Boxs::where('user_id', Auth::user()->id)->get()->first()->id;
+        }
 
         $order = OrderMaster::create($orderMaster);
         $response = ["order_master" => $order, "order_details" => []];
+        $totalAmount = 0;
         foreach ($request->order_details as $order_detail) {
             $item = Item::find($order_detail['item_id']);
             $orderDetail = OrderDetails::create([
@@ -81,7 +111,19 @@ class OrderController extends Controller
                 'quantity' => $order_detail['quantity']
             ]);
 
+            $totalAmount += $item->sale_price * $order_detail['quantity'];
+
             array_push($response['order_details'], $orderDetail);
+        }
+
+        if($role == "cashier")
+        {
+            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $log = BoxLogs::where('box_id', $box->id)->get()->last();
+
+            $log->collected_amount += $totalAmount;
+
+            $log->save();
         }
 
         return response()->json([

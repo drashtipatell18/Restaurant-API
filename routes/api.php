@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/box/update/{id}', [BoxController::class, 'updateBox']);
     Route::delete('/box/delete/{id}', [BoxController::class, 'deleteBox']);
     Route::post('/box-serach', [BoxController::class, 'Boxsearch']);
+    Route::post('/box/statusChange', [BoxController::class, 'BoxStatusChange']);
 
     // Family Route
     Route::post('/family/create', [FamilyController::class, 'createFamily']);
