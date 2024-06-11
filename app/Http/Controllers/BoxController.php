@@ -86,7 +86,7 @@ class BoxController extends Controller
             ], 401);
         }
         $validateFamily = Validator::make($request->all(), [
-            'user_id' => 'required|integer',
+            'user_id' => 'required|integer|exists:users,id',
             'name' => 'required|string|max:255'
         ]);
 
@@ -98,6 +98,20 @@ class BoxController extends Controller
                 'errors' => $validateFamily->errors()
             ], 401);
         }
+
+        $user = User::find($request->input('user_id'));
+
+        if(Role::find($user->role_id)->name != "cashier")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => [
+                    "user_id" => "Only cashier can be assigned to a box"
+                ]
+            ], 401);
+        }
+        
         $box = Boxs::find($id);
         $box->update([
             'user_id' => $request->input('user_id'),
