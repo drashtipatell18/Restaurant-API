@@ -36,6 +36,7 @@ class OrderController extends Controller
         $validateRequest = Validator::make($request->order_master,[
             'order_type' => 'required|in:delivery,local,withdraw',
             'payment_type' => 'required|in:cash,debit,credit,transfer',
+            'status' => 'required|in:complete,pending',
             'discount' => 'required|min:0',
             'delivery_cost' => 'required|min:0'
         ]);
@@ -52,6 +53,7 @@ class OrderController extends Controller
         $orderMaster = [
             'order_type' => $request->order_master['order_type'],
             'payment_type' => $request->order_master['payment_type'],
+            'status' => $request->order_master['status'],
             'discount' => $request->order_master['discount'],
             'delivery_cost' => $request->order_master['delivery_cost']
         ];
