@@ -128,7 +128,7 @@ class OrderController extends Controller
         }
 
         $order = OrderMaster::find($id);
-        $orderDetails = OrderDetails::where('order_master_id', $id)->get();
+        $orderDetails = OrderDetails::where('order_master_id', $id)->getAll();
 
         foreach ($orderDetails as $orderDetail) 
         {
@@ -139,7 +139,7 @@ class OrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Order deleted successfully'
+            'message' => 'Order deleted'
         ], 200);
     }
 }
