@@ -12,6 +12,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletLogController;
 use App\Http\Controllers\BoxController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\GroupController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -107,6 +109,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/order/getAll', [OrderController::class, 'getAll']);
     Route::delete('/order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::get('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
+
+    // Group
+    Route::post('/group/create', [GroupController::class,'create']);
+    Route::post('/group/update/{id}', [GroupController::class,'update']);
+    Route::delete('/group/delete/{id}', [GroupController::class,'delete']);
+    Route::post('/group/addUser', [GroupController::class,'addUser']);
+    Route::post('/group/deleteUser', [GroupController::class,'deleteUser']);
+    Route::get('/group/getMyGroups', [GroupController::class, 'getMyGroups']);
+    Route::get('/group/getAllGroups', [GroupController::class, 'getAllGroups']);
+
+    Route::get('/group/getChats/{id}', [GroupController::class, 'getGroupChats']);
+
+    // Chat
+    Route::post('/chat/addToGroup', [ChatController::class, 'addGroupChat']);
+    Route::post('/chat/sendMessage',[ChatController::class, 'makeNewChat']);
+    Route::get('/chat/getChatUsers',[ChatController::class, 'getAllChats']);
+    Route::get('/chat/getSpecificUserChat/{id}',[ChatController::class, 'getSpecificUserChat']);
 });
 
 
