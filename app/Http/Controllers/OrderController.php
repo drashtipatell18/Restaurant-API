@@ -36,7 +36,7 @@ class OrderController extends Controller
         $validateRequest = Validator::make($request->order_master,[
             'order_type' => 'required|in:delivery,local,withdraw',
             'payment_type' => 'required|in:cash,debit,credit,transfer',
-            'status' => 'required|in:complete,pending',
+            'status' => 'required|in:received,prepared,delivered,finalized',
             'discount' => 'required|min:0',
             'delivery_cost' => 'required|min:0'
         ]);
@@ -110,6 +110,7 @@ class OrderController extends Controller
                 'order_master_id' => $order->id,
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
+                'cost' => $item->cost_price,
                 'quantity' => $order_detail['quantity']
             ]);
 
@@ -168,7 +169,8 @@ class OrderController extends Controller
                 'order_master_id' => $order->id,
                 'item_id' => $order_detail['item_id'],
                 'quantity' => $order_detail['quantity'],
-                'amount' => $item->sale_price
+                'amount' => $item->sale_price,
+                'cost' => $item->cost_price,
             ]);
 
             array_push($responseData['order_details'], $detail);
@@ -246,6 +248,32 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Order deleted'
+        ], 200);
+    }
+
+    public function updateOrderStatus(Request $request)
+    {
+        $validateRequest = Validator::make($request->all(), [
+            'order_id' => 'required|exists:order_masters,id',
+            'status' => 'required|in:received,prepared,delivered,finalized,cancelled'
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ],403);
+        }
+
+        $order = OrderMaster::find($request->input('order_id'));
+        $order->status = $request->input('status');
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Status updated successfully"
         ], 200);
     }
 }

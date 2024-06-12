@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,7 +37,9 @@ class AuthController extends Controller
         $user = User::where('email', $request->input('email'))->first();
         $token = $user->createToken($user->role_id)->plainTextToken;
         return response()->json([
+            'name' => $user->name,
             'access_token' => $token,
+            'role' => Role::find($user->role_id)->name
         ]);
     }
 }

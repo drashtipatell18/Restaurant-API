@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoxLogs;
+use App\Models\Boxs;
+use App\Models\OrderDetails;
+use App\Models\OrderMaster;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -159,6 +165,102 @@ class UserController extends Controller
         return response()->json($users, 200);
     }
 
+    public function dashboard(Request $request)
+    {
+        $validateRequest = Validator::make($request->all(),[
+            'duration' => 'in:day,week,month',
+            'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+        $responseData = [];
+
+        $orders = OrderMaster::query();
+        $orderDetails = OrderDetails::query();
+
+        if($request->has('duration') && $request->input('duration') == "month")
+        {
+            $orders = $orders->whereMonth('created_at', $request->input('month'));
+            $orderDetails = $orderDetails->whereMonth('created_at', $request->input('month'));
+        }
+        if($request->has('duration') && $request->input('duration') == "day")
+        {
+            $orders = $orders->whereDate('created_at', $request->input('day'));
+            $orderDetails = $orderDetails->whereDate('created_at', $request->input('day'));
+        }
+
+        $orders = $orders->get();
+        $orderDetails = $orderDetails->get();
+
+        $sale = 0;
+        $cost = 0;
+        foreach ($orderDetails as $orderDetail) {
+            $sale += $orderDetail->amount * $orderDetail->quantity;
+            $cost += $orderDetail->cost * $orderDetail->quantity;
+        }
+
+        $responseData['statistical_data'] = [
+            "total_orders" => $orders->count(), 
+            "total_income" => $sale - $cost, 
+            "delivery_orders" => $orders->where('order_type', 'delivery')->count()
+        ];
+
+        $responseData['payment_methods'] = [
+            'cash' => $orders->where('payment_type', 'cash')->count(),
+            'debit' => $orders->where('payment_type', 'debit')->count(),
+            'credit' => $orders->where('payment_type', 'credit')->count(),
+            'transfer' => $orders->where('payment_type', 'transfer')->count()
+        ];
+
+        $responseData['total_revenue'] = $sale;
+
+        $responseData['statusSummary'] = [
+            'received' => $orders->where('status', 'received')->count(),
+            'prepared' => $orders->where('status', 'prepared')->count(),
+            'delivered' => $orders->where('status', 'delivered')->count(),
+            'finalized' => $orders->where('status', 'finalized')->count()
+        ];
+
+        $mostOrderedItems = OrderDetails::select('items.name', 'items.image', DB::raw('COUNT(order_details.item_id) as order_count'))
+            ->join('items', 'order_details.item_id', '=', 'items.id')
+            ->join('order_masters', 'order_details.order_master_id', '=', 'order_masters.id')
+            ->groupBy('order_details.item_id', 'items.name', 'items.image')
+            ->orderBy('order_count', 'desc')
+            ->get();
+        
+        $responseData['popular_products'] = $mostOrderedItems;
+
+        $responseData['box_entry'] = [];
+        $boxs = Boxs::all();
+
+        foreach ($boxs as $box) {
+            $logs = BoxLogs::query('box_id', $box->id);
+
+            if($request->has('duration') && $request->input('duration') == "month")
+            {
+                $logs = $logs->whereMonth('created_at', $request->input('month'));
+            }
+            if($request->has('duration') && $request->input('duration') == "day")
+            {
+                $logs = $logs->whereDate('created_at', $request->input('day'));
+            }
+
+            $logs = $logs->get();
+
+            array_push($responseData['box_entry'], ['box' => $box->name, 'collected_amount' => $logs->sum('collected_amount')]);
+        }
+
+        $responseData['cancelled_orders'] = $orders->where('status', 'cancelled')->all();
+
+        return response()->json($responseData, 200);
+    }
 }
 
 

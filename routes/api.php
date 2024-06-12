@@ -30,12 +30,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Roles Routes
+    // Dasboard
+    Route::post('/dashboard', [UserController::class, 'dashboard']);
 
+    // Roles Routes
     Route::get('/roles', [RoleController::class, 'getRole']);
 
     // Register Routes
-
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/create-user', [UserController::class, 'storeUser']);
     Route::post('/update-user/{id}', [UserController::class, 'updateUser']);
@@ -46,25 +47,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-users', [UserController::class, 'index']);
 
      // Menu Routes
-
     Route::post('/menu/create', [MenuController::class, 'createMenu']);
     Route::post('/menu/update/{id}', [MenuController::class, 'updateMenu']);
     Route::delete('/menu/delete/{id}', [MenuController::class, 'deleteMenu']);
 
     // Wallet Routes
-
     Route::post('/wallet/create', [WalletController::class, 'createWallet']);
     Route::post('/wallet/update/{id}', [WalletController::class, 'updateWallet']);
     Route::delete('/wallet/delete/{id}', [WalletController::class, 'deleteWallet']);
 
     // WalletLog Routes
-
     Route::post('/wallet-log/create', [WalletLogController::class, 'createWalletLog']);
     Route::post('/wallet-log/update/{id}', [WalletLogController::class, 'updateWalletLog']);
     Route::delete('/wallet-log/delete/{id}', [WalletLogController::class, 'deleteWalletLog']);
 
     // Boxs Routes
-
     Route::post('/box/create', [BoxController::class, 'createBox']);
     Route::post('/box/update/{id}', [BoxController::class, 'updateBox']);
     Route::delete('/box/delete/{id}', [BoxController::class, 'deleteBox']);
@@ -109,6 +106,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/order/getAll', [OrderController::class, 'getAll']);
     Route::delete('/order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::get('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
+    Route::post('/order/updateStatus', [OrderController::class, 'updateOrderStatus']);
 
     // Group
     Route::post('/group/create', [GroupController::class,'create']);

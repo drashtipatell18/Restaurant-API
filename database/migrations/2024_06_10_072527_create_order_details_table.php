@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('order_master_id')->nullable();
             $table->unsignedBigInteger('item_id')->nullable();
             $table->decimal('amount',10,2)->nullable();
+            $table->decimal('cost',10,2)->nullable();
             $table->integer('quantity')->nullable();
             $table->timestamps();
             $table->softDeletes();
