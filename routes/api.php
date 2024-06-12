@@ -105,6 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/order/addItem', [OrderController::class, 'addItem']);
     Route::get('/order/getAll', [OrderController::class, 'getAll']);
     Route::delete('/order/delete/{id}', [OrderController::class, 'deleteOrder']);
+    Route::delete('/order/deleteSingle/{id}', [OrderController::class, 'deleteSingle']);
     Route::get('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
     Route::post('/order/updateStatus', [OrderController::class, 'updateOrderStatus']);
 

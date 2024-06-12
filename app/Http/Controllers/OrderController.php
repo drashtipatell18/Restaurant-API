@@ -196,6 +196,7 @@ class OrderController extends Controller
             $order['order_details'] = DB::table('order_details')
                 ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
                 ->where('order_master_id', $order->id)
+                ->whereNull('order_details.deleted_at')
                 ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
                 ->get();
         }
@@ -219,6 +220,7 @@ class OrderController extends Controller
             $order['order_details'] = DB::table('order_details')
                 ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
                 ->where('order_master_id', $order->id)
+                ->whereNull('order_details.deleted_at')
                 ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
                 ->get();
         return response()->json($order);
@@ -274,6 +276,26 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Status updated successfully"
+        ], 200);
+    }
+
+    public function deleteSingle($id)
+    {
+        $orderDetail = OrderDetails::where('id', $id);
+
+        if($orderDetail == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order Detail id not valid'
+            ],403);
+        }
+
+        $orderDetail->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Item deleted from order'
         ], 200);
     }
 }
