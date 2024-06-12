@@ -147,6 +147,7 @@ class FamilyController extends Controller
     {
         $families = DB::table('subfamilies')
             ->leftJoin('families', 'subfamilies.family_id', '=', 'families.id')
+            ->whereNull('subfamilies.deleted_at')
             ->select('subfamilies.id', 'subfamilies.name', 'families.name as family_name')
             ->get();
         return response()->json($families, 200);

@@ -203,7 +203,9 @@ class ItemController extends Controller
     {
         $validateRequest = Validator::make($request->all(), [
             'subfamilies' => 'array',
-            'subfamilies.*' => 'integer|exists:subfamilies,id' // Ensure each family ID is an integer and exists in the families table
+            'families' => 'array',
+            'subfamilies.*' => 'integer|exists:subfamilies,id',
+            'families.*' => 'integer|exists:families,id'
         ]);
 
         if($validateRequest->fails())
@@ -216,6 +218,10 @@ class ItemController extends Controller
         }
 
         $items = Item::all()->whereIn('sub_family_id', $request->subfamilies);
+        if($request->has('families'))
+        {
+            $items = Item::all()->whereIn('family_id', $request->families);
+        }
         return response()->json([
             'success' => true,
             'items' => $items
