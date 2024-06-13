@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\BoxLogs;
 use Illuminate\Http\Request;
 use App\Models\Boxs;
+use App\Models\OrderDetails;
+use App\Models\OrderMaster;
 use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
@@ -281,5 +283,51 @@ class BoxController extends Controller
                 'box' => $boxLog
             ],200);
         }
+    }
+
+    public function BoxReportMonthWise(Request $request, $id)
+    {
+        if(Boxs::find($id) == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Box is is not valid'
+            ],403);
+        }
+
+        $responseData = [];
+
+        $ordersQuery = OrderMaster::where('box_id', $id);
+
+        if($request->has('from_month') && $request->has('to_month'))
+        {
+            $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
+            $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
+            $ordersQuery->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
+        $orders = $ordersQuery->get();
+
+        foreach ($orders as $order) {
+            $customer = User::find($order->user_id);
+
+            if ($customer != null) {
+                $order->customer = $customer->name;
+            }
+
+            $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
+            $order->items = $orderDetails;
+
+            $total = 0;
+            foreach ($orderDetails as $detail) {
+                $detail->total = $detail->quantity * $detail->amount;
+                $total += $detail->total;
+            }
+            $order->order_total = $total;
+
+            $responseData[] = $order;
+        }
+
+        return response()->json($orders, 200);
     }
 }

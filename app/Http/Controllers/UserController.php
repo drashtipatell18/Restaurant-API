@@ -55,6 +55,11 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'image' => $filename,
         ]);
+
+        if($request->has('invite'))
+        {
+            // mail
+        }
     
         return response()->json([
             'message' => 'User created successfully',

@@ -179,7 +179,7 @@ class OrderController extends Controller
         return response()->json($responseData, 200);
     }
     
-    public function getAll()
+    public function getAll(Request $request)
     {
         // $role = Role::where('id',Auth()->user()->role_id)->first()->name;
         // if($role != "admin")
@@ -191,6 +191,34 @@ class OrderController extends Controller
         // }
 
         $orders = OrderMaster::all();
+
+        $filter = [];
+        $flag = false;
+        if($request->has('received') && $request->query('received') == "yes")
+        {
+            $filter[] = "received";
+            $flag = true;
+        }
+        if($request->has('prepared') && $request->query('prepared') == "yes")
+        {
+            $filter[] = "prepared";
+            $flag = true;
+        }
+        if($request->has('delivered') && $request->query('delivered') == "yes")
+        {
+            $filter[] = "delivered";
+            $flag = true;
+        }
+        if($request->has('finalized') && $request->query('finalized') == "yes")
+        {
+            $filter[] = "finalized";
+            $flag = true;
+        }
+
+        if($flag)
+        {
+            $orders = $orders->whereIn('status', $filter)->all();
+        }
         foreach ($orders as $order) {
             $order['total'] = OrderDetails::where('order_master_id', $order->id)->sum('amount');
             $order['order_details'] = DB::table('order_details')
