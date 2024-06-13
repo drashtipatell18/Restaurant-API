@@ -298,4 +298,36 @@ class OrderController extends Controller
             'message' => 'Item deleted from order'
         ], 200);
     }
+
+    public function addTip(Request $request, $id)
+    {
+        $order = OrderMaster::find($id);
+
+        if($order == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order id not valid'
+            ], 403);
+        }
+
+        if(!$request->has('tip_amount'))
+        {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation fails",
+                'errors' => [
+                    'tip_amount' => 'It is required parameter'
+                ]
+            ],403);
+        }
+
+        $order->tip = $request->query('tip_amount');
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Tip added successfully"
+        ], 200);
+    }
 }

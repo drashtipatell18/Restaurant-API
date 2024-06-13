@@ -88,11 +88,12 @@ Route::middleware('auth:sanctum')->group(function () {
      Route::post('/search/production-centers', [ProductionCenterController::class, 'ProductionCentersearch']);
 
 
-    // Sector
+    // Sector and Table
     Route::post('/sector/create', [SectorController::class, 'createSector']);
     Route::delete('/sector/delete/{id}', [SectorController::class, 'deleteSector']);
     Route::post('/sector/addTables', [SectorController::class, 'addTables']);
     Route::post('/table/updateStatus', [SectorController::class, 'updateTableStatus']);
+    Route::get('/table/getStats/{id}', [SectorController::class, 'getTableStats']);
 
     // Items
     Route::post('/item/create', [ItemController::class, 'createItem']);
@@ -108,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/order/deleteSingle/{id}', [OrderController::class, 'deleteSingle']);
     Route::get('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
     Route::post('/order/updateStatus', [OrderController::class, 'updateOrderStatus']);
+    Route::get('/order/addTip/{id}', [OrderController::class, 'addTip']);
 
     // Group
     Route::post('/group/create', [GroupController::class,'create']);

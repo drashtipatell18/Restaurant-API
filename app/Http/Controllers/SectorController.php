@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderDetails;
+use App\Models\OrderMaster;
 use App\Models\Role;
 use App\Models\Sector;
 use App\Models\Table;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -218,4 +222,49 @@ class SectorController extends Controller
             'tables' => $tables
         ], 200);
     }
+
+    public function getTableStats(Request $request, $id)
+    {
+        if (Table::find($id) == null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Table id invalid'
+            ], 403);
+        }
+
+        $responseData = [];
+
+        $ordersQuery = OrderMaster::where('table_id', $id);
+
+        if ($request->has('from_month') && $request->has('to_month')) {
+            $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
+            $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
+            $ordersQuery->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
+        $orders = $ordersQuery->get();
+
+        foreach ($orders as $order) {
+            $customer = User::find($order->user_id);
+
+            if ($customer != null) {
+                $order->customer = $customer->name;
+            }
+
+            $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
+            $order->items = $orderDetails;
+
+            $total = 0;
+            foreach ($orderDetails as $detail) {
+                $detail->total = $detail->quantity * $detail->amount;
+                $total += $detail->total;
+            }
+            $order->order_total = $total;
+
+            $responseData[] = $order;
+        }
+
+        return response()->json($responseData, 200);
+    }
+
 }
