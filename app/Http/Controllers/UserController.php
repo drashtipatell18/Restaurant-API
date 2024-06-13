@@ -6,9 +6,11 @@ use App\Models\BoxLogs;
 use App\Models\Boxs;
 use App\Models\OrderDetails;
 use App\Models\OrderMaster;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use App\Mail\RegistrationConfirmation;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -24,6 +26,7 @@ class UserController extends Controller
 
     public function storeUser(Request $request)
     {
+        // Validate the request
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -32,22 +35,25 @@ class UserController extends Controller
             'confirm_password' => 'required|string|min:8|same:password',
             'image' => 'nullable|file|mimes:jpg,png,jpeg,gif|max:2048',
         ]);
-    
+
+        // Handle validation errors
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
                 'error' => $validator->errors()
             ], 401);
-        }        
-    
+        }
+
+        // Move uploaded image to storage if provided
         $filename = '';
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $filename = time() . '.' . $image->getClientOriginalExtension();
-            $image->move(public_path('images'), $filename); // Ensure the 'images' directory exists and is writable
+            $image->move(public_path('images'), $filename);
         }
-    
+
+        // Create the user
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -56,17 +62,31 @@ class UserController extends Controller
             'image' => $filename,
         ]);
 
-        if($request->has('invite'))
-        {
-            // mail
+        // Check if 'invite' parameter is present in request
+        if ($request->has('invite')) {
+            // Generate a new remember token for the user
+            $user->remember_token = Str::random(40);
+            $user->save();
+
+            // Send the registration confirmation email to the user
+            Mail::to($user->email)->send(new RegistrationConfirmation($user, $request->password));
+
+            // Return JSON response with success message and user data
+            return response()->json([
+                'success' => true,
+                'message' => 'Registration successful. Email sent with login details.',
+                'user' => $user,
+            ], 200);
         }
-    
+
+        // Return JSON response with success message and user data
         return response()->json([
+            'success' => true,
             'message' => 'User created successfully',
             'user' => $user,
         ], 200);
     }
-    
+
     public function updateUser(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -79,11 +99,11 @@ class UserController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                     'success' => false,
-                     'message' => 'Validation fails',
-                     'error' => $validator->errors()
-                 ], 401);
-         }     
+                'success' => false,
+                'message' => 'Validation fails',
+                'error' => $validator->errors()
+            ], 401);
+        }
 
         $users = User::find($id);
         if (is_null($users)) {
@@ -102,7 +122,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role_id' => $request->role_id,
             'password' => Hash::make($request->password),
-    
+
         ]);
 
         return response()->json([
@@ -132,14 +152,14 @@ class UserController extends Controller
         }
         $users = $usersQuery->get();
         return response()->json($users, 200);
-    }   
-    
-    public function getUser($id){
+    }
+
+    public function getUser($id)
+    {
         $user = User::find($id);
         return response()->json($user, 200);
-
     }
-    
+
     public function Monthsearch(Request $request)
     {
         $startMonth = $request->input('start_month');
@@ -149,36 +169,35 @@ class UserController extends Controller
         if (is_null($startMonth) || is_null($endMonth) || is_null($year)) {
             return response()->json(['error' => 'Year, start month, and end month are required'], 400);
         }
-    
+
         if ($startMonth < 1 || $startMonth > 12 || $endMonth < 1 || $endMonth > 12) {
             return response()->json(['error' => 'Invalid month provided'], 400);
         }
-    
+
         $usersQuery = User::query();
-    
+
         // Define the date range based on input
         $startDate = Carbon::create($year, $startMonth, 1)->startOfDay();
         $endDate = Carbon::create($year, $endMonth)->endOfMonth()->endOfDay();
-    
+
         // Add the date range condition
         $usersQuery->whereBetween('created_at', [$startDate, $endDate]);
-    
+
         // Fetch the users
         $users = $usersQuery->get();
-    
+
         // Return the users as JSON response
         return response()->json($users, 200);
     }
 
     public function dashboard(Request $request)
     {
-        $validateRequest = Validator::make($request->all(),[
+        $validateRequest = Validator::make($request->all(), [
             'duration' => 'in:day,week,month',
             'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
         ]);
 
-        if($validateRequest->fails())
-        {
+        if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
@@ -190,13 +209,11 @@ class UserController extends Controller
         $orders = OrderMaster::query();
         $orderDetails = OrderDetails::query();
 
-        if($request->has('duration') && $request->input('duration') == "month")
-        {
+        if ($request->has('duration') && $request->input('duration') == "month") {
             $orders = $orders->whereMonth('created_at', $request->input('month'));
             $orderDetails = $orderDetails->whereMonth('created_at', $request->input('month'));
         }
-        if($request->has('duration') && $request->input('duration') == "day")
-        {
+        if ($request->has('duration') && $request->input('duration') == "day") {
             $orders = $orders->whereDate('created_at', $request->input('day'));
             $orderDetails = $orderDetails->whereDate('created_at', $request->input('day'));
         }
@@ -212,8 +229,8 @@ class UserController extends Controller
         }
 
         $responseData['statistical_data'] = [
-            "total_orders" => $orders->count(), 
-            "total_income" => $sale - $cost, 
+            "total_orders" => $orders->count(),
+            "total_income" => $sale - $cost,
             "delivery_orders" => $orders->where('order_type', 'delivery')->count()
         ];
 
@@ -239,7 +256,7 @@ class UserController extends Controller
             ->groupBy('order_details.item_id', 'items.name', 'items.image')
             ->orderBy('order_count', 'desc')
             ->get();
-        
+
         $responseData['popular_products'] = $mostOrderedItems;
 
         $responseData['box_entry'] = [];
@@ -248,12 +265,10 @@ class UserController extends Controller
         foreach ($boxs as $box) {
             $logs = BoxLogs::query('box_id', $box->id);
 
-            if($request->has('duration') && $request->input('duration') == "month")
-            {
+            if ($request->has('duration') && $request->input('duration') == "month") {
                 $logs = $logs->whereMonth('created_at', $request->input('month'));
             }
-            if($request->has('duration') && $request->input('duration') == "day")
-            {
+            if ($request->has('duration') && $request->input('duration') == "day") {
                 $logs = $logs->whereDate('created_at', $request->input('day'));
             }
 
@@ -344,5 +359,3 @@ class UserController extends Controller
         return response()->json($responseData, 200);
     }
 }
-
-

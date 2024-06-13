@@ -27,7 +27,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
 Route::middleware('auth:sanctum')->group(function () {
 
     // Dasboard
@@ -84,12 +83,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
      // Production Center
-     Route::get('/production-centers', [ProductionCenterController::class, 'viewProductionCenter']);
-     Route::post('/create/production-centers', [ProductionCenterController::class, 'storeProductionCenter']);
-     Route::post('/update/production-centers/{id}', [ProductionCenterController::class, 'updateProductionCenter']);
-     Route::get('/delete/production-centers/{id}', [ProductionCenterController::class, 'destroyProductionCenter']);
-     Route::post('/search/production-centers', [ProductionCenterController::class, 'ProductionCentersearch']);
-     Route::post('/production-centers/getProducts', [ProductionCenterController::class, 'getProducts']);
+    Route::get('/production-centers', [ProductionCenterController::class, 'viewProductionCenter']);
+    Route::post('/create/production-centers', [ProductionCenterController::class, 'storeProductionCenter']);
+    Route::post('/update/production-centers/{id}', [ProductionCenterController::class, 'updateProductionCenter']);
+    Route::get('/delete/production-centers/{id}', [ProductionCenterController::class, 'destroyProductionCenter']);
+    Route::post('/search/production-centers', [ProductionCenterController::class, 'ProductionCentersearch']);
+    Route::post('/production-centers/getProducts', [ProductionCenterController::class, 'getProducts']);
 
 
     // Sector and Table
@@ -124,7 +123,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/group/deleteUser', [GroupController::class,'deleteUser']);
     Route::get('/group/getMyGroups', [GroupController::class, 'getMyGroups']);
     Route::get('/group/getAllGroups', [GroupController::class, 'getAllGroups']);
-
     Route::get('/group/getChats/{id}', [GroupController::class, 'getGroupChats']);
 
     // Chat
@@ -135,14 +133,14 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
-// User Routes
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
-Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
-Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
-Route::get('/sector/getAll', [SectorController::class, 'getSector']);
-Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
-Route::post('/menu/get', [MenuController::class, 'getMenu']);
-Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
-Route::get('/item/getAll', [ItemController::class, 'getAll']);
-Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
+    // User Routes
+    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
+    Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
+    Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
+    Route::get('/sector/getAll', [SectorController::class, 'getSector']);
+    Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
+    Route::post('/menu/get', [MenuController::class, 'getMenu']);
+    Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
+    Route::get('/item/getAll', [ItemController::class, 'getAll']);
+    Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
