@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\Item_Menu_Join;
 use App\Models\Menu;
+use App\Models\OrderDetails;
+use App\Models\OrderMaster;
 use App\Models\Role;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -268,5 +272,100 @@ class ItemController extends Controller
             'success' => true,
             'message' => "Items added to menu successfully"
         ], 200);
+    }
+
+    public function getSaleReport(Request $request, $id)
+    {
+        $order_ids = [];
+
+        if(Item::find($id) == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => "Item id invalid"
+            ], 403);
+        }
+
+        $details = OrderDetails::where('item_id', $id)->get();
+        foreach ($details as $value) {
+            if(!in_array($value->order_master_id, $order_ids))
+            {
+                $order_ids[] = $value->order_master_id;
+            }
+        }
+
+        $responseData = [];
+        $ordersQuery = OrderMaster::whereIn('id', $order_ids);
+
+        if ($request->has('from_month') && $request->has('to_month')) {
+            $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
+            $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
+            $ordersQuery->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
+        $orders = $ordersQuery->get();
+
+        foreach ($orders as $order) {
+            $customer = User::find($order->user_id);
+
+            if ($customer != null) {
+                $order->customer = $customer->name;
+            }
+
+            $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
+            $order->items = $orderDetails;
+
+            $total = 0;
+            foreach ($orderDetails as $detail) {
+                $detail->total = $detail->quantity * $detail->amount;
+                $total += $detail->total;
+            }
+            $order->order_total = $total;
+
+            $responseData[] = $order;
+        }
+
+        $cancelledOrders = OrderMaster::onlyTrashed()
+            ->where('user_id', $id)
+            ->get();
+        
+        foreach ($cancelledOrders as $order) {
+            $order['status'] = "cancelled";
+            $customer = User::find($order->user_id);
+
+            if ($customer != null) {
+                $order['customer'] = $customer->name;
+            }
+
+            $orderDetails = OrderDetails::onlyTrashed()
+                ->where('order_master_id', $order->id)
+                ->get();
+            $order['items'] = $orderDetails;
+
+            $total = 0;
+            foreach ($orderDetails as $detail) {
+                $detail['total'] = $detail->quantity * $detail->amount;
+                $total += $detail->total;
+            }
+            $order['order_total'] = $total;
+
+            $responseData[] = $order;
+        }
+
+        if($request->has('order_id'))
+        {
+            $order = [];
+            foreach ($responseData as $response) {
+                if($response['id'] == $request->query('order_id'))
+                {
+                    $order = $response;
+                    break;
+                }
+            }
+
+            $responseData = $order;
+        }
+
+        return response()->json($responseData, 200);
     }
 }

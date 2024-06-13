@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/search-user', [UserController::class, 'Rolesearch']);
     Route::post('/search-user-month', [UserController::class, 'Monthsearch']);
     Route::get('/get-users', [UserController::class, 'index']);
+    Route::get("/user/{id}/getOrders", [UserController::class, 'getOrders']);
 
      // Menu Routes
     Route::post('/menu/create', [MenuController::class, 'createMenu']);
@@ -87,6 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
      Route::post('/update/production-centers/{id}', [ProductionCenterController::class, 'updateProductionCenter']);
      Route::get('/delete/production-centers/{id}', [ProductionCenterController::class, 'destroyProductionCenter']);
      Route::post('/search/production-centers', [ProductionCenterController::class, 'ProductionCentersearch']);
+     Route::post('/production-centers/getProducts', [ProductionCenterController::class, 'getProducts']);
 
 
     // Sector and Table
@@ -101,6 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/item/update/{id}', [ItemController::class, 'updateItem']);
     Route::delete('/item/delete/{id}', [ItemController::class, 'deleteItem']);
     Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
+    Route::get("/item/getSaleReport/{id}", [ItemController::class, 'getSaleReport']);
 
     // Orders
     Route::post('/order/place_new', [OrderController::class, 'placeOrder']);

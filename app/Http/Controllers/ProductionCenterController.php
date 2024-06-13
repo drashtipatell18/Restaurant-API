@@ -1,6 +1,7 @@
 <?php 
 namespace App\Http\Controllers;
 
+use App\Models\Item;
 use App\Models\ProductionCenter;
 use App\Models\Role;
 use Illuminate\Http\Request;
@@ -120,5 +121,26 @@ class ProductionCenterController extends Controller
         }
         $productioncenter = $productioncenterQuery->get();
         return response()->json($productioncenter, 200);
-    }   
+    }  
+    
+    public function getProducts(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'productioncenter_ids' => 'required|array',
+            'productioncenter_ids.*' => 'integer|exists:production_centers,id'
+        ]);
+
+        if($validator->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => "Validation error",
+                'errors' => $validator->errors()
+            ], 403);
+        }
+
+        $items = Item::whereIn('production_center_id', $request->productioncenter_ids)->get();
+
+        return response()->json($items, 200);
+    }
 }

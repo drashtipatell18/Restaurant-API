@@ -266,6 +266,83 @@ class UserController extends Controller
 
         return response()->json($responseData, 200);
     }
+
+    public function getOrders(Request $request, $id)
+    {
+        if(User::find($id) == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => "User id is not valid"
+            ], 403);
+        }
+
+        $responseData = [];
+        $orders = OrderMaster::where('user_id', $id)->get();
+
+        foreach ($orders as $order) {
+            $customer = User::find($order->user_id);
+
+            if ($customer != null) {
+                $order->customer = $customer->name;
+            }
+
+            $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
+            $order->items = $orderDetails;
+
+            $total = 0;
+            foreach ($orderDetails as $detail) {
+                $detail->total = $detail->quantity * $detail->amount;
+                $total += $detail->total;
+            }
+            $order->order_total = $total;
+
+            $responseData[] = $order;
+        }
+
+        $cancelledOrders = OrderMaster::onlyTrashed()
+            ->where('user_id', $id)
+            ->get();
+        
+        foreach ($cancelledOrders as $order) {
+            $order['status'] = "cancelled";
+            $customer = User::find($order->user_id);
+
+            if ($customer != null) {
+                $order['customer'] = $customer->name;
+            }
+
+            $orderDetails = OrderDetails::onlyTrashed()
+                ->where('order_master_id', $order->id)
+                ->get();
+            $order['items'] = $orderDetails;
+
+            $total = 0;
+            foreach ($orderDetails as $detail) {
+                $detail['total'] = $detail->quantity * $detail->amount;
+                $total += $detail->total;
+            }
+            $order['order_total'] = $total;
+
+            $responseData[] = $order;
+        }
+
+        if($request->has('order_id'))
+        {
+            $order = [];
+            foreach ($responseData as $response) {
+                if($response['id'] == $request->query('order_id'))
+                {
+                    $order = $response;
+                    break;
+                }
+            }
+
+            $responseData = $order;
+        }
+
+        return response()->json($responseData, 200);
+    }
 }
 
 
