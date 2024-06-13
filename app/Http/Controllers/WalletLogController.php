@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\Wallet;
 use App\Models\Wallet_log;
@@ -77,12 +78,36 @@ class WalletLogController extends Controller
     public function deleteWalletLog($id)
     {
         $walletlog = Wallet_log::find($id);
-        if (is_null($user)) {
+        if (is_null($walletlog)) {
             return response()->json(['message' => 'Wallet not found'], 404);
         }
 
         $walletlog->delete();
         return response()->json(['message' => 'Wallet deleted successfully'], 200);
+    }
+
+    public function getWalletLog($id)
+    {
+        if(User::find($id) == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => "User id not valid"
+            ], 403);
+        }
+
+        $responseData = [];
+
+        $wallets = Wallet::where('user_id', $id)->get();
+
+        foreach ($wallets as $wallet) {
+            $logs = Wallet_log::where('wallet_id', $wallet->id);
+            $wallet['log'] = $logs;
+
+            $responseData[] = $wallet;
+        }
+
+        return response()->json($responseData, 200);
     }
 
 }

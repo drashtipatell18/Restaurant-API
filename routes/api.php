@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/wallet-log/create', [WalletLogController::class, 'createWalletLog']);
     Route::post('/wallet-log/update/{id}', [WalletLogController::class, 'updateWalletLog']);
     Route::delete('/wallet-log/delete/{id}', [WalletLogController::class, 'deleteWalletLog']);
+    Route::get("/wallet/getUserLog/{id}", [WalletLogController::class, 'getWalletLog']);
 
     // Boxs Routes
     Route::post('/box/create', [BoxController::class, 'createBox']);
