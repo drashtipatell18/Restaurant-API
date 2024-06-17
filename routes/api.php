@@ -97,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/sector/addTables', [SectorController::class, 'addTables']);
     Route::post('/table/updateStatus', [SectorController::class, 'updateTableStatus']);
     Route::get('/table/getStats/{id}', [SectorController::class, 'getTableStats']);
+    Route::get('/kds/{table_id}', [SectorController::class, 'getKds']);
 
     // Items
     Route::post('/item/create', [ItemController::class, 'createItem']);

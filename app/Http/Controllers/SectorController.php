@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Item;
 use App\Models\OrderDetails;
 use App\Models\OrderMaster;
 use App\Models\Role;
@@ -267,4 +268,52 @@ class SectorController extends Controller
         return response()->json($responseData, 200);
     }
 
+    public function getKds($table_id)
+    {
+        $table = Table::find($table_id);
+
+        if($table == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => "Table id invalid"
+            ], 403);
+        }
+
+        $responseData = ["received" => [], "prepared" => [], "finalized" => [], "delivered" => []];
+
+        $orderMaster = OrderMaster::where('table_id', $table->id)->get();
+        foreach ($orderMaster as $order) {
+            $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
+            $data = [
+                "order_id" => $order->id,
+                "from" => Carbon::parse($order->created_at)->format('H:i'),
+                "items" => [],
+                "notes" => $order->notes
+            ];
+            foreach ($orderDetails as $orderDetail) {
+                $item = Item::find($orderDetail->item_id);
+                $data["items"][] = $item->name . "(x" . $orderDetail->quantity . " qty)";
+            }
+
+            if($order->status == "received")
+            {
+                $responseData["received"][] = $data;
+            }
+            if($order->status == "prepared")
+            {
+                $responseData["prepared"][] = $data;
+            }
+            if($order->status == "finalized")
+            {
+                $responseData["finalized"][] = $data;
+            }
+            if($order->status == "delivered")
+            {
+                $responseData["delivered"][] = $data;
+            }
+        }
+
+        return response()->json($responseData, 200);
+    }
 }
