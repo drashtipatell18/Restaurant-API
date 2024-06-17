@@ -95,6 +95,10 @@ class OrderController extends Controller
         {
             $orderMaster['tip'] = $request->order_master['tip'];
         }
+        if(isset($request->order_master['notes']))
+        {
+            $orderMaster['notes'] = $request->order_master['notes'];
+        }
         
         if($role == "cashier")
         {
@@ -356,6 +360,35 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Tip added successfully"
+        ], 200);
+    }
+
+    public function addNote(Request $request, $id)
+    {
+        $orderMaster = OrderMaster::find($id);
+
+        if($orderMaster == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order ID invalid'
+            ], 403);
+        }
+
+        if($orderMaster->notes == null || $orderMaster->notes == "")
+        {
+            $orderMaster->notes = $request->input('notes');
+        }
+        else
+        {
+            $orderMaster->notes .= "," . $request->input('notes');
+        }
+
+        $orderMaster->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Note added successfully'
         ], 200);
     }
 }
