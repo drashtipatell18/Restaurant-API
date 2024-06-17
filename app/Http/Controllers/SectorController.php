@@ -310,6 +310,7 @@ class SectorController extends Controller
             }
             if($order->status == "delivered")
             {
+                $data["finished_at"] = Carbon::parse($order->updated_at)->format('H:i');
                 $responseData["delivered"][] = $data;
             }
         }
