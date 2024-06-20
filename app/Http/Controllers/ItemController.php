@@ -72,6 +72,7 @@ class ItemController extends Controller
             "sale_price" => $request->sale_price,
             "family_id" => $request->family_id,
             "sub_family_id" => $request->sub_family_id,
+            "description" => $request->description,
             "image" => $filename
         ]);
 
