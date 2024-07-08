@@ -21,7 +21,21 @@ class UserController extends Controller
     public function index()
     {
         $users = User::all();
-        return response()->json($users, 200);
+        foreach ($users as $user) {
+            $encryptedPassword = $user->password;
+            $decryption_iv = '1234567891011121';
+            $decryption_key = "GeeksforGeeks";
+            $ciphering = "AES-128-CTR";
+            $options = 0;
+
+            // Decrypt the password
+            $decryptedPassword = openssl_decrypt($encryptedPassword, $ciphering, $decryption_key, $options, $decryption_iv);
+
+            // Update the user's password with the decrypted password
+            $user->password = mb_convert_encoding($decryptedPassword, 'UTF-8', 'UTF-8');
+        }
+
+        return response()->json($users, 200, [], JSON_UNESCAPED_UNICODE);
     }
 
     public function storeUser(Request $request)
@@ -53,14 +67,28 @@ class UserController extends Controller
             $image->move(public_path('images'), $filename);
         }
 
+
+// Password Encryption store in pass filed to database
+
+        $simple_string = $request->password;
+
+        $ciphering = "AES-128-CTR";
+        $iv_length = openssl_cipher_iv_length($ciphering);
+        $options = 0;
+        $encryption_iv = '1234567891011121';
+        $encryption_key = "GeeksforGeeks";
+        $encryption = openssl_encrypt($simple_string, $ciphering,
+       $encryption_key, $options, $encryption_iv);
+
         // Create the user
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'role_id' => $request->role_id,
-            'password' => Hash::make($request->password),
+            'password' => $encryption,
             'image' => $filename,
         ]);
+
 
         // Check if 'invite' parameter is present in request
         if ($request->has('invite')) {
@@ -157,7 +185,19 @@ class UserController extends Controller
     public function getUser($id)
     {
         $user = User::find($id);
-        return response()->json($user, 200);
+
+        // Decryption To pass Filed
+        $encryption = $user->password;
+        $decryption_iv = '1234567891011121';
+        $decryption_key = "GeeksforGeeks";
+        $ciphering = "AES-128-CTR";
+        $options = 0;
+        $decryption=openssl_decrypt ($encryption, $ciphering,$decryption_key, $options, $decryption_iv);
+
+        $user->password = $decryption;
+        $user->confirm_password = $decryption;
+
+        return response()->json([$user, 200]);
     }
 
     public function Monthsearch(Request $request)
@@ -318,7 +358,7 @@ class UserController extends Controller
         $cancelledOrders = OrderMaster::onlyTrashed()
             ->where('user_id', $id)
             ->get();
-        
+
         foreach ($cancelledOrders as $order) {
             $order['status'] = "cancelled";
             $customer = User::find($order->user_id);
