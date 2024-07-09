@@ -11,4 +11,9 @@ class Menu extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'menus';
     protected $fillable = ['name'];
+
+    public function items()
+    {
+        return $this->belongsToMany(Item::class, 'item__menu__joins', 'menu_id', 'item_id');
+    }
 }

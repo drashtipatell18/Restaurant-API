@@ -46,10 +46,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-users', [UserController::class, 'index']);
     Route::get("/user/{id}/getOrders", [UserController::class, 'getOrders']);
 
+    Route::get('/getCasherUser', [UserController::class, 'getCasherUser']);
+
      // Menu Routes
     Route::post('/menu/create', [MenuController::class, 'createMenu']);
     Route::post('/menu/update/{id}', [MenuController::class, 'updateMenu']);
     Route::delete('/menu/delete/{id}', [MenuController::class, 'deleteMenu']);
+
+
+    Route::delete('/menu/{menuId}/item/{itemId}', [MenuController::class, 'deleteItem'])->name('menu.item.remove');
 
     // Wallet Routes
     Route::post('/wallet/create', [WalletController::class, 'createWallet']);
@@ -105,6 +110,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/item/delete/{id}', [ItemController::class, 'deleteItem']);
     Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
     Route::get("/item/getSaleReport/{id}", [ItemController::class, 'getSaleReport']);
+
+
 
     // Orders
     Route::post('/order/place_new', [OrderController::class, 'placeOrder']);

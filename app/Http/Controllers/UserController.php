@@ -28,11 +28,13 @@ class UserController extends Controller
             $ciphering = "AES-128-CTR";
             $options = 0;
 
+
             // Decrypt the password
             $decryptedPassword = openssl_decrypt($encryptedPassword, $ciphering, $decryption_key, $options, $decryption_iv);
 
             // Update the user's password with the decrypted password
             $user->password = mb_convert_encoding($decryptedPassword, 'UTF-8', 'UTF-8');
+            $user->confirm_password = mb_convert_encoding($decryptedPassword, 'UTF-8', 'UTF-8');
         }
 
         return response()->json($users, 200, [], JSON_UNESCAPED_UNICODE);
@@ -145,11 +147,23 @@ class UserController extends Controller
             $users->image = $filename;
         }
 
+        $simple_string = $request->password;
+
+        $ciphering = "AES-128-CTR";
+        $iv_length = openssl_cipher_iv_length($ciphering);
+        $options = 0;
+        $encryption_iv = '1234567891011121';
+        $encryption_key = "GeeksforGeeks";
+        $encryption = openssl_encrypt($simple_string, $ciphering,
+       $encryption_key, $options, $encryption_iv);
+
+
+
         $users->update([
             'name' => $request->name,
             'email' => $request->email,
             'role_id' => $request->role_id,
-            'password' => Hash::make($request->password),
+            'password' =>$encryption,
 
         ]);
 
@@ -397,5 +411,13 @@ class UserController extends Controller
         }
 
         return response()->json($responseData, 200);
+    }
+
+    public function getCasherUser()
+    {
+
+        $users = User::where('role_id',2)->get();
+        return response()->json($users, 200);
+
     }
 }

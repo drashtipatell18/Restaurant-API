@@ -128,7 +128,7 @@ class MenuController extends Controller
                 ->select('items.*')
                 ->where('item__menu__joins.menu_id', $menu->id)
                 ->get();
-                
+
             array_push($returnData, [
                 'id' => $menu->id,
                 'name' => $menu->name,
@@ -140,5 +140,12 @@ class MenuController extends Controller
             'success' => true,
             'menus' => $returnData
         ], 200);
+    }
+
+    public function deleteItem($menuId)
+    {
+        $menu = Menu::findOrFail($menuId);
+        $menu->items()->detach();
+        return response()->json(['message' => 'Menu item remove successfully'], 200);
     }
 }
