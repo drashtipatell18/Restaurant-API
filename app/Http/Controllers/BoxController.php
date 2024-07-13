@@ -15,17 +15,24 @@ use Illuminate\Support\Facades\Validator;
 
 class BoxController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $boxs = Boxs::all();
+        $query = BoxLogs::query();
+
+        if ($request->has('from_month') && $request->has('to_month')) {
+
+            $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
+            $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
+        $boxs = $query->get();
         return response()->json($boxs, 200);
     }
-
     public function createBox(Request $request)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -36,8 +43,7 @@ class BoxController extends Controller
             'name' => 'required|string|max:255'
         ]);
 
-        if($validateFamily->fails())
-        {
+        if ($validateFamily->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -47,8 +53,7 @@ class BoxController extends Controller
 
         $user = User::find($request->input('user_id'));
 
-        if(Role::find($user->role_id)->name != "cashier")
-        {
+        if (Role::find($user->role_id)->name != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -60,15 +65,14 @@ class BoxController extends Controller
 
         $checkBox = Boxs::where('user_id', $request->input('user_id'))->count();
 
-        if($checkBox != 0)
-        {
+        if ($checkBox != 0) {
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails",
                 'errors' => [
                     "user_id" => "One cashier can be assigned on box only."
                 ]
-            ],403);
+            ], 403);
         }
 
         $box = Boxs::create([
@@ -83,11 +87,10 @@ class BoxController extends Controller
         ], 200);
     }
 
-    public function updateBox(Request $request,$id)
+    public function updateBox(Request $request, $id)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -98,8 +101,7 @@ class BoxController extends Controller
             'name' => 'required|string|max:255'
         ]);
 
-        if($validateFamily->fails())
-        {
+        if ($validateFamily->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -109,8 +111,7 @@ class BoxController extends Controller
 
         $user = User::find($request->input('user_id'));
 
-        if(Role::find($user->role_id)->name != "cashier")
-        {
+        if (Role::find($user->role_id)->name != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -119,7 +120,7 @@ class BoxController extends Controller
                 ]
             ], 401);
         }
-        
+
         $box = Boxs::find($id);
         $box->update([
             'user_id' => $request->input('user_id'),
@@ -155,16 +156,11 @@ class BoxController extends Controller
         foreach ($boxs as $box) {
             $boxLog = BoxLogs::where('box_id', $box->id)->get()->last();
 
-            if($boxLog == null)
-            {
+            if ($boxLog == null) {
                 $box['status'] = "Not opened";
-            }
-            else if($boxLog->close_time != null)
-            {
+            } else if ($boxLog->close_time != null) {
                 $box['status'] = "Not opened";
-            }
-            else 
-            {
+            } else {
                 $box['status'] = "Opened";
                 $box['open_amount'] = $boxLog->open_amount;
                 $box['open_time'] = $boxLog->open_time;
@@ -174,41 +170,37 @@ class BoxController extends Controller
             $box['log'] = $boxLog = BoxLogs::where('box_id', $box->id)->get();
         }
         return response()->json($boxs, 200);
-    } 
-    
+    }
+
     public function BoxStatusChange(Request $request)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin" && $role != "cashier")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
             ], 401);
         }
-        $validateInitial = Validator::make($request->all(),[
+        $validateInitial = Validator::make($request->all(), [
             'box_id' => 'required|exists:boxs,id'
         ]);
 
-        if($validateInitial->fails())
-        {
+        if ($validateInitial->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails",
                 'errors' => $validateInitial->errors()
             ], 403);
         }
-        
+
         $boxLog = BoxLogs::where('box_id', $request->input('box_id'))->get()->last();
 
-        if($boxLog == null)
-        {
+        if ($boxLog == null) {
             $validateLater = Validator::make($request->all(), [
                 'open_amount' => 'required|numeric|min:0'
             ]);
 
-            if($validateLater->fails())
-            {
+            if ($validateLater->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
@@ -228,15 +220,12 @@ class BoxController extends Controller
                 'success' => true,
                 'box' => $log
             ], 200);
-        }
-        else if($boxLog->close_time != null)
-        {
+        } else if ($boxLog->close_time != null) {
             $validateLater = Validator::make($request->all(), [
                 'open_amount' => 'required|numeric|min:0'
             ]);
 
-            if($validateLater->fails())
-            {
+            if ($validateLater->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
@@ -256,15 +245,12 @@ class BoxController extends Controller
                 'success' => true,
                 'box' => $log
             ], 200);
-        }
-        else
-        {
+        } else {
             $validateLater = Validator::make($request->all(), [
                 'close_amount' => 'required|numeric|min:0'
             ]);
 
-            if($validateLater->fails())
-            {
+            if ($validateLater->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
@@ -281,26 +267,24 @@ class BoxController extends Controller
             return response()->json([
                 'success' => true,
                 'box' => $boxLog
-            ],200);
+            ], 200);
         }
     }
 
     public function BoxReportMonthWise(Request $request, $id)
     {
-        if(Boxs::find($id) == null)
-        {
+        if (Boxs::find($id) == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Box is is not valid'
-            ],403);
+            ], 403);
         }
 
         $responseData = [];
 
         $ordersQuery = OrderMaster::where('box_id', $id);
 
-        if($request->has('from_month') && $request->has('to_month'))
-        {
+        if ($request->has('from_month') && $request->has('to_month')) {
             $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
             $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
             $ordersQuery->whereBetween('created_at', [$startDate, $endDate]);
