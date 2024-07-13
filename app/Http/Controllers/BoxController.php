@@ -176,10 +176,10 @@ class BoxController extends Controller
         return response()->json($boxs, 200);
     } 
     
-    public function getAllBox(Request $request)
+    public function getAllBox(Request $request,$id)
     {
-            $query = BoxLogs::query();
-    
+            $query = BoxLogs::where('box_id', $id);
+
             if ($request->has('from_month') && $request->has('to_month')) {
     
                 $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
