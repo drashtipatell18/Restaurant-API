@@ -176,6 +176,11 @@ class BoxController extends Controller
         return response()->json($boxs, 200);
     } 
     
+    public function getAllBoxsLog(){
+        $boxlog = BoxLogs::all();
+        return response()->json($boxlog, 200);
+    }
+
     public function getAllBox(Request $request,$id)
     {
             $query = BoxLogs::where('box_id', $id);
