@@ -183,6 +183,50 @@ class OrderController extends Controller
 
         return response()->json($responseData, 200);
     }
+
+    public function UpdateItem(Request $request,$id)
+    {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin" && $role != "cashier" && $role != "waitress")
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+
+        $validateRequest = Validator::make($request->all(), [
+            'order_id' => 'required|exists:order_masters,id',
+            'order_details' => 'required|array'
+        ]);
+
+        if($validateRequest->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ],403);
+        }
+
+        $order = OrderMaster::find($request->input('order_id'));
+        $responseData = ["order" => $order, "order_details" => []];
+        foreach ($request->order_details as $order_detail) {
+            $item = Item::find($order_detail['item_id']);
+            $detail = OrderDetails::find($id);
+            $detail->update([
+                'order_master_id' => $order->id,
+                'item_id' => $order_detail['item_id'],
+                'quantity' => $order_detail['quantity'],
+                'amount' => $item->sale_price,
+                'cost' => $item->cost_price,
+            ]);
+
+            array_push($responseData['order_details'], $detail);
+        }
+
+        return response()->json($responseData, 200);
+    }
     
     public function getAll(Request $request)
     {
