@@ -10,5 +10,5 @@ class OrderDetails extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'order_details';
-    protected $fillable = ['order_master_id','item_id','amount','quantity', 'cost'];
+    protected $fillable = ['order_master_id','item_id','amount','quantity','notes', 'cost'];
 }

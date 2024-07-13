@@ -115,6 +115,7 @@ class OrderController extends Controller
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
+                'notes' =>  $order_detail['notes'],
                 'quantity' => $order_detail['quantity']
             ]);
 
@@ -365,7 +366,7 @@ class OrderController extends Controller
 
     public function addNote(Request $request, $id)
     {
-        $orderMaster = OrderMaster::find($id);
+        $orderMaster = OrderDetails::find($id);
 
         if($orderMaster == null)
         {
