@@ -162,6 +162,35 @@ class SectorController extends Controller
         return response()->json(["success" => true, "data" => $data], 200);
     }
 
+    public function getSectorByTableId($tableId)
+    {
+        $table = Table::find($tableId);
+
+        if (!$table) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Table not found'
+            ], 404);
+        }
+
+        $sector = Sector::find($table->sector_id);
+
+        if (!$sector) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sector not found for this table'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'sector' => [
+                'id' => $sector->id,
+                'name' => $sector->name
+            ]
+        ], 200);
+    }
+
     public function updateTableStatus(Request $request)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;

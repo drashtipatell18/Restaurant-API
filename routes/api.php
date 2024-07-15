@@ -154,6 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
     Route::get('/sector/getAll', [SectorController::class, 'getSector']);
     Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
+    Route::get('/sector/by-table/{tableId}', [SectorController::class, 'getSectorByTableId']);
     Route::post('/menu/get', [MenuController::class, 'getMenu']);
     Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
     Route::get('/item/getAll', [ItemController::class, 'getAll']);
