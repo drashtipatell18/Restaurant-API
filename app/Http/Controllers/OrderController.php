@@ -55,7 +55,9 @@ class OrderController extends Controller
             'payment_type' => $request->order_master['payment_type'],
             'status' => $request->order_master['status'],
             'discount' => $request->order_master['discount'],
-            'delivery_cost' => $request->order_master['delivery_cost']
+            'delivery_cost' => $request->order_master['delivery_cost'],
+            'customer_name' =>  $request->order_master['customer_name'],
+            'person' =>  $request->order_master['person']
         ];
 
         if($role == "cashier")
