@@ -128,7 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/order/updateStatus', [OrderController::class, 'updateOrderStatus']);
     Route::get('/order/addTip/{id}', [OrderController::class, 'addTip']);
     Route::post('/order/addNote/{id}', [OrderController::class, 'addNote']);
-
+    Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
     // Group
     Route::post('/group/create', [GroupController::class,'create']);
     Route::post('/group/update/{id}', [GroupController::class,'update']);
