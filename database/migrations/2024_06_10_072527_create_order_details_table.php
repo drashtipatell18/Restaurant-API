@@ -18,6 +18,7 @@ return new class extends Migration
             $table->decimal('amount',10,2)->nullable();
             $table->decimal('cost',10,2)->nullable();
             $table->integer('quantity')->nullable();
+            $table->string('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->foreign('order_master_id')->references('id')->on('order_masters')->onUpdate('cascade')->onDelete('cascade');

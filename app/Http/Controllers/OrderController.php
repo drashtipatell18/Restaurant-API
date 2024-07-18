@@ -26,23 +26,21 @@ class OrderController extends Controller
     }
     public function placeOrder(Request $request)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin" && $role != "cashier" && $role != "waitress")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
             ], 401);
         }
 
-        if(!$request->has('order_master'))
-        {
+        if (!$request->has('order_master')) {
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails"
             ], 403);
         }
-        $validateRequest = Validator::make($request->order_master,[
+        $validateRequest = Validator::make($request->order_master, [
             'order_type' => 'required|in:delivery,local,withdraw',
             'payment_type' => 'required|in:cash,debit,credit,transfer',
             'status' => 'required|in:received,prepared,delivered,finalized',
@@ -50,8 +48,7 @@ class OrderController extends Controller
             'delivery_cost' => 'required|min:0'
         ]);
 
-        if($validateRequest->fails())
-        {
+        if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails",
@@ -64,23 +61,21 @@ class OrderController extends Controller
             'payment_type' => $request->order_master['payment_type'],
             'status' => $request->order_master['status'],
             'discount' => $request->order_master['discount'],
-            'delivery_cost' => $request->order_master['delivery_cost']
+            'delivery_cost' => $request->order_master['delivery_cost'],
+            'customer_name' =>  $request->order_master['customer_name'],
+            'person' =>  $request->order_master['person']
         ];
 
-        if($role == "cashier")
-        {
+        if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
             $log = BoxLogs::where('box_id', $box->id)->get()->last();
 
-            if($log == null)
-            {
+            if ($log == null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Box not opened'
                 ], 403);
-            }
-            else if($log->close_time != null)
-            {
+            } else if ($log->close_time != null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Box not opened'
@@ -88,29 +83,23 @@ class OrderController extends Controller
             }
         }
 
-        if(isset($request->order_master['table_id']))
-        {
+        if (isset($request->order_master['table_id'])) {
             $orderMaster['table_id'] = $request->order_master['table_id'];
         }
-        if(isset($request->order_master['user_id']))
-        {
+        if (isset($request->order_master['user_id'])) {
             $orderMaster['user_id'] = $request->order_master['user_id'];
         }
-        if($role != "cashier" && isset($request->order_master['box_id']))
-        {
+        if ($role != "cashier" && isset($request->order_master['box_id'])) {
             $orderMaster['box_id'] = $request->order_master['box_id'];
         }
-        if(isset($request->order_master['tip']))
-        {
+        if (isset($request->order_master['tip'])) {
             $orderMaster['tip'] = $request->order_master['tip'];
         }
-        if(isset($request->order_master['notes']))
-        {
+        if (isset($request->order_master['notes'])) {
             $orderMaster['notes'] = $request->order_master['notes'];
         }
-        
-        if($role == "cashier")
-        {
+
+        if ($role == "cashier") {
             $orderMaster['box_id'] = Boxs::where('user_id', Auth::user()->id)->get()->first()->id;
         }
 
@@ -124,6 +113,7 @@ class OrderController extends Controller
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
+                'notes' =>  $order_detail['notes'],
                 'quantity' => $order_detail['quantity']
             ]);
 
@@ -132,8 +122,7 @@ class OrderController extends Controller
             array_push($response['order_details'], $orderDetail);
         }
 
-        if($role == "cashier")
-        {
+        if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
             $log = BoxLogs::where('box_id', $box->id)->get()->last();
 
@@ -151,9 +140,8 @@ class OrderController extends Controller
 
     public function addItem(Request $request)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin" && $role != "cashier" && $role != "waitress")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -165,13 +153,12 @@ class OrderController extends Controller
             'order_details' => 'required|array'
         ]);
 
-        if($validateRequest->fails())
-        {
+        if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
                 'errors' => $validateRequest->errors()
-            ],403);
+            ], 403);
         }
 
         $order = OrderMaster::find($request->input('order_id'));
@@ -191,7 +178,49 @@ class OrderController extends Controller
 
         return response()->json($responseData, 200);
     }
-    
+
+    public function UpdateItem(Request $request, $id)
+    {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+
+        $validateRequest = Validator::make($request->all(), [
+            'order_id' => 'required|exists:order_masters,id',
+            'order_details' => 'required|array'
+        ]);
+
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        $order = OrderMaster::find($request->input('order_id'));
+        $responseData = ["order" => $order, "order_details" => []];
+        foreach ($request->order_details as $order_detail) {
+            $item = Item::find($order_detail['item_id']);
+            $detail = OrderDetails::find($id);
+            $detail->update([
+                'order_master_id' => $order->id,
+                'item_id' => $order_detail['item_id'],
+                'quantity' => $order_detail['quantity'],
+                'amount' => $item->sale_price,
+                'cost' => $item->cost_price,
+            ]);
+
+            array_push($responseData['order_details'], $detail);
+        }
+
+        return response()->json($responseData, 200);
+    }
+
     public function getAll(Request $request)
     {
         // $role = Role::where('id',Auth()->user()->role_id)->first()->name;
@@ -207,29 +236,24 @@ class OrderController extends Controller
 
         $filter = [];
         $flag = false;
-        if($request->has('received') && $request->query('received') == "yes")
-        {
+        if ($request->has('received') && $request->query('received') == "yes") {
             $filter[] = "received";
             $flag = true;
         }
-        if($request->has('prepared') && $request->query('prepared') == "yes")
-        {
+        if ($request->has('prepared') && $request->query('prepared') == "yes") {
             $filter[] = "prepared";
             $flag = true;
         }
-        if($request->has('delivered') && $request->query('delivered') == "yes")
-        {
+        if ($request->has('delivered') && $request->query('delivered') == "yes") {
             $filter[] = "delivered";
             $flag = true;
         }
-        if($request->has('finalized') && $request->query('finalized') == "yes")
-        {
+        if ($request->has('finalized') && $request->query('finalized') == "yes") {
             $filter[] = "finalized";
             $flag = true;
         }
 
-        if($flag)
-        {
+        if ($flag) {
             $orders = $orders->whereIn('status', $filter)->all();
         }
         foreach ($orders as $order) {
@@ -249,8 +273,7 @@ class OrderController extends Controller
     {
         $order = OrderMaster::find($id);
 
-        if($order == null)
-        {
+        if ($order == null) {
             return response()->json([
                 'success' => false,
                 'message' => "Invalid order id"
@@ -258,20 +281,19 @@ class OrderController extends Controller
         }
 
         $order['total'] = OrderDetails::where('order_master_id', $order->id)->sum('amount');
-            $order['order_details'] = DB::table('order_details')
-                ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
-                ->where('order_master_id', $order->id)
-                ->whereNull('order_details.deleted_at')
-                ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
-                ->get();
+        $order['order_details'] = DB::table('order_details')
+            ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
+            ->where('order_master_id', $order->id)
+            ->whereNull('order_details.deleted_at')
+            ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
+            ->get();
         return response()->json($order);
     }
 
     public function deleteOrder($id)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -281,8 +303,7 @@ class OrderController extends Controller
         $order = OrderMaster::find($id);
         $orderDetails = OrderDetails::where('order_master_id', $id)->getAll();
 
-        foreach ($orderDetails as $orderDetail) 
-        {
+        foreach ($orderDetails as $orderDetail) {
             $orderDetail->delete();
         }
 
@@ -301,13 +322,12 @@ class OrderController extends Controller
             'status' => 'required|in:received,prepared,delivered,finalized,cancelled'
         ]);
 
-        if($validateRequest->fails())
-        {
+        if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
                 'errors' => $validateRequest->errors()
-            ],403);
+            ], 403);
         }
 
         $order = OrderMaster::find($request->input('order_id'));
@@ -324,12 +344,11 @@ class OrderController extends Controller
     {
         $orderDetail = OrderDetails::where('id', $id);
 
-        if($orderDetail == null)
-        {
+        if ($orderDetail == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Order Detail id not valid'
-            ],403);
+            ], 403);
         }
 
         $orderDetail->delete();
@@ -344,23 +363,21 @@ class OrderController extends Controller
     {
         $order = OrderMaster::find($id);
 
-        if($order == null)
-        {
+        if ($order == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Order id not valid'
             ], 403);
         }
 
-        if(!$request->has('tip_amount'))
-        {
+        if (!$request->has('tip_amount')) {
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails",
                 'errors' => [
                     'tip_amount' => 'It is required parameter'
                 ]
-            ],403);
+            ], 403);
         }
 
         $order->tip = $request->query('tip_amount');
@@ -374,22 +391,18 @@ class OrderController extends Controller
 
     public function addNote(Request $request, $id)
     {
-        $orderMaster = OrderMaster::find($id);
+        $orderMaster = OrderDetails::find($id);
 
-        if($orderMaster == null)
-        {
+        if ($orderMaster == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Order ID invalid'
             ], 403);
         }
 
-        if($orderMaster->notes == null || $orderMaster->notes == "")
-        {
+        if ($orderMaster->notes == null || $orderMaster->notes == "") {
             $orderMaster->notes = $request->input('notes');
-        }
-        else
-        {
+        } else {
             $orderMaster->notes .= "," . $request->input('notes');
         }
 
@@ -398,6 +411,39 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Note added successfully'
+        ], 200);
+    }
+
+    public function getLastOrder()
+    {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+
+        $lastOrder = OrderMaster::orderBy('id', 'desc')->first();
+
+        if ($lastOrder == null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No orders found'
+            ], 404);
+        }
+
+        $lastOrder['total'] = OrderDetails::where('order_master_id', $lastOrder->id)->sum('amount');
+        $lastOrder['order_details'] = DB::table('order_details')
+            ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
+            ->where('order_master_id', $lastOrder->id)
+            ->whereNull('order_details.deleted_at')
+            ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'order' => $lastOrder
         ], 200);
     }
 }

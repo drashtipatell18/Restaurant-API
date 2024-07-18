@@ -22,7 +22,9 @@ return new class extends Migration
             $table->string('tip')->nullable();
             $table->string('discount')->nullable();
             $table->string('delivery_cost')->nullable();
-            $table->string('notes')->nullable();
+            $table->string('customer_name')->nullable();
+            $table->string('person')->nullable();
+            // $table->string('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->foreign('table_id')->references('id')->on('restauranttables')->onUpdate('cascade')->onDelete('cascade');

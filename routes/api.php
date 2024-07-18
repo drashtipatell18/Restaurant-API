@@ -12,6 +12,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletLogController;
 use App\Http\Controllers\BoxController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GroupController;
 use Illuminate\Support\Facades\Route;
@@ -46,10 +47,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-users', [UserController::class, 'index']);
     Route::get("/user/{id}/getOrders", [UserController::class, 'getOrders']);
 
+    Route::get('/getCasherUser', [UserController::class, 'getCasherUser']);
+
      // Menu Routes
     Route::post('/menu/create', [MenuController::class, 'createMenu']);
     Route::post('/menu/update/{id}', [MenuController::class, 'updateMenu']);
     Route::delete('/menu/delete/{id}', [MenuController::class, 'deleteMenu']);
+
+
+    Route::delete('/menu/{menuId}/item/{itemId}', [MenuController::class, 'deleteItem'])->name('menu.item.remove');
 
     // Wallet Routes
     Route::post('/wallet/create', [WalletController::class, 'createWallet']);
@@ -69,6 +75,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/box-serach', [BoxController::class, 'Boxsearch']);
     Route::post('/box/statusChange', [BoxController::class, 'BoxStatusChange']);
     Route::get('/get-boxs', [BoxController::class, 'index']);
+    Route::get('/get-all-boxs-log', [BoxController::class, 'getAllBoxsLog']);
+    Route::get('/get-boxlogs-all/{id}', [BoxController::class, 'getAllBox']);
+    Route::get('/get-boxlogs-all/{id}', [BoxController::class, 'getAllBox']);
+    Route::get('/get-boxlogs/{id}', [BoxController::class, 'GetAllBoxLog']);
     Route::get('/box/orderReport/{id}', [BoxController::class, 'BoxReportMonthWise']);
 
     // Family Route
@@ -106,9 +116,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
     Route::get("/item/getSaleReport/{id}", [ItemController::class, 'getSaleReport']);
 
+
+
     // Orders
     Route::post('/order/place_new', [OrderController::class, 'placeOrder']);
     Route::post('/order/addItem', [OrderController::class, 'addItem']);
+    Route::post('/order/updateItem/{id}', [OrderController::class, 'UpdateItem']);
     Route::get('/order/getAll', [OrderController::class, 'getAll']);
     Route::delete('/order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::delete('/order/deleteSingle/{id}', [OrderController::class, 'deleteSingle']);
@@ -116,8 +129,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/order/updateStatus', [OrderController::class, 'updateOrderStatus']);
     Route::get('/order/addTip/{id}', [OrderController::class, 'addTip']);
     Route::post('/order/addNote/{id}', [OrderController::class, 'addNote']);
+<<<<<<< HEAD
     Route::get('/order/getLog/{id}', [OrderController::class,'getOrderLog']);
 
+=======
+    Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
+>>>>>>> aae791964755608b5cb50df51a6ce6579735a497
     // Group
     Route::post('/group/create', [GroupController::class,'create']);
     Route::post('/group/update/{id}', [GroupController::class,'update']);
@@ -133,6 +150,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chat/sendMessage',[ChatController::class, 'makeNewChat']);
     Route::get('/chat/getChatUsers',[ChatController::class, 'getAllChats']);
     Route::get('/chat/getSpecificUserChat/{id}',[ChatController::class, 'getSpecificUserChat']);
+
+    //Payment
+    Route::get('/get-payments', [PaymentController::class, 'GetPayment']);
+    Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
 });
 
 
@@ -143,6 +164,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
     Route::get('/sector/getAll', [SectorController::class, 'getSector']);
     Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
+    Route::get('/sector/by-table/{tableId}', [SectorController::class, 'getSectorByTableId']);
     Route::post('/menu/get', [MenuController::class, 'getMenu']);
     Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
     Route::get('/item/getAll', [ItemController::class, 'getAll']);

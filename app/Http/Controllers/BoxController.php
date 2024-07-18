@@ -176,6 +176,31 @@ class BoxController extends Controller
         return response()->json($boxs, 200);
     } 
     
+    public function getAllBoxsLog(){
+        $boxlog = BoxLogs::all();
+        return response()->json($boxlog, 200);
+    }
+
+    public function getAllBox(Request $request,$id)
+    {
+            $query = BoxLogs::where('box_id', $id);
+
+            if ($request->has('from_month') && $request->has('to_month')) {
+    
+                $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
+                $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            }
+    
+            $boxs = $query->get();
+            return response()->json($boxs, 200);
+    }
+
+    public function GetAllBoxLog($id){
+        $boxlogs = BoxLogs::find($id);
+        return response()->json($boxlogs, 200);
+
+    }
     public function BoxStatusChange(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;

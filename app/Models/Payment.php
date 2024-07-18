@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class OrderDetails extends Model
+class Payment extends Model
 {
     use HasFactory,SoftDeletes;
-    protected $table = 'order_details';
-    protected $fillable = ['order_master_id','item_id','amount','quantity','notes', 'cost'];
+    protected $table = 'payments';
+    protected $fillable = ['order_master_id','rut','firstname','lastname','business_name','ltda','tour','address','email','phone'];
 }
