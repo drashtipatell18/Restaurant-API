@@ -12,6 +12,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletLogController;
 use App\Http\Controllers\BoxController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GroupController;
 use Illuminate\Support\Facades\Route;
@@ -144,6 +145,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chat/sendMessage',[ChatController::class, 'makeNewChat']);
     Route::get('/chat/getChatUsers',[ChatController::class, 'getAllChats']);
     Route::get('/chat/getSpecificUserChat/{id}',[ChatController::class, 'getSpecificUserChat']);
+
+    //Payment
+    Route::get('/get-payments', [PaymentController::class, 'GetPayment']);
+    Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
 });
 
 
