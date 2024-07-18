@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 
 class UserController extends Controller
 {
@@ -52,6 +53,8 @@ class UserController extends Controller
             $filename = time() . '.' . $image->getClientOriginalExtension();
             $image->move(public_path('images'), $filename);
         }
+
+        $newpassword = $request->password;
 
         // Create the user
         $user = User::create([
@@ -156,7 +159,15 @@ class UserController extends Controller
 
     public function getUser($id)
     {
-        $user = User::find($id);
+    //     $abc = "123456789";
+    //     $bcrypassword = bcrypt($abc);
+    //    $bcrypassword = decrypt($bcrypassword);
+    
+    $user = User::find($id);
+    $originalPassword = $user->password;
+    
+   
+        
         return response()->json($user, 200);
     }
 

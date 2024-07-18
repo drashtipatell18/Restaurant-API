@@ -10,5 +10,23 @@ class OrderMaster extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'order_masters';
-    protected $fillable = ['table_id','user_id','box_id','order_type','payment_type','status','tip','discount','delivery_cost', 'notes'];
+    protected $fillable = ['table_id','user_id','box_id','order_type','payment_type','status','tip','discount','delivery_cost','customer_name','person'];
+    protected static function booted()
+    {
+        static::creating(function ($order) {
+            OrderStatusLog::create([
+                'order_id' => $order->id,
+                'status' => $order->status,
+            ]);
+        });
+
+        static::updating(function ($order) {
+            if ($order->isDirty('status')) {
+                OrderStatusLog::create([
+                    'order_id' => $order->id,
+                    'status' => $order->status,
+                ]);
+            }
+        });
+    }
 }

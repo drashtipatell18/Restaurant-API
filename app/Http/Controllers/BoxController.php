@@ -147,7 +147,7 @@ class BoxController extends Controller
     {
         $ids = $request->input('ids', []);
         $boxQuery = Boxs::query();
-        if (!empty($roleIds)) {
+        if (!empty($ids)) {
             $boxQuery->whereIn('ids', $ids);
         }
         $boxs = $boxQuery->get();

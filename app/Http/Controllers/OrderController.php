@@ -15,6 +15,15 @@ use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
 {
+    public function getOrderLog($id)
+    {
+        $orderLogs = OrderStatusLog::where('order_id', $id)->get();
+        return response()->json([
+            'success' => true,
+            'message' => 'Log retrieved successfully.',
+            'logs' => $orderLogs
+        ], 200);
+    }
     public function placeOrder(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
