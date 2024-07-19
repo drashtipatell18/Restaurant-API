@@ -14,8 +14,8 @@ class OrderMaster extends Model
 
     protected static function booted()
     {
-        static::creating(function ($order) {
-            OrderStatusLog::created([
+        static::created(function ($order) {
+            OrderStatusLog::create([
                 'order_id' => $order->id,
                 'status' => $order->status,
             ]);

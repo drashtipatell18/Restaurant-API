@@ -7,6 +7,7 @@ use App\Models\Boxs;
 use App\Models\Item;
 use App\Models\OrderDetails;
 use App\Models\OrderMaster;
+use App\Models\OrderStatusLog;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -338,7 +339,7 @@ class OrderController extends Controller
     public function updateOrderStatus(Request $request)
     {
         $validateRequest = Validator::make($request->all(), [
-            'order_id' => 'required|exists:order_masters,id',
+            'order_id' => 'required',
             'status' => 'required|in:received,prepared,delivered,finalized,cancelled'
         ]);
 
