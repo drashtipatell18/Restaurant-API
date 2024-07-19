@@ -63,7 +63,8 @@ class OrderController extends Controller
             'discount' => $request->order_master['discount'],
             'delivery_cost' => $request->order_master['delivery_cost'],
             'customer_name' =>  $request->order_master['customer_name'],
-            'person' =>  $request->order_master['person']
+            'person' =>  $request->order_master['person'],
+            'reason' => $request->order_master['reason']
         ];
 
         if ($role == "cashier") {
@@ -220,7 +221,26 @@ class OrderController extends Controller
 
         return response()->json($responseData, 200);
     }
-
+    public function UpdateOrderReason(Request $request, $id) {
+        $order = OrderMaster::find($id);
+        if ($order) {
+            $order->update([
+                'reason' => $request->input('reason')
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Reason updated successfully.',
+                'reason' => $order
+            ], 200);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.'
+            ], 404);
+        }
+    }
+    
     public function getAll(Request $request)
     {
         // $role = Role::where('id',Auth()->user()->role_id)->first()->name;

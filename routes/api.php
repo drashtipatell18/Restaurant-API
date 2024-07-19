@@ -129,12 +129,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/order/updateStatus', [OrderController::class, 'updateOrderStatus']);
     Route::get('/order/addTip/{id}', [OrderController::class, 'addTip']);
     Route::post('/order/addNote/{id}', [OrderController::class, 'addNote']);
-<<<<<<< HEAD
     Route::get('/order/getLog/{id}', [OrderController::class,'getOrderLog']);
+    Route::post('/order/updateorderreason/{id}', [OrderController::class,'UpdateOrderReason']);
 
-=======
     Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
->>>>>>> aae791964755608b5cb50df51a6ce6579735a497
     // Group
     Route::post('/group/create', [GroupController::class,'create']);
     Route::post('/group/update/{id}', [GroupController::class,'update']);
