@@ -64,6 +64,57 @@ class SectorController extends Controller
         ], 200);
     }
 
+    public function updateSector(Request $request, $id) {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
+    
+        $validateRequest = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'noOfTables' => 'required|integer|min:1'
+        ]);
+    
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+    
+        $sector = Sector::findOrFail($id);
+        $sector->update([
+            'name' => $request->input('name')
+        ]);
+    
+        $tables = [];
+    
+        // Delete existing tables
+        Table::where('sector_id', $sector->id)->delete();
+    
+        // Create new tables
+        for ($i = 0; $i < $request->input('noOfTables'); $i++) {
+            $table = Table::create([
+                'user_id' => Auth::user()->id,
+                'sector_id' => $sector->id,
+                'name' => 'Table ' . ($i + 1)
+            ]);
+    
+            array_push($tables, $table);
+        }
+    
+        return response()->json([
+            'success' => true,
+            'message' => 'Sector and Tables updated successfully.',
+            'sector' => $sector,
+            'tables' => $tables
+        ], 200);
+    }
+
     public function deleteSector($id)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
