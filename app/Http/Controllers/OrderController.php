@@ -25,6 +25,10 @@ class OrderController extends Controller
             'logs' => $orderLogs
         ], 200);
     }
+
+
+
+    
     public function placeOrder(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;

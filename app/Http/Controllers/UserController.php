@@ -69,7 +69,9 @@ class UserController extends Controller
             $filename = time() . '.' . $image->getClientOriginalExtension();
             $image->move(public_path('images'), $filename);
         }
+
         $newpassword = $request->password;
+
 
 // Password Encryption store in pass filed to database
 
@@ -82,6 +84,7 @@ class UserController extends Controller
         $encryption_key = "GeeksforGeeks";
         $encryption = openssl_encrypt($simple_string, $ciphering,
        $encryption_key, $options, $encryption_iv);
+
 
         // Create the user
         $user = User::create([
@@ -199,6 +202,14 @@ class UserController extends Controller
 
     public function getUser($id)
     {
+
+    //     $abc = "123456789";
+    //     $bcrypassword = bcrypt($abc);
+    //    $bcrypassword = decrypt($bcrypassword);
+    
+    $user = User::find($id);
+    $originalPassword = $user->password;
+    
         $user = User::find($id);
 
         // Decryption To pass Filed
