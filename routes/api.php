@@ -158,6 +158,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // User Routes
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/invite', [AuthController::class, 'invite']);
+    Route::post('set-password/{id}', [AuthController::class, 'setPassword']);
     Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
     Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
     Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);

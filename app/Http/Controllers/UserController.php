@@ -69,10 +69,7 @@ class UserController extends Controller
             $filename = time() . '.' . $image->getClientOriginalExtension();
             $image->move(public_path('images'), $filename);
         }
-
-<<<<<<< HEAD
         $newpassword = $request->password;
-=======
 
 // Password Encryption store in pass filed to database
 
@@ -85,7 +82,6 @@ class UserController extends Controller
         $encryption_key = "GeeksforGeeks";
         $encryption = openssl_encrypt($simple_string, $ciphering,
        $encryption_key, $options, $encryption_iv);
->>>>>>> aae791964755608b5cb50df51a6ce6579735a497
 
         // Create the user
         $user = User::create([
@@ -203,18 +199,6 @@ class UserController extends Controller
 
     public function getUser($id)
     {
-<<<<<<< HEAD
-    //     $abc = "123456789";
-    //     $bcrypassword = bcrypt($abc);
-    //    $bcrypassword = decrypt($bcrypassword);
-    
-    $user = User::find($id);
-    $originalPassword = $user->password;
-    
-   
-        
-        return response()->json($user, 200);
-=======
         $user = User::find($id);
 
         // Decryption To pass Filed
@@ -229,7 +213,6 @@ class UserController extends Controller
         $user->confirm_password = $decryption;
 
         return response()->json([$user, 200]);
->>>>>>> aae791964755608b5cb50df51a6ce6579735a497
     }
 
     public function Monthsearch(Request $request)
