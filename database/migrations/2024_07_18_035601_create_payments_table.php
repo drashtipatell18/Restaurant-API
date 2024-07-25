@@ -23,6 +23,9 @@ return new class extends Migration
             $table->longText('address')->nullable();
             $table->string('email')->nullable()->unique();
             $table->string('phone')->nullable();
+            $table->string('type')->nullable();
+            $table->decimal('amount',10,2)->nullable();
+            $table->decimal('return',10,2)->nullable();
             $table->foreign('order_master_id')->references('id')->on('order_masters')->onUpdate('cascade')->onDelete('cascade');
             $table->timestamps();
             $table->softDeletes();

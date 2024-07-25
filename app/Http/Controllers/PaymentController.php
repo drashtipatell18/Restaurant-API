@@ -25,6 +25,8 @@ class PaymentController extends Controller
             'ltda' => 'required',
             'tour' => 'required',
             'address' => 'required',
+            'type' => 'required|in:cash,transfer,debit,credit',
+            'amount' => 'required'
         ]);
 
         if ($validateRequest->fails()) {
@@ -45,7 +47,9 @@ class PaymentController extends Controller
             'address' => $request->input('address'),
             'email' => $request->input('email'),
             'phone' => $request->input('phone'),
-
+            'type' => $request->input('type'),
+            'amount' => $request->input('amount'),
+            'return' => $request->input('return'),
         ]);
 
         return response()->json([
