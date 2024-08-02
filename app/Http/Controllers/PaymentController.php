@@ -18,16 +18,15 @@ class PaymentController extends Controller
     }
 
 
-    public function getsinglePayments(Request $request)
+    public function getsinglePayments($order_master_id)
     {
-        $request->validate([
-            'order_master_id' => 'required|integer'
-        ]);
-        $paymentId = Payment::where('order_master_id', $request->input('order_master_id'))->first();
-        if ($paymentId) {
+        // Assuming the route parameter is directly used.
+        $payment = Payment::where('order_master_id', $order_master_id)->first();
+
+        if ($payment) {
             return response()->json([
                 'success' => true,
-                'data' => $paymentId
+                'data' => $payment
             ], 200);
         } else {
             return response()->json([
@@ -36,7 +35,6 @@ class PaymentController extends Controller
             ], 404);
         }
     }
-
 
 
 

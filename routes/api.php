@@ -154,7 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Payment
     Route::get('/get-payments', [PaymentController::class, 'GetPayment']);
-    Route::get('/getsinglepayments', [PaymentController::class, 'getsinglePayments']);
+    Route::get('/getsinglepayments/{order_master_id}', [PaymentController::class, 'getsinglePayments']);
     Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
 });
 
