@@ -87,17 +87,16 @@ class AuthController extends Controller
 
         $ciphering = "AES-128-CTR";
         $iv_length = openssl_cipher_iv_length($ciphering);
+
         $options = 0;
         $encryption_iv = '1234567891011121';
         $encryption_key = "GeeksforGeeks";
         $encryption = openssl_encrypt($simple_string, $ciphering,
-       $encryption_key, $options, $encryption_iv);
-        // Set the password and mark the invite as used
-        $invite->password = $request->password;
+        $encryption_key, $options, $encryption_iv);
+
+        $invite->password = $encryption;
         $invite->save();
-    
-        // Optionally, you might want to create a user account here if you haven't already
-    
+
         return response()->json([
             'success' => true,
             'message' => 'Your password has been set successfully.'
