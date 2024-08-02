@@ -38,7 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Register Routes
     Route::get('/users', [UserController::class, 'index']);
-  
+
     Route::post('/update-user/{id}', [UserController::class, 'updateUser']);
     Route::delete('/delete-user/{id}', [UserController::class, 'destroyUser']);
     Route::get('/get-user/{id}', [UserController::class, 'getUser']);
@@ -131,14 +131,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/order/addTip/{id}', [OrderController::class, 'addTip']);
     Route::post('/order/addNote/{id}', [OrderController::class, 'addNote']);
     Route::get('/order/getLog/{id}', [OrderController::class,'getOrderLog']);
-<<<<<<< Updated upstream
     Route::post('/order/updateorderreason/{id}', [OrderController::class,'UpdateOrderReason']);
 
     Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
-=======
     Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
 
->>>>>>> Stashed changes
     // Group
     Route::post('/group/create', [GroupController::class,'create']);
     Route::post('/group/update/{id}', [GroupController::class,'update']);
@@ -157,6 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Payment
     Route::get('/get-payments', [PaymentController::class, 'GetPayment']);
+    Route::get('/getsinglepayments', [PaymentController::class, 'getsinglePayments']);
     Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
 });
 
