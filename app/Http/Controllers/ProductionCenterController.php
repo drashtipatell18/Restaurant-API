@@ -1,11 +1,14 @@
-<?php 
+<?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\ProductionCenter;
+use App\Models\Item_Production_Join;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class ProductionCenterController extends Controller
 {
@@ -20,9 +23,8 @@ class ProductionCenterController extends Controller
 
     public function storeProductionCenter(Request $request)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -50,11 +52,47 @@ class ProductionCenterController extends Controller
         ], 200);
     }
 
+    public function addToMenuProducation(Request $request)
+    {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
+
+        $validateRequest = Validator::make($request->all(), [
+            'item_ids' => 'required|array',
+            'item_ids.*' => 'integer|exists:items,id',
+            'production_id' => 'required|exists:production_centers,id'
+        ]);
+
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        $production = ProductionCenter::find($request->production_id);
+        foreach ($request->item_ids as $item_id) {
+            Item_Production_Join::create([
+                'production_id' => $production->id,
+                'item_id' => $item_id
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Items added to production successfully"
+        ], 200);
+    }
     public function updateProductionCenter(Request $request, $id)
     {
-        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
-        {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -121,8 +159,8 @@ class ProductionCenterController extends Controller
         }
         $productioncenter = $productioncenterQuery->get();
         return response()->json($productioncenter, 200);
-    }  
-    
+    }
+
     public function getProducts(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -130,8 +168,7 @@ class ProductionCenterController extends Controller
             'productioncenter_ids.*' => 'integer|exists:production_centers,id'
         ]);
 
-        if($validator->fails())
-        {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => "Validation error",

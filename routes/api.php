@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/delete/production-centers/{id}', [ProductionCenterController::class, 'destroyProductionCenter']);
     Route::post('/search/production-centers', [ProductionCenterController::class, 'ProductionCentersearch']);
     Route::post('/production-centers/getProducts', [ProductionCenterController::class, 'getProducts']);
+    Route::post("/item/addToproducation", [ProductionCenterController::class, 'addToMenuProducation']);
 
 
     // Sector and Table
@@ -131,14 +132,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/order/addTip/{id}', [OrderController::class, 'addTip']);
     Route::post('/order/addNote/{id}', [OrderController::class, 'addNote']);
     Route::get('/order/getLog/{id}', [OrderController::class,'getOrderLog']);
-<<<<<<< Updated upstream
     Route::post('/order/updateorderreason/{id}', [OrderController::class,'UpdateOrderReason']);
 
     Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
-=======
-    Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
 
->>>>>>> Stashed changes
+
     // Group
     Route::post('/group/create', [GroupController::class,'create']);
     Route::post('/group/update/{id}', [GroupController::class,'update']);

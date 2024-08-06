@@ -53,7 +53,8 @@ class OrderController extends Controller
             'delivery_cost' => 'required|min:0'
         ]);
 
-        if ($validateRequest->fails()) {
+        if ($validateRequest->fails())
+         {
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails",

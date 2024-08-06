@@ -30,7 +30,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        if (!Auth::attempt($request->only(['email', 'password']))) {
+        if (Auth::attempt($request->only(['email', 'password']))) {
             return response()->json([
                 'success' => false,
                 'message' => 'Credential does not found in our records',
