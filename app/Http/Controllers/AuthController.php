@@ -65,6 +65,8 @@ class AuthController extends Controller
             'role_id' => $request->input('role_id'),
             'name' => $request->input('name'),
             'email' => $request->input('email'),
+            'password_reset' => false,
+            // 'password_reset_expires_at' => now()->addMinute(),
         ]);
 
         $token = Str::random(60);
@@ -83,24 +85,48 @@ class AuthController extends Controller
     public function setPassword(Request $request, $id)
     {
         $invite = User::findOrFail($id);
+
+
+        if ($invite->password_reset || now()->greaterThan($invite->password_reset_expires_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password reset link has either been used or expired.',
+            ], 400);
+        }
+
+        // Validate the request input
+        $validateUser = Validator::make($request->all(), [
+            'password' => 'required|string|min:6', // Ensure the password meets your criteria
+        ]);
+
+        if ($validateUser->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'error' => $validateUser->errors()
+            ], 400);
+        }
+
         $simple_string = $request->password;
 
+        // Encryption setup
         $ciphering = "AES-128-CTR";
         $iv_length = openssl_cipher_iv_length($ciphering);
         $options = 0;
         $encryption_iv = '1234567891011121';
         $encryption_key = "GeeksforGeeks";
-        $encryption = openssl_encrypt($simple_string, $ciphering,
-       $encryption_key, $options, $encryption_iv);
+        $encryption = openssl_encrypt($simple_string, $ciphering, $encryption_key, $options, $encryption_iv);
+
         // Set the password and mark the invite as used
-        $invite->password = $request->password;
+        $invite->password = $encryption;
+        $invite->password_reset = true;
+        $invite->password_reset_expires_at = null;
         $invite->save();
-    
-        // Optionally, you might want to create a user account here if you haven't already
-    
+
         return response()->json([
             'success' => true,
             'message' => 'Your password has been set successfully.'
         ], 200);
     }
+
 }

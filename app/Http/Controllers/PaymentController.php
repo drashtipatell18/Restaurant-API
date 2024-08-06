@@ -17,6 +17,27 @@ class PaymentController extends Controller
     ], 200);
     }
 
+
+    public function getsinglePayments($order_master_id)
+    {
+        // Assuming the route parameter is directly used.
+        $payment = Payment::where('order_master_id', $order_master_id)->first();
+
+        if ($payment) {
+            return response()->json([
+                'success' => true,
+                'data' => $payment
+            ], 200);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found'
+            ], 404);
+        }
+    }
+
+
+
     public function InsertPayment(Request $request){
         $validateRequest = Validator::make($request->all(), [
             'order_master_id' => 'required|exists:order_masters,id',
