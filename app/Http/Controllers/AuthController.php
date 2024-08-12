@@ -18,32 +18,63 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validateUser = Validator::make($request->all(), [
-            'email' => 'required',
+            'email' => 'required|email',
             'password' => 'required'
         ]);
 
         if ($validateUser->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation fails',
+                'message' => 'Validation failed',
                 'error' => $validateUser->errors()
             ], 401);
         }
 
-        if (Auth::attempt($request->only(['email', 'password']))) {
+        // Find user by email
+        $user = User::where('email', $request->input('email'))->first();
+
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Credential does not found in our records',
+                'message' => 'Invalid email or password'
             ], 401);
         }
-        $user = User::where('email', $request->input('email'))->first();
+
+        // Decrypt the stored password and compare
+        $ciphering = "AES-128-CTR";
+        $options = 0;
+        $decryption_iv = '1234567891011121'; // Ensure this matches the encryption IV
+        $decryption_key = "GeeksforGeeks"; // Ensure this matches the encryption key
+
+        try {
+            $decrypted_password = openssl_decrypt($user->password, $ciphering, $decryption_key, $options, $decryption_iv);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error decrypting password'
+            ], 500);
+        }
+
+
+        // Check if the decrypted password matches the provided password
+        if ($decrypted_password !== $request->input('password')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Credential does not found in our records'
+            ], 401);
+        }
+
+        // Create token and respond with user info
         $token = $user->createToken($user->role_id)->plainTextToken;
+
         return response()->json([
+            'success' => true,
             'name' => $user->name,
             'access_token' => $token,
             'role' => Role::find($user->role_id)->name
         ]);
     }
+
 
     public function invite(Request $request)
     {
