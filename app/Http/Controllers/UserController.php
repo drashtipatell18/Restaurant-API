@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Mail\RegistrationConfirmation;
+use App\Mail\UpdateConfirmation;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -73,7 +74,7 @@ class UserController extends Controller
         $newpassword = $request->password;
 
 
-// Password Encryption store in pass filed to database
+        // Password Encryption store in pass filed to database
 
         $simple_string = $request->password;
 
@@ -82,8 +83,13 @@ class UserController extends Controller
         $options = 0;
         $encryption_iv = '1234567891011121';
         $encryption_key = "GeeksforGeeks";
-        $encryption = openssl_encrypt($simple_string, $ciphering,
-       $encryption_key, $options, $encryption_iv);
+        $encryption = openssl_encrypt(
+            $simple_string,
+            $ciphering,
+            $encryption_key,
+            $options,
+            $encryption_iv
+        );
 
 
         // Create the user
@@ -158,16 +164,36 @@ class UserController extends Controller
         $options = 0;
         $encryption_iv = '1234567891011121';
         $encryption_key = "GeeksforGeeks";
-        $encryption = openssl_encrypt($simple_string, $ciphering,
-       $encryption_key, $options, $encryption_iv);
+        $encryption = openssl_encrypt(
+            $simple_string,
+            $ciphering,
+            $encryption_key,
+            $options,
+            $encryption_iv
+        );
 
 
+        // Check if 'invite' parameter is present in request
+        if ($request->has('invite')) {
+            // Generate a new remember token for the user
+            $users->remember_token = Str::random(40);
+            $users->save();
 
+            // Send the registration confirmation email to the user
+            Mail::to($users->email)->send(new UpdateConfirmation($user, $request->password));
+
+            // Return JSON response with success message and user data
+            return response()->json([
+                'success' => true,
+                'message' => 'Registration successful. Email sent with login details.',
+                'user' => $users,
+            ], 200);
+        }
         $users->update([
             'name' => $request->name,
             'email' => $request->email,
             'role_id' => $request->role_id,
-            'password' =>$encryption,
+            'password' => $encryption,
 
         ]);
 
@@ -203,13 +229,13 @@ class UserController extends Controller
     public function getUser($id)
     {
 
-    //     $abc = "123456789";
-    //     $bcrypassword = bcrypt($abc);
-    //    $bcrypassword = decrypt($bcrypassword);
-    
-    $user = User::find($id);
-    $originalPassword = $user->password;
-    
+        //     $abc = "123456789";
+        //     $bcrypassword = bcrypt($abc);
+        //    $bcrypassword = decrypt($bcrypassword);
+
+        $user = User::find($id);
+        $originalPassword = $user->password;
+
         $user = User::find($id);
 
         // Decryption To pass Filed
@@ -218,7 +244,7 @@ class UserController extends Controller
         $decryption_key = "GeeksforGeeks";
         $ciphering = "AES-128-CTR";
         $options = 0;
-        $decryption=openssl_decrypt ($encryption, $ciphering,$decryption_key, $options, $decryption_iv);
+        $decryption = openssl_decrypt($encryption, $ciphering, $decryption_key, $options, $decryption_iv);
 
         $user->password = $decryption;
         $user->confirm_password = $decryption;
@@ -350,8 +376,7 @@ class UserController extends Controller
 
     public function getOrders(Request $request, $id)
     {
-        if(User::find($id) == null)
-        {
+        if (User::find($id) == null) {
             return response()->json([
                 'success' => false,
                 'message' => "User id is not valid"
@@ -408,12 +433,10 @@ class UserController extends Controller
             $responseData[] = $order;
         }
 
-        if($request->has('order_id'))
-        {
+        if ($request->has('order_id')) {
             $order = [];
             foreach ($responseData as $response) {
-                if($response['id'] == $request->query('order_id'))
-                {
+                if ($response['id'] == $request->query('order_id')) {
                     $order = $response;
                     break;
                 }
@@ -428,8 +451,7 @@ class UserController extends Controller
     public function getCasherUser()
     {
 
-        $users = User::where('role_id',2)->get();
+        $users = User::where('role_id', 2)->get();
         return response()->json($users, 200);
-
     }
 }

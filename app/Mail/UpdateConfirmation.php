@@ -25,11 +25,11 @@ class RegistrationConfirmation extends Mailable
      */
     public function build()
     {
-        return $this->subject('Invitación para unirse a Cyproapp: detalles de su cuenta')
-        ->view('userdetails') // View for email template
-        ->with([
-            'user' => $this->user,
-            'plainPassword' => $this->plainPassword,
-        ]);
+        return $this->subject('Invitación para unirse a Cyproapp: detalles de su cuentaz')
+                    ->view('updateuser') // View for email template
+                    ->with([
+                        'user' => $this->user,
+                        'plainPassword' => $this->plainPassword,
+                    ]);
     }
 }
