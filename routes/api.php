@@ -12,6 +12,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletLogController;
 use App\Http\Controllers\BoxController;
+use App\Http\Controllers\BoxSelectedController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GroupController;
@@ -172,3 +173,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
     Route::get('/item/getAll', [ItemController::class, 'getAll']);
     Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
+
+
+    Route::post('brodcastCardClicked',[BoxSelectedController::class,'cardClicked'])->name('broadcast.cardclicked');
