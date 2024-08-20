@@ -119,7 +119,7 @@ class BoxController extends Controller
                 ]
             ], 401);
         }
-        
+
         $box = Boxs::find($id);
         $box->update([
             'user_id' => $request->input('user_id'),
@@ -163,7 +163,7 @@ class BoxController extends Controller
             {
                 $box['status'] = "Not opened";
             }
-            else 
+            else
             {
                 $box['status'] = "Opened";
                 $box['open_amount'] = $boxLog->open_amount;
@@ -174,8 +174,8 @@ class BoxController extends Controller
             $box['log'] = $boxLog = BoxLogs::where('box_id', $box->id)->get();
         }
         return response()->json($boxs, 200);
-    } 
-    
+    }
+
     public function getAllBoxsLog(){
         $boxlog = BoxLogs::all();
         return response()->json($boxlog, 200);
@@ -186,12 +186,12 @@ class BoxController extends Controller
             $query = BoxLogs::where('box_id', $id);
 
             if ($request->has('from_month') && $request->has('to_month')) {
-    
+
                 $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
                 $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
                 $query->whereBetween('created_at', [$startDate, $endDate]);
             }
-    
+
             $boxs = $query->get();
             return response()->json($boxs, 200);
     }
@@ -223,7 +223,7 @@ class BoxController extends Controller
                 'errors' => $validateInitial->errors()
             ], 403);
         }
-        
+
         $boxLog = BoxLogs::where('box_id', $request->input('box_id'))->get()->last();
 
         if($boxLog == null)
@@ -285,7 +285,8 @@ class BoxController extends Controller
         else
         {
             $validateLater = Validator::make($request->all(), [
-                'close_amount' => 'required|numeric|min:0'
+                'close_amount' => 'required|numeric|min:0',
+                'cash_amount' => 'required'
             ]);
 
             if($validateLater->fails())
@@ -298,6 +299,7 @@ class BoxController extends Controller
             }
 
             $boxLog->close_amount = $request->input('close_amount');
+            $boxLog->cash_amount = $request->input('cash_amount');
             $boxLog->close_by = Auth::user()->id;
             $boxLog->close_time = Carbon::now();
 

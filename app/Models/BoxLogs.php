@@ -10,5 +10,5 @@ class BoxLogs extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'box_logs';
-    protected $fillable = ['box_id','open_amount','open_time','open_by','close_by','close_time','close_amount', 'collected_amount'];
+    protected $fillable = ['box_id','open_amount','open_time','open_by','close_by','close_time','close_amount','cash_amount', 'collected_amount'];
 }
