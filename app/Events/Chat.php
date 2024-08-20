@@ -10,22 +10,22 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class CardClick implements ShouldBroadcast
+class Chat implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $card_id;
-    public $selected;
+    public $username;
+    public $message;
 
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct($card_id, $selected)
+    public function __construct($username,$message)
     {
-        $this->card_id = $card_id;
-        $this->selected = $selected;
+        $this->username = $username;
+        $this->message = $message;
     }
 
     /**
@@ -35,6 +35,6 @@ class CardClick implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return new Channel('chatMessage');
+        return new Channel('chatApplication');
     }
 }

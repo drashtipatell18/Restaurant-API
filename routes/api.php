@@ -12,7 +12,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletLogController;
 use App\Http\Controllers\BoxController;
-use App\Http\Controllers\BoxSelectedController;
+use App\Http\Controllers\ChatAppController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GroupController;
@@ -175,4 +175,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
 
 
-    Route::post('brodcastCardClicked',[BoxSelectedController::class,'cardClicked'])->name('broadcast.cardclicked');
+    Route::post('brodcastCardClicked',[ChatAppController::class,'cardClicked'])->name('broadcast.cardclicked');
