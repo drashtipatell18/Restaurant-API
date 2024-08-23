@@ -83,73 +83,139 @@ class ItemController extends Controller
         ]);
     }
 
-    public function updateItem(Request $request, $id)
-    {
-        $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if($role != "admin")
-        {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorised'
-            ], 405);
-        }
+    // public function updateItem(Request $request, $id)
+    // {
+    //     $role = Role::where('id', Auth::user()->role_id)->first()->name;
+    //     if($role != "admin")
+    //     {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Unauthorised'
+    //         ], 405);
+    //     }
 
-        $validateRequest = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'production_center_id' => 'required|exists:production_centers,id',
-            'cost_price' => 'required|numeric|min:1',
-            'sale_price' => 'required|numeric|min:1',
-            'family_id' => 'required|exists:families,id',
-            'sub_family_id' => 'required|exists:subfamilies,id',
-            'photo' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
-        ]);
+    //     $validateRequest = Validator::make($request->all(), [
+    //         'name' => 'required|string|max:255',
+    //         'production_center_id' => 'required|exists:production_centers,id',
+    //         'cost_price' => 'required|numeric|min:1',
+    //         'sale_price' => 'required|numeric|min:1',
+    //         'family_id' => 'required|exists:families,id',
+    //         'sub_family_id' => 'required|exists:subfamilies,id',
+    //         'photo' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
+    //     ]);
 
-        if($validateRequest->fails())
-        {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
-            ], 403);
-        }
+    //     if($validateRequest->fails())
+    //     {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation fails',
+    //             'errors' => $validateRequest->errors()
+    //         ], 403);
+    //     }
 
-        $item = Item::find($id);
-        if($item == null)
-        {
-            return response()->json([
-                'success' => false,
-                'message' => 'Incorrect item id'
-            ], 403);
-        }
+    //     $item = Item::find($id);
+    //     if($item == null)
+    //     {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Incorrect item id'
+    //         ], 403);
+    //     }
 
-        $item->name = $request->name;
-        $item->production_center_id = $request->production_center_id;
-        $item->cost_price = $request->cost_price;
-        $item->sale_price = $request->sale_price;
-        $item->family_id = $request->family_id;
-        $item->sub_family_id = $request->sub_family_id;
+    //     $item->name = $request->name;
+    //     $item->production_center_id = $request->production_center_id;
+    //     $item->cost_price = $request->cost_price;
+    //     $item->sale_price = $request->sale_price;
+    //     $item->family_id = $request->family_id;
+    //     $item->sub_family_id = $request->sub_family_id;
 
-        if ($request->hasFile('photo'))
-        {
-            $image = $request->file('photo');
-            $filename = time() . '.' . $image->getClientOriginalExtension();
-            $image->move(public_path('images'), $filename);
+    //     if ($request->hasFile('photo'))
+    //     {
+    //         $image = $request->file('photo');
+    //         $filename = time() . '.' . $image->getClientOriginalExtension();
+    //         $image->move(public_path('images'), $filename);
 
-            $item->image = $filename;
-        }
-        if(isset($request->description) && !empty($request->description))
-        {
-            $item->description = $request->description;
-        }
+    //         $item->image = $filename;
+    //     }
+    //     if(isset($request->description) && !empty($request->description))
+    //     {
+    //         $item->description = $request->description;
+    //     }
 
-        $item->save();
+    //     $item->save();
 
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Item updated successfully',
+    //         'item' => $item
+    //     ], 200);
+    // }
+
+    public function UpdateItem(Request $request, $id)
+{
+    $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+    if ($role != "admin" && $role != "cashier" && $role != "waitress") {
         return response()->json([
-            'success' => true,
-            'message' => 'Item updated successfully',
-            'item' => $item
-        ], 200);
+            'success' => false,
+            'message' => 'Unauthorised'
+        ], 401);
     }
+
+    $validateRequest = Validator::make($request->all(), [
+        'order_id' => 'required|exists:order_masters,id',
+        'order_details' => 'nullable|array', // Changed 'required' to 'nullable'
+        'transaction_code' => 'nullable|boolean'
+    ]);
+
+    if ($validateRequest->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation fails',
+            'errors' => $validateRequest->errors()
+        ], 403);
+    }
+
+    $order = OrderMaster::find($request->input('order_id'));
+
+    // Generate and update unique transaction code if requested
+    if ($request->input('transaction_code', false)) {
+        do {
+            $transactionCode = rand(100000, 999999); // Generate a 6-digit number
+        } while (OrderMaster::where('transaction_code', $transactionCode)->exists()); // Check for uniqueness
+
+        $order->transaction_code = $transactionCode; // Assign unique code
+        $order->save();
+    }
+
+    $responseData = ["order" => $order, "order_details" => []];
+
+    if ($request->has('order_details')) {
+        foreach ($request->order_details as $order_detail) {
+            $item = Item::find($order_detail['item_id']);
+            $detail = OrderDetails::find($id); // Ensure this is the correct ID for the order detail
+
+            if ($detail) { // Check if detail is found
+                $detail->update([
+                    'order_master_id' => $order->id,
+                    'item_id' => $order_detail['item_id'],
+                    'quantity' => $order_detail['quantity'],
+                    'amount' => $item->sale_price,
+                    'cost' => $item->cost_price,
+                ]);
+
+                array_push($responseData['order_details'], $detail);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order detail not found for ID: ' . $id
+                ], 404); // Return a 404 error if the detail is not found
+            }
+        }
+    }
+
+    return response()->json($responseData, 200);
+}
+
 
     public function deleteItem($id)
     {
