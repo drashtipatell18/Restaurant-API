@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Boxs;
 use App\Models\OrderDetails;
 use App\Models\OrderMaster;
+use App\Models\Payment;
 use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
@@ -196,11 +197,67 @@ class BoxController extends Controller
             return response()->json($boxs, 200);
     }
 
-    public function GetAllBoxLog($id){
-        $boxlogs = BoxLogs::find($id);
-        return response()->json($boxlogs, 200);
+    // public function GetAllBoxLog($id){
+    //     $boxlogs = BoxLogs::find($id);
+    //     return response()->json($boxlogs, 200);
 
-    }
+    // }
+    public function GetAllBoxLog(Request $request, $id)
+{
+    // Validate incoming request
+    $request->validate([
+        'payment_id' => 'nullable|exists:payments,id',
+        'order_master_id' => 'nullable|exists:order_masters,id',
+    ]);
+
+    // Fetch the box logs
+    $boxLogs = BoxLogs::where('id', $id)->get()->map(function($boxLog) use ($request) {
+        // Insert or update payment and order master IDs if provided
+        if ($request->has('payment_id')) {
+            $boxLog->payment_id = $request->input('payment_id');
+        }
+        if ($request->has('order_master_id')) {
+            $boxLog->order_master_id = $request->input('order_master_id');
+        }
+
+        // Assuming boxLog has a relation to OrderMaster
+        $order = OrderMaster::find($boxLog->order_master_id); // Fetch the related order
+
+        if ($order) {
+            $customer = User::find($order->user_id);
+            $boxLog->customer = $customer ? $customer->name : null;
+
+            $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
+            $boxLog->items = $orderDetails;
+
+            $total = 0;
+            foreach ($orderDetails as $detail) {
+                $detail->total = $detail->quantity * $detail->amount;
+                $total += $detail->total;
+            }
+            $boxLog->order_total = $total;
+
+            // Adding tip, discount, and delivery cost
+            $boxLog->tip = $order->tip; // Assuming tip is a field in OrderMaster
+            $boxLog->discount = $order->discount; // Assuming discount is a field in OrderMaster
+            $boxLog->delivery_cost = $order->delivery_cost; // Assuming delivery_cost is a field in OrderMaster
+
+            // Fetching payment details
+            $payment = Payment::where('order_master_id', $order->id)->first(); // Assuming Payment model exists
+            $boxLog->payment_id = $payment ? $payment->id : null;
+            $boxLog->payment_type = $payment ? $payment->type : null; // Assuming 'type' is a field in Payment
+            $boxLog->payment_amount = $payment ? $payment->amount : null; // Assuming 'amount' is a field in Payment
+
+            // Set open and close times
+            $boxLog->open_time = $boxLog->open_time; // Assuming these fields exist in BoxLogs
+            $boxLog->close_time = $boxLog->close_time; // Assuming these fields exist in BoxLogs
+        }
+
+        return $boxLog;
+    });
+
+    return response()->json($boxLogs, 200);
+}
     public function BoxStatusChange(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;

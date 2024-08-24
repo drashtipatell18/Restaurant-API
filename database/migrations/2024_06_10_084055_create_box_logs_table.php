@@ -21,11 +21,16 @@ return new class extends Migration
             $table->dateTime('close_time')->nullable();
             $table->decimal('close_amount',10,2)->nullable();
             $table->decimal('collected_amount', 10, 2)->nullable();
+            $table->unsignedBigInteger('                        ')->nullable(); 
+            $table->unsignedBigInteger('order_master_id')->nullable(); 
             $table->timestamps();
             $table->softDeletes();
             $table->foreign('box_id')->references('id')->on('boxs')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('open_by')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade'); 
-             $table->foreign('close_by')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('close_by')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('payment_id')->references('id')->on('payments')->onUpdate('cascade')->onDelete('cascade'); 
+            $table->foreign('order_master_id')->references('id')->on('order_masters')->onUpdate('cascade')->onDelete('cascade'); 
+
         });
     }
 
