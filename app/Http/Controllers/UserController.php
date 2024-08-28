@@ -180,7 +180,7 @@ class UserController extends Controller
             $users->save();
 
             // Send the registration confirmation email to the user
-            Mail::to($users->email)->send(new UpdateConfirmation($user, $request->password));
+            Mail::to($users->email)->send(new UpdateConfirmation($users, $request->password));
 
             // Return JSON response with success message and user data
             return response()->json([

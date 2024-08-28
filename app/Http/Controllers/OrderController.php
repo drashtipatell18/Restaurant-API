@@ -28,7 +28,7 @@ class OrderController extends Controller
 
 
 
-    
+
     public function placeOrder(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
@@ -70,7 +70,7 @@ class OrderController extends Controller
             'delivery_cost' => $request->order_master['delivery_cost'],
             'customer_name' =>  $request->order_master['customer_name'],
             'person' =>  $request->order_master['person'],
-            'reason' => $request->order_master['reason']
+            // 'reason' => $request->order_master['reason']
         ];
 
         if ($role == "cashier") {
@@ -134,6 +134,24 @@ class OrderController extends Controller
             $log = BoxLogs::where('box_id', $box->id)->get()->last();
 
             $log->collected_amount += $totalAmount;
+
+            if(empty($log->order_master_id))
+            {
+                $log->order_master_id = $order->id;
+            }
+            else
+            {
+                $log->order_master_id .= "," . $order->id;
+            }
+
+            if(empty($log->payment_id))
+            {
+                $log->payment_id = $order->payment_type;
+            }
+            else
+            {
+                $log->payment_id .= "," . $order->payment_type;
+            }
 
             $log->save();
         }
@@ -233,7 +251,7 @@ class OrderController extends Controller
             $order->update([
                 'reason' => $request->input('reason')
             ]);
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Reason updated successfully.',
@@ -246,7 +264,7 @@ class OrderController extends Controller
             ], 404);
         }
     }
-    
+
     public function getAll(Request $request)
     {
         // $role = Role::where('id',Auth()->user()->role_id)->first()->name;

@@ -4,7 +4,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class RegistrationConfirmation extends Mailable
+class UpdateConfirmation extends Mailable
 {
     use Queueable, SerializesModels;
 
