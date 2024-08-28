@@ -50,7 +50,8 @@ class OrderController extends Controller
             'payment_type' => 'required|in:cash,debit,credit,transfer',
             'status' => 'required|in:received,prepared,delivered,finalized',
             'discount' => 'required|min:0',
-            'delivery_cost' => 'required|min:0'
+            'delivery_cost' => 'required|min:0',
+            'transaction_code' => 'boolean'
         ]);
 
         if ($validateRequest->fails())
@@ -68,10 +69,18 @@ class OrderController extends Controller
             'status' => $request->order_master['status'],
             'discount' => $request->order_master['discount'],
             'delivery_cost' => $request->order_master['delivery_cost'],
-            'customer_name' =>  $request->order_master['customer_name'],
-            'person' =>  $request->order_master['person'],
-            // 'reason' => $request->order_master['reason']
+            'customer_name' => $request->order_master['customer_name'],
+            'person' => $request->order_master['person'],
+            'reason' => $request->order_master['reason']
         ];
+
+        if (isset($request->order_master['transaction_code']) && $request->order_master['transaction_code'] === true) {
+            do {
+                $code = str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            } while (OrderMaster::where('transaction_code', $code)->exists());
+
+            $orderMaster['transaction_code'] = $code;
+        }
 
         if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
@@ -146,11 +155,11 @@ class OrderController extends Controller
 
             if(empty($log->payment_id))
             {
-                $log->payment_id = $order->payment_type;
+                $log->payment_id = $order->payment_id;
             }
             else
             {
-                $log->payment_id .= "," . $order->payment_type;
+                $log->payment_id .= "," . $order->payment_id;
             }
 
             $log->save();
@@ -216,7 +225,8 @@ class OrderController extends Controller
 
         $validateRequest = Validator::make($request->all(), [
             'order_id' => 'required|exists:order_masters,id',
-            'order_details' => 'required|array'
+            'order_details' => 'nullable|array', // Changed 'required' to 'nullable'
+            'transaction_code' => 'nullable|boolean'
         ]);
 
         if ($validateRequest->fails()) {
@@ -228,19 +238,40 @@ class OrderController extends Controller
         }
 
         $order = OrderMaster::find($request->input('order_id'));
-        $responseData = ["order" => $order, "order_details" => []];
-        foreach ($request->order_details as $order_detail) {
-            $item = Item::find($order_detail['item_id']);
-            $detail = OrderDetails::find($id);
-            $detail->update([
-                'order_master_id' => $order->id,
-                'item_id' => $order_detail['item_id'],
-                'quantity' => $order_detail['quantity'],
-                'amount' => $item->sale_price,
-                'cost' => $item->cost_price,
-            ]);
 
-            array_push($responseData['order_details'], $detail);
+        if ($request->input('transaction_code', false)) {
+            do {
+                $transactionCode = rand(100000, 999999); // Generate a 6-digit number
+            } while (OrderMaster::where('transaction_code', $transactionCode)->exists()); // Check for uniqueness
+
+            $order->transaction_code = $transactionCode; // Assign unique code
+            $order->save();
+        }
+
+        $responseData = ["order" => $order, "order_details" => []];
+
+        if ($request->has('order_details')) {
+            foreach ($request->order_details as $order_detail) {
+                $item = Item::find($order_detail['item_id']);
+                $detail = OrderDetails::find($id); // Ensure this is the correct ID for the order detail
+
+                if ($detail) { // Check if detail is found
+                    $detail->update([
+                        'order_master_id' => $order->id,
+                        'item_id' => $order_detail['item_id'],
+                        'quantity' => $order_detail['quantity'],
+                        'amount' => $item->sale_price,
+                        'cost' => $item->cost_price,
+                    ]);
+
+                    array_push($responseData['order_details'], $detail);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Order detail not found for ID: ' . $id
+                    ], 404); // Return a 404 error if the detail is not found
+                }
+            }
         }
 
         return response()->json($responseData, 200);
@@ -489,5 +520,105 @@ class OrderController extends Controller
             'success' => true,
             'order' => $lastOrder
         ], 200);
+    }
+
+    public function orderUpdateItem(Request $request, $order_id)
+    {
+        // Check user role for authorization
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Validate the request data
+        $validateRequest = Validator::make($request->all(), [
+            'order_details' => 'nullable|array',
+            'order_details.*.item_id' => 'required_with:order_details|exists:items,id',
+            'order_details.*.quantity' => 'required_with:order_details|integer|min:1',
+            'tip' => 'nullable|numeric|min:0',
+            'payment_type' => 'nullable|string',
+            'transaction_code' => 'nullable|boolean'
+        ]);
+
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        // Find the order using the order_id from the URL
+        $order = OrderMaster::find($order_id);
+
+        // Check if the order exists
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+
+        // Update tip and payment_type if provided
+        $orderUpdateData = [];
+        if ($request->has('tip')) {
+            $orderUpdateData['tip'] = $request->input('tip');
+        }
+        if ($request->has('payment_type')) {
+            $orderUpdateData['payment_type'] = $request->input('payment_type');
+        }
+
+        // Generate and update transaction code if requested
+        if ($request->input('transaction_code') === true) {
+            do {
+                $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            } while (OrderMaster::where('transaction_code', $code)->exists());
+
+            $orderUpdateData['transaction_code'] = $code;
+        }
+
+        if (!empty($orderUpdateData)) {
+            $order->update($orderUpdateData);
+        }
+
+        // Prepare response data
+        $responseData = ["order" => $order, "order_details" => []];
+
+        // Handle order details if provided
+        if ($request->has('order_details')) {
+            // Get the item IDs from the request
+            $requestedItemIds = collect($request->input('order_details'))->pluck('item_id')->toArray();
+
+            // Remove existing order details that are not in the request
+            OrderDetails::where('order_master_id', $order->id)
+                ->whereNotIn('item_id', $requestedItemIds)
+                ->delete();
+
+            // Loop through the order details from the request
+            foreach ($request->input('order_details') as $order_detail) {
+                // Find the existing detail or create a new one
+                $detail = OrderDetails::updateOrCreate(
+                    [
+                        'order_master_id' => $order->id,
+                        'item_id' => $order_detail['item_id']
+                    ],
+                    [
+                        'quantity' => $order_detail['quantity']
+                    ]
+                );
+
+                // Add the updated or newly created detail to the response
+                $responseData['order_details'][] = $detail;
+            }
+        } else {
+            // If no order details provided, fetch existing ones for the response
+            $responseData['order_details'] = $order->orderDetails;
+        }
+
+        // Return the response
+        return response()->json($responseData, 200);
     }
 }
