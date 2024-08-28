@@ -327,6 +327,10 @@ class OrderController extends Controller
             $filter[] = "finalized";
             $flag = true;
         }
+        if ($request->has('cancelled') && $request->query('cancelled') == "yes") {
+            $filter[] = "cancelled";
+            $flag = true;
+        }
 
         if ($flag) {
             $orders = $orders->whereIn('status', $filter)->all();
