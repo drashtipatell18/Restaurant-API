@@ -322,16 +322,34 @@ class UserController extends Controller
             $payment->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
         }
 
+        $totalOrdersCount = $orders->count();
+
+        $totalDays = 0;
+
+        if ($request->has('duration')) {
+            $duration = $request->input('duration');
+            if ($duration === 'month') {
+                $totalDays = now()->copy()->month($request->input('month'))->daysInMonth;
+            } elseif ($duration === 'week') {
+                $totalDays = 7; // A week has 7 days
+            } elseif ($duration === 'day') {
+                $totalDays = 1; // For a single day
+            }
+        } else {
+            $totalDays = 365; // Default to 1 year if no duration is provided
+        }
+
         $sale = $payment->sum('amount');
         $returns = $payment->sum('return');
 
-
+        $totalAverage = $totalDays > 0 ? $totalOrdersCount / $totalDays : 0;
         $statisticalData = [
             "total_orders_count" => $orders->count(),
             "total_orders" => $orders->get(),
             "total_payments" => $payment->get(),
             "total_income" => $sale - $returns,
-            "delivery_orders" => $orders->where('order_type', 'delivery')->count()
+            "delivery_orders" => $orders->where('order_type', 'delivery')->count(),
+            "total_average" => $totalAverage
         ];
 
         return response()->json(['statistical_data' => $statisticalData], 200);
