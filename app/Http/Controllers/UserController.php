@@ -342,7 +342,8 @@ class UserController extends Controller
         $sale = $payment->sum('amount');
         $returns = $payment->sum('return');
 
-        $totalAverage = $totalDays > 0 ? $totalOrdersCount / $totalDays : 0;
+        $totalAverage =( $sale - $returns )/ $totalDays;
+
         $statisticalData = [
             "total_orders_count" => $orders->count(),
             "total_orders" => $orders->get(),
