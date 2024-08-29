@@ -188,7 +188,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     // Chat Application
-    Route::get('login',[ChatAppController::class,'chatLoggin'])->name('chat.loggin');
-    Route::post('/brodcast',[ChatAppController::class,'broadcastChat'])->name('broadcast.chat');
-    Route::post('/chat',[ChatAppController::class,'chat'])->name('chat');
-    Route::get('/chat',[ChatAppController::class,'notFound'])->name('noChat');
+    // Route::get('login',[ChatAppController::class,'chatLoggin'])->name('chat.loggin');
+    // Route::post('/brodcast',[ChatAppController::class,'broadcastChat'])->name('broadcast.chat');
+    // Route::post('/chat',[ChatAppController::class,'chat'])->name('chat');
+    // Route::get('/chat',[ChatAppController::class,'notFound'])->name('noChat');

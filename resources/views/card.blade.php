@@ -4,87 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Chat App</title>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <title>Box</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        .box {
+            width: 100px;
+            height: 100px;
+            display: inline-block;
+            margin: 10px;
+            background-color: lightgray;
+            cursor: pointer;
+        }
+    </style>
 </head>
-<style>
-    .card {
-        width: 100px;
-        height: 100px;
-        background: gray;
-        margin: 5px;
-        display: inline-block;
-        cursor: pointer;
-    }
-
-    .selected {
-        background: green;
-    }
-</style>
-
 <body>
     <div class="container">
-        <h1>Welcome to My Box App</h1>
-        <div class="cards">
-            @for ($i = 1; $i <= 9; $i++)
-                <div class="card" onclick="fireClick(this)" id="card-{{ $i }}"></div>
-            @endfor
-        </div>
+        <div class="box" data-id="1"></div>
+        <div class="box" data-id="2"></div>
+        <div class="box" data-id="3"></div>
+        <div class="box" data-id="4"></div>
+        <div class="box" data-id="5"></div>
+        <div class="box" data-id="6"></div>
+        <div class="box" data-id="7"></div>
+        <div class="box" data-id="8"></div>
+        <div class="box" data-id="9"></div>
+        <div class="box" data-id="10"></div>
     </div>
-    @vite('resources/js/app.js')
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-<script>
-    function fireClick(cardElement) {
-        const cardId = $(cardElement).attr('id');
+    <script src="https://cdn.jsdelivr.net/npm/pusher-js@7.0.0/dist/web/pusher.min.js"></script>
 
-        if ($(cardElement).hasClass('selected')) {
-            $(cardElement).removeClass('selected');
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.11.3/dist/echo.iife.js"></script>
 
-            $.ajax({
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            url: '{{ route('broadcast.cardclicked') }}',
-            type: 'POST',
-            data: {
-                card_id: cardId
-            },
-            success: function(data) {
-                console.log(data);
-            }
+    <script>
+        const defaultColor = 'lightgray';
+        const activeColor = 'green';
+        const socket = new window.Echo({
+            broadcaster: "pusher",
+            key: "GoofNBCH",
+            cluster: "mt1",
+            wsHost: window.location.hostname,
+            wsPort: 6001,
+            forceTLS: false,
+            disableStats: true,
         });
-        }
-        else{
-            $(cardElement).addClass('selected');
-            $.ajax({
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                url: '{{ route('broadcast.cardclicked') }}',
-                type: 'POST',
-                data: {
-                    card_id: cardId,
-                    selected: true
-                },
-                success: function(data) {
-                    console.log(data);
-                }
-            });
-        }
-    }
-    setTimeout(() => {
-        window.Echo.channel('chatMessage').listen('CardClick', (event)=> {
-    const cardElement = document.getElementById(event.card_id);
-        if (cardElement) {
-            if (event.selected) {
-                $(cardElement).addClass('selected');
-            } else {
-                $(cardElement).removeClass('selected');
-            }
-        }
-    });
-    }, 1000);
 
-</script>
+        const boxes = document.querySelectorAll('.box');
+        fetch('/api/initialState')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(box => {
+                    const element = document.querySelector(`.box[data-id="${box.card_id}"]`);
+                    element.style.backgroundColor = box.selected ? activeColor : defaultColor;
+                });
+            });
+
+
+        socket.channel('box-channel')
+            .listen('.CardClick', (e) => {
+                const box = document.querySelector(`.box[data-id="${e.card_id}"]`);
+                box.style.backgroundColor = e.selected ? activeColor : defaultColor;
+            });
+
+        boxes.forEach(box => {
+            box.addEventListener('click', () => {
+                const cardId = box.getAttribute('data-id');
+                const isSelected = box.style.backgroundColor === activeColor;
+                const newSelected = !isSelected;
+
+                box.style.backgroundColor = newSelected ? activeColor : defaultColor;
+
+                fetch('/api/brodcastCardClicked', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ card_id: cardId, selected: newSelected })
+                });
+            });
+        });
+    </script>
 </body>
 </html>

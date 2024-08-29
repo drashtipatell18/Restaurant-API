@@ -9,6 +9,7 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 
 class CardClick implements ShouldBroadcast
 {
@@ -19,22 +20,22 @@ class CardClick implements ShouldBroadcast
 
     /**
      * Create a new event instance.
-     *
-     * @return void
      */
     public function __construct($card_id, $selected)
     {
         $this->card_id = $card_id;
         $this->selected = $selected;
+
+        Cache::put('box-' . $card_id, ['card_id' => $card_id, 'selected' => $selected], 36000);
     }
 
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return \Illuminate\Broadcasting\Channel|array
-     */
     public function broadcastOn()
     {
-        return new Channel('chatMessage');
+        return new Channel('box-channel');
+    }
+
+    public function broadcastAs()
+    {
+        return 'CardClick';
     }
 }
