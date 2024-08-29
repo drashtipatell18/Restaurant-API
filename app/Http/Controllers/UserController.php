@@ -349,8 +349,10 @@ class UserController extends Controller
             "total_orders" => $orders->get(),
             "total_payments" => $payment->get(),
             "total_income" => $sale - $returns,
-            "delivery_orders" => $orders->where('order_type', 'delivery')->count(),
-            "total_average" => $totalAverage
+            "delivery_orders_count" => $orders->where('status', 'delivered')->count(),
+             "delivery_orders" => $orders->where('status', 'delivered')->get(),
+             "total_average" => $totalAverage,
+             "total_days" => $totalDays
         ];
 
         return response()->json(['statistical_data' => $statisticalData], 200);
