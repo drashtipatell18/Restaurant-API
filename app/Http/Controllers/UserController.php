@@ -329,6 +329,7 @@ class UserController extends Controller
         $statisticalData = [
             "total_orders_count" => $orders->count(),
             "total_orders" => $orders->get(),
+            "total_payments" => $payment->get(),
             "total_income" => $sale - $returns,
             "delivery_orders" => $orders->where('order_type', 'delivery')->count()
         ];
