@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Mail\RegistrationConfirmation;
 use App\Mail\UpdateConfirmation;
+use App\Models\Payment;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -301,35 +302,39 @@ class UserController extends Controller
         }
 
         $orders = OrderMaster::query();
+        $payment = Payment::query();
 
         $orderDetails = OrderDetails::query();
 
         if ($request->input('duration') == "month") {
             $orders->whereMonth('created_at', $request->input('month'));
             $orderDetails->whereMonth('created_at', $request->input('month'));
+            $payment->whereMonth('created_at', $request->input('month'));
         } elseif ($request->input('duration') == "day") {
             $orders->whereDate('created_at', $request->input('day'));
             $orderDetails->whereDate('created_at', $request->input('day'));
+            $payment->whereDate('created_at', $request->input('day'));
         } elseif ($request->input('duration') == "week") {
             $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
             $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
             $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
             $orderDetails->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
+            $payment->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
         }
 
-        $sale = $orderDetails->sum(DB::raw('amount * quantity'));
-        $cost = $orderDetails->sum(DB::raw('cost * quantity'));
+        $sale = $payment->sum('amount');
+        $returns = $payment->sum('return');
+
 
         $statisticalData = [
             "total_orders_count" => $orders->count(),
             "total_orders" => $orders->get(),
-            "total_income" => $sale - $cost,
+            "total_income" => $sale - $returns,
             "delivery_orders" => $orders->where('order_type', 'delivery')->count()
         ];
 
         return response()->json(['statistical_data' => $statisticalData], 200);
     }
-
 
     public function getPaymentMethods(Request $request)
     {
@@ -354,23 +359,26 @@ class UserController extends Controller
 
 
         // Filter by month, day, or week based on the 'duration' input
-        if ($request->input('duration') == "month") {
-            $orders->whereMonth('created_at', $request->input('month'));
-        } elseif ($request->input('duration') == "day") {
-            $orders->whereDate('created_at', $request->input('day'));
-        } elseif ($request->input('duration') == "week") {
-            $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
-            $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
-            $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
+        if ($request->has('duration')) {
+            if ($request->input('duration') == "month" && $request->has('month')) {
+                $orders->whereMonth('created_at', $request->input('month'));
+            } elseif ($request->input('duration') == "day" && $request->has('day')) {
+                $orders->whereDate('created_at', $request->input('day'));
+            } elseif ($request->input('duration') == "week") {
+                $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
+                $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
+                $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
+            }
         }
 
         // Count orders by payment type
         $paymentMethods = [
-            'cash' => $orders->where('payment_type', 'cash')->count(),
-            'debit' => $orders->where('payment_type', 'debit')->count(),
-            'credit' => $orders->where('payment_type', 'credit')->count(),
-            'transfer' => $orders->where('payment_type', 'transfer')->count()
+            'cash' => $orders->clone()->where('payment_type', 'cash')->count(),
+            'debit' => $orders->clone()->where('payment_type', 'debit')->count(),
+            'credit' => $orders->clone()->where('payment_type', 'credit')->count(),
+            'transfer' => $orders->clone()->where('payment_type', 'transfer')->count()
         ];
+
 
         // Return the payment methods data as a JSON response
         return response()->json(['payment_methods' => $paymentMethods], 200);
