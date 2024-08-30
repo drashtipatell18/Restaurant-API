@@ -41,6 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/getPopularProducts', [UserController::class, 'getPopularProducts']);
     Route::post('/getBoxEntry', [UserController::class, 'getBoxEntry']);
     Route::post('/cancelOrders', [UserController::class, 'cancelOrders']);
+    Route::post('/getdelivery', [UserController::class, 'getDelivery']);
+
 
 
     // Roles Routes

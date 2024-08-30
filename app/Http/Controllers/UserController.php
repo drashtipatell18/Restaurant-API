@@ -284,6 +284,47 @@ class UserController extends Controller
         return response()->json($users, 200);
     }
 
+    public function getDelivery(Request $request)
+    {
+        $validateRequest = Validator::make($request->all(), [
+            'duration' => 'in:day,week,month',
+            'day' => 'date', // Validate day as a date
+            'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
+        ]);
+
+        // Return an error response if validation fails
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+        $orders = OrderMaster::query();
+
+        if ($request->has('duration')) {
+            if ($request->input('duration') == "month" && $request->has('month')) {
+                $orders->whereMonth('created_at', $request->input('month'));
+            } elseif ($request->input('duration') == "day" && $request->has('day')) {
+                $orders->whereDate('created_at', $request->input('day'));
+            } elseif ($request->input('duration') == "week") {
+                $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
+                $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
+                $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
+            }
+        }
+
+        $deliveryMethods = [
+            'delivery' => $orders->clone()->where('order_type', 'delivery')->count(),
+            'withdrawal' => $orders->clone()->where('order_type', 'withdrawal')->count(),
+            'local' => $orders->clone()->where('order_type', 'local')->count(),
+            'platform' => $orders->clone()->where('order_type', 'platform')->count()
+        ];
+
+        return response()->json(['delivery_methods' => $deliveryMethods], 200);
+
+
+    }
 
     public function getStatisticalData(Request $request)
     {
@@ -541,8 +582,8 @@ class UserController extends Controller
         //     ->groupBy('order_details.item_id', 'items.name', 'items.image')
         //     ->orderBy('order_count', 'desc');
          $orderDetailsQuery = OrderDetails::select(
-            'items.name', 
-            'items.image', 
+            'items.name',
+            'items.image',
             'order_details.amount', // Include the amount from order_details
             DB::raw('COUNT(order_details.item_id) as order_count')
         )
@@ -565,7 +606,7 @@ class UserController extends Controller
 
         return response()->json(['popular_products' => $mostOrderedItems], 200);
     }
-    
+
     public function getBoxEntry(Request $request)
     {
 
