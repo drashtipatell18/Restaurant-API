@@ -84,8 +84,17 @@ class OrderController extends Controller
         }
 
         if ($role == "cashier") {
-            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $box = Boxs::where('user_id', Auth::user()->id)->first();
+            if (!$box) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Box not found'
+                ], 403);
+            }
+
             $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+
+
 
             if ($log == null) {
                 return response()->json([
@@ -139,9 +148,6 @@ class OrderController extends Controller
             ]);
 
             $totalAmount += $item->sale_price * $order_detail['quantity'];
-
-
-
             array_push($response['order_details'], $orderDetail);
         }
 
@@ -149,7 +155,8 @@ class OrderController extends Controller
 
         if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
-            $log = BoxLogs::where('box_id', $box->id)->get()->last();
+
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
 
             $log->collected_amount += $totalAmount;
 
@@ -164,7 +171,7 @@ class OrderController extends Controller
 
             if(empty($log->payment_id))
             {
-                $log->payment_id = $order->payment_id;
+                $log->payment_id = $payment ? $payment->id : null;
             }
             else
             {
@@ -297,10 +304,6 @@ class OrderController extends Controller
             'message' => 'Credit Note deleted successfully'
         ]);
     }
-
-
-
-
 
     public function addItem(Request $request)
     {
