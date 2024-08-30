@@ -16,4 +16,9 @@ class Item extends Model
     {
         return $this->belongsToMany(Menu::class, 'item__menu__joins', 'item_id', 'menu_id');
     }
+
+    public function returnItems()
+    {
+        return $this->hasMany(ReturnItem::class, 'item_id');
+    }
 }

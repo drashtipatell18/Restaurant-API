@@ -13,6 +13,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Models\CreditNot;
+use App\Models\Payment;
+use App\Models\ReturnItem;
 
 class OrderController extends Controller
 {
@@ -25,8 +28,6 @@ class OrderController extends Controller
             'logs' => $orderLogs
         ], 200);
     }
-
-
 
 
     public function placeOrder(Request $request)
@@ -69,9 +70,9 @@ class OrderController extends Controller
             'status' => $request->order_master['status'],
             'discount' => $request->order_master['discount'],
             'delivery_cost' => $request->order_master['delivery_cost'],
-            'customer_name' => $request->order_master['customer_name'],
-            'person' => $request->order_master['person'],
-            'reason' => $request->order_master['reason']
+            // 'customer_name' => $request->order_master['customer_name'],
+            // 'person' => $request->order_master['person'],
+            // 'reason' => $request->order_master['reason']
         ];
 
         if (isset($request->order_master['transaction_code']) && $request->order_master['transaction_code'] === true) {
@@ -84,7 +85,7 @@ class OrderController extends Controller
 
         if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
-            $log = BoxLogs::where('box_id', $box->id)->get()->last();
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
 
             if ($log == null) {
                 return response()->json([
@@ -119,6 +120,10 @@ class OrderController extends Controller
             $orderMaster['box_id'] = Boxs::where('user_id', Auth::user()->id)->get()->first()->id;
         }
 
+        $paymentType = $request->order_master['payment_type']; // This could be 'debit', 'credit', etc.
+        $payment = Payment::where('type', $paymentType)->first();
+
+
         $order = OrderMaster::create($orderMaster);
         $response = ["order_master" => $order, "order_details" => []];
         $totalAmount = 0;
@@ -129,14 +134,18 @@ class OrderController extends Controller
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
-                'notes' =>  $order_detail['notes'],
+                // 'notes' =>  $order_detail['notes'],
                 'quantity' => $order_detail['quantity']
             ]);
 
             $totalAmount += $item->sale_price * $order_detail['quantity'];
 
+
+
             array_push($response['order_details'], $orderDetail);
         }
+
+
 
         if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
@@ -171,6 +180,127 @@ class OrderController extends Controller
             'details' => $response
         ], 200);
     }
+
+    public function getCredit()
+    {
+        // Retrieve all credit notes
+        $creditNotes = CreditNot::with('returnItems')->get();
+
+        // Return the credit notes as JSON
+        return response()->json([
+            'success' => true,
+            'data' => $creditNotes
+        ], 200);
+
+    }
+
+
+    public function creditNote(Request $request)
+    {
+        $creditNoteData = $request->input('credit_note');
+        $returnItemsData = $request->input('return_items');
+
+        // Create the credit note
+        $creditNote = CreditNot::create([
+            'order_id' => $creditNoteData['order_id'],
+            'payment_id' => $creditNoteData['payment_id'],
+            'status' => $creditNoteData['status'],
+            'name' => $creditNoteData['name'],
+            'email' => $creditNoteData['email'],
+            'code' => $creditNoteData['code'],
+            'destination' => $creditNoteData['destination'],
+            'delivery_cost' => $creditNoteData['delivery_cost'],
+            'payment_status' => $creditNoteData['payment_status'],
+        ]);
+
+        // Process return items (if you need to process them but not include in the response)
+        $returnItems = [];
+        foreach ($returnItemsData as $orderDetail) {
+                $item = Item::find($orderDetail['item_id']);
+
+                if (!$item) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Item not found'
+                    ], 404);
+                }
+
+                $cost = $orderDetail['cost'] ?? null;
+                $amount = $orderDetail['amount'] ?? null;
+                $note = $orderDetail['notes'] ?? null;
+
+                // Prepare the item details to be added to the array
+                $returnItem = ReturnItem::create([
+                    'credit_note_id' => $creditNote->id,
+                    'item_id' => $orderDetail['item_id'],
+                    'quantity' => $orderDetail['quantity'],
+                    'cost' => $cost,
+                    'amount' => $amount,
+                    'notes' => $note,
+                ]);
+
+                $returnItems[] = $returnItem;
+
+        }
+
+        // Return the response without including return_items
+        return response()->json([
+            'success' => true,
+            'credit_note' => $creditNote,
+            'return_items' => $returnItems
+        ]);
+    }
+
+    public function orderCreditUpdate(Request $request, $id)
+    {
+        $validatedData = $request->validate([
+            'status' => 'required|string',
+            'destination' => 'nullable',
+        ]);
+        $creditNote = CreditNot::find($id);
+        // dd($creditNote);
+        if (!$creditNote) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Credit Note not found'
+            ], 404);
+        }
+        $creditNote->status = $validatedData['status'];
+        $creditNote->destination = $validatedData['destination'];
+        $creditNote->save();
+        return response()->json([
+            'success' => true,
+            'message' => 'Credit Note status updated successfully',
+            'credit_note' => $creditNote
+        ]);
+    }
+
+    public function orderCreditDelete($id)
+    {
+        // Find the CreditNote by ID
+        $creditNote = CreditNot::find($id);
+
+        // Check if the CreditNote exists
+        if (!$creditNote) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Credit Note not found'
+            ], 404);
+        }
+
+        // Delete the CreditNote
+        $creditNote->delete();
+
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'Credit Note deleted successfully'
+        ]);
+    }
+
+
+
+
 
     public function addItem(Request $request)
     {
