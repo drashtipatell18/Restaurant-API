@@ -127,7 +127,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
     Route::get("/item/getSaleReport/{id}", [ItemController::class, 'getSaleReport']);
 
-
+    Route::post('/order/creditNote', [OrderController::class, 'creditNote']);
+    Route::get('/order/getCredit', [OrderController::class, 'getCredit']);
+    Route::post('/order/getCreditUpdate/{id}', [OrderController::class, 'orderCreditUpdate']);
+    Route::delete('/order/creditnotes/{id}', [OrderController::class, 'orderCreditDelete']);
 
     // Orders
     Route::post('/order/place_new', [OrderController::class, 'placeOrder']);
