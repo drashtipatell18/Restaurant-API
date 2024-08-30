@@ -477,6 +477,47 @@ class UserController extends Controller
         return response()->json(['statusSummary' => $statusSummary], 200);
     }
 
+    // public function getPopularProducts(Request $request)
+    // {
+    //     // Validate the input
+    //     $validateRequest = Validator::make($request->all(), [
+    //         'duration' => 'in:day,week,month',
+    //         'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12',
+    //         'day' => 'date',
+    //         'week' => 'integer|min:1|max:53' // Assuming week can be 1 to 53
+    //     ]);
+
+    //     if ($validateRequest->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation fails',
+    //             'errors' => $validateRequest->errors()
+    //         ], 403);
+    //     }
+
+    //     $orderDetailsQuery = OrderDetails::select('items.name', 'items.image', DB::raw('COUNT(order_details.item_id) as order_count'))
+    //         ->join('items', 'order_details.item_id', '=', 'items.id')
+    //         ->groupBy('order_details.item_id', 'items.name', 'items.image')
+    //         ->orderBy('order_count', 'desc');
+
+
+
+    //     // Apply the filter based on the duration
+    //     if ($request->input('duration') == "month") {
+    //         $orderDetailsQuery->whereMonth('order_details.created_at', $request->input('month'));
+    //     } elseif ($request->input('duration') == "day") {
+    //         $orderDetailsQuery->whereDate('order_details.created_at', $request->input('day'));
+    //     } elseif ($request->input('duration') == "week") {
+    //         $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
+    //         $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
+    //         $orderDetailsQuery->whereBetween('order_details.created_at', [$startOfWeek, $endOfWeek]);
+    //     }
+
+    //     $mostOrderedItems = $orderDetailsQuery->get();
+
+    //     return response()->json(['popular_products' => $mostOrderedItems], 200);
+    // }
+
     public function getPopularProducts(Request $request)
     {
         // Validate the input
@@ -495,12 +536,19 @@ class UserController extends Controller
             ], 403);
         }
 
-        $orderDetailsQuery = OrderDetails::select('items.name', 'items.image', DB::raw('COUNT(order_details.item_id) as order_count'))
-            ->join('items', 'order_details.item_id', '=', 'items.id')
-            ->groupBy('order_details.item_id', 'items.name', 'items.image')
-            ->orderBy('order_count', 'desc');
-
-
+        // $orderDetailsQuery = OrderDetails::select('items.name', 'items.image', DB::raw('COUNT(order_details.item_id) as order_count'))
+        //     ->join('items', 'order_details.item_id', '=', 'items.id')
+        //     ->groupBy('order_details.item_id', 'items.name', 'items.image')
+        //     ->orderBy('order_count', 'desc');
+         $orderDetailsQuery = OrderDetails::select(
+            'items.name', 
+            'items.image', 
+            'order_details.amount', // Include the amount from order_details
+            DB::raw('COUNT(order_details.item_id) as order_count')
+        )
+        ->join('items', 'order_details.item_id', '=', 'items.id')
+        ->groupBy('order_details.item_id', 'items.name', 'items.image', 'order_details.amount')
+        ->orderBy('order_count', 'desc');
 
         // Apply the filter based on the duration
         if ($request->input('duration') == "month") {
@@ -517,7 +565,7 @@ class UserController extends Controller
 
         return response()->json(['popular_products' => $mostOrderedItems], 200);
     }
-
+    
     public function getBoxEntry(Request $request)
     {
 
