@@ -73,6 +73,7 @@ class PaymentController extends Controller
             'type' => $request->input('type'),
             'amount' => $request->input('amount'),
             'return' => $request->input('return'),
+            'tax' => $request->input('tax')
         ]);
 
         $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
