@@ -71,7 +71,6 @@ class ChatAppController extends Controller
 
         $sender = auth()->user();
         $senderName = $sender->username;
-
         $chat = new Chats;
         $chat->sender_id = $sender->id;
         $chat->receiver_id = $request->receiver_id;
@@ -87,7 +86,6 @@ class ChatAppController extends Controller
         ]);
     }
 
-
     public function notFound()
     {
         return abort(404,'Not found');
@@ -95,17 +93,13 @@ class ChatAppController extends Controller
 
     public function getMessages(Request $request)
     {
-        $senderId = auth()->id();  // Authenticated user's ID
-        $receiverId = $request->receiver_id;  // ID of the selected user to chat with
-
-        // Fetch messages between the authenticated user and the selected user only
+        $senderId = auth()->id(); 
+        $receiverId = $request->receiver_id; 
         $messages = Chats::where(function ($query) use ($senderId, $receiverId) {
             $query->where('sender_id', $senderId)->where('receiver_id', $receiverId);
         })->orWhere(function ($query) use ($senderId, $receiverId) {
             $query->where('sender_id', $receiverId)->where('receiver_id', $senderId);
         })->with('sender')->orderBy('created_at', 'asc')->get();
-
-        // Add sender's username to the message object
         $messages->transform(function ($message) {
             $message->sender_name = $message->sender->username;
             return $message;
