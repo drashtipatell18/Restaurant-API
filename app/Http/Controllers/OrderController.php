@@ -169,15 +169,6 @@ class OrderController extends Controller
                 $log->order_master_id .= "," . $order->id;
             }
 
-            if(empty($log->payment_id))
-            {
-                $log->payment_id = $payment ? $payment->id : null;
-            }
-            else
-            {
-                $log->payment_id .= "," . $order->payment_id;
-            }
-
             $log->save();
         }
 

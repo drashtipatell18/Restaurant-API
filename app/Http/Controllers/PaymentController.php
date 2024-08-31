@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoxLogs;
 use Illuminate\Http\Request;
 use App\Models\Payment;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class PaymentController extends Controller
@@ -72,6 +74,17 @@ class PaymentController extends Controller
             'amount' => $request->input('amount'),
             'return' => $request->input('return'),
         ]);
+
+        $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
+        if(empty($log->payment_id))
+        {
+            $log->payment_id = $payment->id;
+        }
+        else
+        {
+            $log->payment_id .= "," . $payment->id;
+        }
+        $log->save();
 
         return response()->json([
             'success' => true,
