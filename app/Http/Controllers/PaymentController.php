@@ -77,15 +77,34 @@ class PaymentController extends Controller
         ]);
 
         $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
-        if(empty($log->payment_id))
-        {
-            $log->payment_id = $payment->id;
+        // if(empty($log->payment_id))
+        // {
+        //     $log->payment_id = $payment->id;
+        // }
+        // else
+        // {
+        //     $log->payment_id .= "," . $payment->id;
+        // }
+        // $log->save();
+
+
+        if ($log) {
+            // If payment_id is null or empty, set it to the new payment ID
+            if (empty($log->payment_id)) {
+                $log->payment_id = $payment->id;
+            } else {
+                // Append the new payment ID
+                $log->payment_id .= "," . $payment->id;
+            }
+            $log->save();
+        } else {
+            // Handle case where no log is found, if necessary
+            // Optionally create a new BoxLogs entry or handle the error
+            return response()->json([
+                'success' => false,
+                'message' => 'Box log not found for the given order_master_id.'
+            ], 404);
         }
-        else
-        {
-            $log->payment_id .= "," . $payment->id;
-        }
-        $log->save();
 
         return response()->json([
             'success' => true,
