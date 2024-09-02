@@ -26,6 +26,7 @@ return new class extends Migration
             $table->string('type')->nullable();
             $table->decimal('amount',10,2)->nullable();
             $table->decimal('return',10,2)->nullable();
+            $table->decimal('tax',10,2)->nullable();
             $table->foreign('order_master_id')->references('id')->on('order_masters')->onUpdate('cascade')->onDelete('cascade');
             $table->timestamps();
             $table->softDeletes();

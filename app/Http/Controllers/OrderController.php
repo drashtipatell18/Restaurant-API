@@ -84,8 +84,17 @@ class OrderController extends Controller
         }
 
         if ($role == "cashier") {
-            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $box = Boxs::where('user_id', Auth::user()->id)->first();
+            if (!$box) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Box not found'
+                ], 403);
+            }
+
             $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+
+
 
             if ($log == null) {
                 return response()->json([
@@ -139,9 +148,6 @@ class OrderController extends Controller
             ]);
 
             $totalAmount += $item->sale_price * $order_detail['quantity'];
-
-
-
             array_push($response['order_details'], $orderDetail);
         }
 
@@ -149,7 +155,8 @@ class OrderController extends Controller
 
         if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
-            $log = BoxLogs::where('box_id', $box->id)->get()->last();
+
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
 
             $log->collected_amount += $totalAmount;
 
@@ -160,15 +167,6 @@ class OrderController extends Controller
             else
             {
                 $log->order_master_id .= "," . $order->id;
-            }
-
-            if(empty($log->payment_id))
-            {
-                $log->payment_id = $order->payment_id;
-            }
-            else
-            {
-                $log->payment_id .= "," . $order->payment_id;
             }
 
             $log->save();
@@ -197,6 +195,9 @@ class OrderController extends Controller
 
     public function creditNote(Request $request)
     {
+        $validatedData = $request->validate([
+              'credit_note.credit_method' => 'required|string|in:credit,debit,cash,future purchase'
+        ]);
         $creditNoteData = $request->input('credit_note');
         $returnItemsData = $request->input('return_items');
 
@@ -211,6 +212,7 @@ class OrderController extends Controller
             'destination' => $creditNoteData['destination'],
             'delivery_cost' => $creditNoteData['delivery_cost'],
             'payment_status' => $creditNoteData['payment_status'],
+            'credit_method' => $creditNoteData['credit_method']
         ]);
 
         // Process return items (if you need to process them but not include in the response)
@@ -228,11 +230,13 @@ class OrderController extends Controller
                 $cost = $orderDetail['cost'] ?? null;
                 $amount = $orderDetail['amount'] ?? null;
                 $note = $orderDetail['notes'] ?? null;
+                $name = $orderDetail['name'] ?? null;
 
                 // Prepare the item details to be added to the array
                 $returnItem = ReturnItem::create([
                     'credit_note_id' => $creditNote->id,
                     'item_id' => $orderDetail['item_id'],
+                   'name' => $name,
                     'quantity' => $orderDetail['quantity'],
                     'cost' => $cost,
                     'amount' => $amount,
@@ -297,10 +301,6 @@ class OrderController extends Controller
             'message' => 'Credit Note deleted successfully'
         ]);
     }
-
-
-
-
 
     public function addItem(Request $request)
     {

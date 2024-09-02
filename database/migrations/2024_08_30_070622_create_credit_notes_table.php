@@ -20,6 +20,7 @@ return new class extends Migration
             $table->integer('code');
             $table->string('destination')->nullable();
             $table->enum('status', ['pending', 'completed'])->default('pending');
+            $table->string('credit_method');
             $table->timestamps();
             $table->foreign('order_id')->references('id')->on('order_masters')->onDelete('cascade');
             $table->foreign('payment_id')->references('id')->on('payments')->onDelete('cascade');

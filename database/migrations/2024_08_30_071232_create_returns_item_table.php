@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('credit_note_id')->nullable();
             $table->unsignedBigInteger('item_id')->nullable();
             $table->integer('quantity')->nullable();
+            $table->string('name')->nullable();
             $table->decimal('cost', 10, 2)->nullable();
             $table->decimal('amount', 10, 2)->nullable();
             $table->text('notes')->nullable();
