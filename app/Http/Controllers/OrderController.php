@@ -226,11 +226,13 @@ class OrderController extends Controller
                 $cost = $orderDetail['cost'] ?? null;
                 $amount = $orderDetail['amount'] ?? null;
                 $note = $orderDetail['notes'] ?? null;
+                $name = $orderDetail['name'] ?? null;
 
                 // Prepare the item details to be added to the array
                 $returnItem = ReturnItem::create([
                     'credit_note_id' => $creditNote->id,
                     'item_id' => $orderDetail['item_id'],
+                   'name' => $name,
                     'quantity' => $orderDetail['quantity'],
                     'cost' => $cost,
                     'amount' => $amount,

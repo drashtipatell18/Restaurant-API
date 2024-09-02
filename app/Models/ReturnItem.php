@@ -13,6 +13,7 @@ class ReturnItem extends Model
     protected $fillable = [
         'credit_note_id',
         'item_id',
+        'name',
         'quantity',
         'cost',
         'amount',
