@@ -79,4 +79,22 @@ class PaymentController extends Controller
             'message' => 'Payment added successfully.'
         ], 200);
     }
+
+    public function getPaymentById($id)
+    {
+        // Retrieve the payment record by ID
+        $payment = Payment::find($id);
+    
+        if ($payment) {
+            return response()->json([
+                'success' => true,
+                'data' => $payment
+            ], 200);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found'
+            ], 404);
+        }
+    }
 }

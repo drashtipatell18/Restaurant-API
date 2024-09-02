@@ -167,6 +167,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-payments', [PaymentController::class, 'GetPayment']);
     Route::get('/getsinglepayments/{order_master_id}', [PaymentController::class, 'getsinglePayments']);
     Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
+    Route::get('/getsinglepaymentById/{id}', [PaymentController::class, 'getPaymentById']);
 });
 
 
@@ -195,3 +196,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::post('/brodcast',[ChatAppController::class,'broadcastChat'])->name('broadcast.chat');
     // Route::post('/chat',[ChatAppController::class,'chat'])->name('chat');
     // Route::get('/chat',[ChatAppController::class,'notFound'])->name('noChat');
+
+
+    
