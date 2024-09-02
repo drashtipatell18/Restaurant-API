@@ -18,6 +18,7 @@ protected $table = "credit_notes";
         'code',
         'destination',
         'status',
+        'credit_method'
     ];
 
     public function orderMaster()

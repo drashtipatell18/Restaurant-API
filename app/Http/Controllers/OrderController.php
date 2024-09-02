@@ -195,6 +195,9 @@ class OrderController extends Controller
 
     public function creditNote(Request $request)
     {
+        $validatedData = $request->validate([
+              'credit_note.credit_method' => 'required|string|in:credit,debit,cash,future purchase'
+        ]);
         $creditNoteData = $request->input('credit_note');
         $returnItemsData = $request->input('return_items');
 
@@ -209,6 +212,7 @@ class OrderController extends Controller
             'destination' => $creditNoteData['destination'],
             'delivery_cost' => $creditNoteData['delivery_cost'],
             'payment_status' => $creditNoteData['payment_status'],
+            'credit_method' => $creditNoteData['credit_method']
         ]);
 
         // Process return items (if you need to process them but not include in the response)
