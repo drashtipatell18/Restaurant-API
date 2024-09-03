@@ -677,11 +677,9 @@ public function orderUpdateItem(Request $request, $order_id)
 
     public function getCredit()
     {
-        dd(1);
-        // Retrieve all credit notes
-        // $creditNotes = CreditNot::with('returnItems')->get();
-         $creditNotes = CreditNot::all();
-        dd($creditNotes);
+      
+        $creditNotes = CreditNot::with('returnItems')->get();
+     
 
         // Return the credit notes as JSON
         return response()->json([
