@@ -17,6 +17,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GroupController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\GroupChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -197,3 +198,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::post('/brodcast',[ChatAppController::class,'broadcastChat'])->name('broadcast.chat');
     // Route::post('/chat',[ChatAppController::class,'chat'])->name('chat');
     // Route::get('/chat',[ChatAppController::class,'notFound'])->name('noChat');
+
+
+    Route::post('group/store', [ChatAppController::class, 'storeGroup']);
+    Route::post('/add-user-to-group', [ChatAppController::class, 'addUserToGroup'])->name('chat.addUserToGroup');
+    Route::post('/remove-user-from-group', [ChatAppController::class, 'removeUserFromGroup'])->name('chat.removeUserFromGroup');

@@ -21,3 +21,12 @@ Broadcast::channel('chat.{sender_id}.{receiver_id}', function ($user, $sender_id
     // Check if the authenticated user is part of the conversation
     return (int) $user->id === (int) $sender_id || (int) $user->id === (int) $receiver_id;
 });
+
+
+Broadcast::channel('group.{groupId}', function ($user, $groupId) {
+    return $user->groups->contains($groupId);
+});
+
+Broadcast::channel('chat.{receiverId}.{userId}', function ($user, $receiverId, $userId) {
+    return (int) $user->id === (int) $receiverId;
+});

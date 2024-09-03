@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use App\Models\GroupForChat;
 
 class ChatAppController extends Controller
 {
@@ -56,8 +57,9 @@ class ChatAppController extends Controller
         }
         $users = User::where('email', '!=', $email)->get();
         Auth::login($user);
+        $groups = GroupForChat::all();
 
-        return view('chat/chatmessage')->with(['email'=> $email,'username'=>$user->username,'users' => $users]);
+        return view('chat/chatmessage')->with(['email'=> $email,'username'=>$user->username,'users' => $users,'groups'=>$groups]);
         // return response()->json(['email'=> $email, 'username'=>$user->username]);
     }
 
@@ -65,25 +67,40 @@ class ChatAppController extends Controller
     {
         $request->validate([
             'username' => 'required',
-            'receiver_id' => 'required|exists:users,id',
             'msg' => 'required'
         ]);
 
         $sender = auth()->user();
         $senderName = $sender->username;
+
+        // Create a new chat message instance
         $chat = new Chats;
         $chat->sender_id = $sender->id;
-        $chat->receiver_id = $request->receiver_id;
         $chat->message = $request->msg;
-        $chat->save();
 
-        broadcast(new Chat($sender->id, $request->receiver_id, $senderName, $request->msg));
+        // If it's a group message
+        if ($request->group_id) {
+            $chat->group_id = $request->group_id;
+            $chat->save();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Message sent successfully',
-            'data' => $chat
-        ]);
+            // Broadcast the message to the group
+            broadcast(new Chat($sender->id, null, $senderName, $request->msg, $request->group_id));
+
+            return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat]);
+        }
+
+        // If it's a private message
+        if ($request->receiver_id) {
+            $chat->receiver_id = $request->receiver_id;
+            $chat->save();
+
+            // Broadcast the message to the receiver
+            broadcast(new Chat($sender->id, $request->receiver_id, $senderName, $request->msg, null));
+
+            return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat]);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Failed to send message']);
     }
 
     public function notFound()
@@ -93,13 +110,27 @@ class ChatAppController extends Controller
 
     public function getMessages(Request $request)
     {
-        $senderId = auth()->id(); 
-        $receiverId = $request->receiver_id; 
-        $messages = Chats::where(function ($query) use ($senderId, $receiverId) {
-            $query->where('sender_id', $senderId)->where('receiver_id', $receiverId);
-        })->orWhere(function ($query) use ($senderId, $receiverId) {
-            $query->where('sender_id', $receiverId)->where('receiver_id', $senderId);
-        })->with('sender')->orderBy('created_at', 'asc')->get();
+        $groupId = $request->group_id;
+        $receiverId = $request->receiver_id;
+
+        // If group chat
+        if ($groupId) {
+            $messages = Chats::where('group_id', $groupId)
+                ->with('sender')
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
+        // If one-to-one chat
+        else {
+            $messages = Chats::where(function ($query) use ($receiverId) {
+                $query->where('sender_id', auth()->id())
+                      ->where('receiver_id', $receiverId);
+            })->orWhere(function ($query) use ($receiverId) {
+                $query->where('sender_id', $receiverId)
+                      ->where('receiver_id', auth()->id());
+            })->with('sender')->orderBy('created_at', 'asc')->get();
+        }
+
         $messages->transform(function ($message) {
             $message->sender_name = $message->sender->username;
             return $message;
@@ -112,6 +143,105 @@ class ChatAppController extends Controller
         Auth::logout();
         return redirect()->route('chat.loggin');
     }
+
+    public function storeGroup(Request $request)
+    {
+        // Validate the incoming request data
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        // Create a new group
+        $group = new GroupForChat();
+        $group->name = $request->input('name');
+        if ($request->hasFile('photo')) {
+            $file = $request->file('photo');
+            $destinationPath = public_path('group_photos');
+
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
+            $fileName = time() . '-' . $file->getClientOriginalName();
+            $file->move($destinationPath, $fileName);
+
+            $group->photo = $fileName;
+        }
+
+        $group->save();
+
+        return response()->json(['success' => true, 'group' => $group]);
+    }
+
+
+    public function addUserToGroup(Request $request)
+    {
+        $group = GroupForChat::find($request->group_id);
+
+        if (!$group) {
+            return response()->json(['status' => 'error', 'message' => 'Group not found']);
+        }
+
+        // Ensure user_id is an array
+        $userIds = (array) $request->user_id;
+
+
+        // Find users that are already in the group
+        $existingUserIds = $group->users->pluck('id')->toArray();
+
+        // Users to add
+        $newUserIds = array_diff($userIds, $existingUserIds);
+
+        // Users already in the group
+        $alreadyInGroupIds = array_intersect($userIds, $existingUserIds);
+
+
+        if (empty($newUserIds)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'All selected users are already in the group'
+            ]);
+        }
+
+        // Attach each new user to the group
+        $group->users()->syncWithoutDetaching($newUserIds);
+
+        // Build the message
+        $message = 'Users added to group';
+        if (!empty($alreadyInGroupIds)) {
+            $message .= '. Some users were already in the group.';
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $message
+        ]);
+    }
+
+
+
+
+    public function removeUserFromGroup(Request $request)
+    {
+        $request->validate([
+            'group_id' => 'required|exists:group_for_chats,id',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $group = GroupForChat::find($request->group_id);
+        $user = User::find($request->user_id);
+
+        if (!$group || !$user) {
+            return response()->json(['status' => 'error', 'message' => 'Group or user not found']);
+        }
+
+        $group->users()->detach($user->id);
+
+        return response()->json(['status' => 'success', 'message' => 'User removed from group']);
+    }
+
+
 
 
 }

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Chat Message</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url('/css/style.css') }}">
@@ -12,28 +13,46 @@
             background-color: blue !important;
             color: white !important;
         }
+        .user-selected {
+            background-color: lightblue !important;
+            color: white !important;
+        }
+        .group-selected {
+            background-color: lightgreen !important;
+            color: white !important;
+        }
     </style>
 </head>
-
 <body>
     <div class="container content">
         <div class="row">
             <div class="col-md-3">
                 <div class="list-group">
                     @foreach ($users as $u)
-                        <a href="javascript:void(0)" class="list-group-item list-group-item-action"
+                        <a href="javascript:void(0)" class="list-group-item list-group-item-action user-item"
                             data-username="{{ $u->username }}" data-id="{{ $u->id }}"
                             data-email="{{ $u->email }}" onclick="selectUser(this)">
                             {{ $u->email }}
                         </a>
                     @endforeach
                 </div>
+                <div class="list-group" style="margin-top:50px !important">
+                    @foreach ($groups as $g)
+                        <a href="javascript:void(0)" class="list-group-item list-group-item-action group-item"
+                            data-group-id="{{ $g->id }}" data-group-name="{{ $g->name }}"
+                            onclick="selectGroup(this)">
+                            {{ $g->name }}
+                        </a>
+                    @endforeach
+                </div>
             </div>
+
             <div class="col-xl-9 col-lg-12 col-md-6 col-sm-12 col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <p class="mb-0">Receiver: <span id="chat-title"></span></p>
                         <p class="mb-0">Sender: {{ $username }}</p>
+                        <p class="mb-0">Group: <span id="chat-group"></span></p>
                     </div>
                     <div class="card-body height3">
                         <ul class="chat-list" id="chat-section">
@@ -45,6 +64,7 @@
                     <div class="col-lg-11">
                         <input type="text" id="username" value="{{ $username }}" hidden class="form-control">
                         <input type="text" id="receiver_id" value="" hidden class="form-control">
+                        <input type="text" id="group_id" value="" hidden class="form-control">
                         <input type="text" id="chat_message" class="form-control" placeholder="Write a text message...">
                     </div>
                     <div class="col-lg-1 justify-content-center">
@@ -66,20 +86,29 @@
 
     <script>
         let receiverId = localStorage.getItem('receiverId') || null;
-        const userId = "{{Auth::user()->id}}"
+        let groupId = localStorage.getItem('groupId') || null;
+        const userId = "{{Auth::user()->id}}";
 
         document.addEventListener('DOMContentLoaded', function() {
             let receiverId = localStorage.getItem('receiverId');
             let receiverName = localStorage.getItem('receiverName');
+            let storedGroupId = localStorage.getItem('groupId');
+            let groupName = localStorage.getItem('groupName');
 
             if (receiverId && receiverName) {
-                // Restore the selected user and load the chat history
                 $("#receiver_id").val(receiverId);
                 $("#chat-title").text(receiverName);
-                loadMessages(receiverId);
+                $("#chat-group").text('');
+                loadMessages(receiverId, null);
+                $(`.list-group-item[data-id="${receiverId}"]`).addClass('user-selected');
+            }
 
-                // Highlight the selected user
-                $(`.list-group-item[data-id="${receiverId}"]`).addClass('selected');
+            if (storedGroupId && groupName) {
+                $("#group_id").val(storedGroupId);
+                $("#chat-group").text(groupName);
+                $("#chat-title").text('');
+                loadMessages(null, storedGroupId);
+                $(`.list-group-item[data-group-id="${storedGroupId}"]`).addClass('group-selected');
             }
         });
 
@@ -89,29 +118,68 @@
             const username = $(element).data('username');
 
             receiverId = id;
+            groupId = null;
             localStorage.setItem('receiverId', id);
             localStorage.setItem('receiverName', username);
+
             $("#receiver_id").val(id);
+            $("#group_id").val(null);
 
-            // Highlight the selected user
-            $('.list-group-item').removeClass('selected');
-            $(element).addClass('selected');
+            $('.user-item').removeClass('user-selected');
+            $('.group-item').removeClass('group-selected');
+            $(element).addClass('user-selected');
 
-            // Change the chat title to the selected user's username
             $("#chat-title").text(username);
-
-            // Clear chat history when switching users
+            $("#chat-group").text('');
             $("#chat-section").empty();
-            window.location.reload();
-            loadMessages(id);
+            
+            
+            loadMessages(id, null);
+            subscribeToChat();
         }
 
-        function loadMessages(id) {
+
+        function selectGroup(element) {
+            const groupId = $(element).data('group-id');
+            const groupName = $(element).data('group-name');
+            const isSelected = $(element).hasClass('group-selected');
+
+            if (isSelected) {
+                // Unselect the group
+                localStorage.removeItem('groupId');
+                localStorage.removeItem('groupName');
+                $("#group_id").val(null);
+                $("#chat-group").text('');
+                $("#chat-title").text('');
+                $("#chat-section").empty();
+                
+                $(element).removeClass('group-selected');
+            } else {
+                // Select the group
+                localStorage.setItem('groupId', groupId);
+                localStorage.setItem('groupName', groupName);
+                $("#group_id").val(groupId);
+                $("#chat-group").text(groupName);
+                $("#chat-title").text('');
+                $("#chat-section").empty();
+                
+                $('.group-item').removeClass('group-selected');
+                $(element).addClass('group-selected');
+
+                loadMessages(null, groupId);
+            }
+        
+            subscribeToChat();
+        }
+
+
+        function loadMessages(id = null, groupId = null) {
             $.ajax({
                 url: '{{ route('chat.messages') }}',
                 type: 'GET',
                 data: {
                     receiver_id: id,
+                    group_id: groupId,
                 },
                 success: function(data) {
                     data.forEach(message => {
@@ -151,6 +219,14 @@
         }
 
         function broadcastMethod() {
+            let receiver_id = $("#receiver_id").val();
+            let group_id = $("#group_id").val();
+
+            if (!receiver_id && !group_id) {
+                alert("Please select a user or a group to send a message.");
+                return;
+            }
+
             $.ajax({
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -159,24 +235,25 @@
                 type: 'POST',
                 data: {
                     username: $("#username").val(),
-                    receiver_id: receiverId,
+                    receiver_id: receiver_id || null,
+                    group_id: group_id || null,
                     msg: $('#chat_message').val()
                 },
-                success: function(data) {
-                    let u = "{{$username}}"
+                    success: function(data) {
+                    let u = "{{ $username }}";
                     let newMessage = `<li class="out">
-                                <div class="chat-img">
-                                    <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
-                                </div>
-                                <div class="chat-body">
-                                    <div class="chat-message">
-                                        <h5>${u}</h5>
-                                        <p>${$('#chat_message').val()}</p>
-                                    </div>
-                                </div>
-                            </li>`;
+                                        <div class="chat-img">
+                                            <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
+                                        </div>
+                                        <div class="chat-body">
+                                            <div class="chat-message">
+                                                <h5>${u}</h5>
+                                                <p>${$('#chat_message').val()}</p>
+                                            </div>
+                                        </div>
+                                    </li>`;
                     $("#chat-section").append(newMessage);
-                    $('#chat_message').val('');
+                    $('#chat_message').val(''); // Clear the message input field
                 },
                 error: function(error) {
                     console.log(error);
@@ -195,38 +272,47 @@
             enabledTransports: ['ws', 'wss']
         });
 
+        function subscribeToChat() {
+    if (groupId) {
+        window.Echo.leave(`group.${groupId}`); // Ensure this is correctly done
+        window.Echo.join(`group.${groupId}`)
+            .listen('Chat', (data) => {
+                let newMessage = `<li class="in">
+                                    <div class="chat-img">
+                                        <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
+                                    </div>
+                                    <div class="chat-body">
+                                        <div class="chat-message">
+                                            <h5>${data.username}</h5>
+                                            <p>${data.message}</p>
+                                        </div>
+                                    </div>
+                                </li>`;
+                $("#chat-section").append(newMessage);
+            });
+    } else if (receiverId) {
+        window.Echo.leave(`chat.${receiverId}.${userId}`); // Ensure this is correctly done
         window.Echo.private(`chat.${receiverId}.${userId}`)
-        .listen('Chat', (data) => {
-            let newMessage;
-
-            if (data.sender_id === parseInt($("#receiver_id").val())) {
-                newMessage = `<li class="in">
-                                <div class="chat-img">
-                                    <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
-                                </div>
-                                <div class="chat-body">
-                                    <div class="chat-message">
-                                        <h5>${data.username}</h5>
-                                        <p>${data.message}</p>
+            .listen('Chat', (data) => {
+                let newMessage = `<li class="in">
+                                    <div class="chat-img">
+                                        <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
                                     </div>
-                                </div>
-                            </li>`;
-            } else if (data.username === $("#username").val()) {
-                newMessage = `<li class="out">
-                                <div class="chat-img">
-                                    <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
-                                </div>
-                                <div class="chat-body">
-                                    <div class="chat-message">
-                                        <h5>${data.username}</h5>
-                                        <p>${data.message}</p>
+                                    <div class="chat-body">
+                                        <div class="chat-message">
+                                            <h5>${data.username}</h5>
+                                            <p>${data.message}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </li>`;
-            }
+                                </li>`;
+                $("#chat-section").append(newMessage);
+            });
+    }
+}
 
-            $("#chat-section").append(newMessage);
-        });
+
+
+        subscribeToChat();
     </script>
 </body>
 </html>
