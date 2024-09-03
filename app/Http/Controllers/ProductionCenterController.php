@@ -24,12 +24,12 @@ class ProductionCenterController extends Controller
     public function storeProductionCenter(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin") {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorised'
-            ], 401);
-        }
+        // if ($role != "admin") {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Unauthorised'
+        //     ], 401);
+        // }
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'printer_code' => 'nullable|integer'

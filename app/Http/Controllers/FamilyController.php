@@ -18,7 +18,7 @@ class FamilyController extends Controller
     public function createFamily(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" &&  $role != "cashier")
         {
             return response()->json([
                 'success' => false,
@@ -57,7 +57,7 @@ class FamilyController extends Controller
     public function updateFamily(Request $request, $id)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" &&  $role != "cashier")
         {
             return response()->json([
                 'success' => false,
@@ -91,7 +91,7 @@ class FamilyController extends Controller
     public function deleteFamily($id)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" &&  $role != "cashier")
         {
             return response()->json([
                 'success' => false,
@@ -111,7 +111,7 @@ class FamilyController extends Controller
     public function createSubFamily(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" &&  $role != "cashier")
         {
             return response()->json([
                 'success' => false,
@@ -155,7 +155,7 @@ class FamilyController extends Controller
     public function updateSubFamily(Request $request, $id)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" &&  $role != "cashier")
         {
             return response()->json([
                 'success' => false,
@@ -191,7 +191,7 @@ class FamilyController extends Controller
     public function deleteSubFamily($id)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" &&  $role != "cashier")
         {
             return response()->json([
                 'success' => false,

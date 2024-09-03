@@ -11,14 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Mail\RegistrationConfirmation;
 use App\Mail\UpdateConfirmation;
-use App\Models\Payment;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
-
+use App\Models\Payment;
 
 class UserController extends Controller
 {
@@ -283,49 +282,49 @@ class UserController extends Controller
         // Return the users as JSON response
         return response()->json($users, 200);
     }
-
-    public function getDelivery(Request $request)
-    {
-        $validateRequest = Validator::make($request->all(), [
-            'duration' => 'in:day,week,month',
-            'day' => 'date', // Validate day as a date
-            'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
-        ]);
-
-        // Return an error response if validation fails
-        if ($validateRequest->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
-            ], 403);
-        }
-        $orders = OrderMaster::query();
-
-        if ($request->has('duration')) {
-            if ($request->input('duration') == "month" && $request->has('month')) {
-                $orders->whereMonth('created_at', $request->input('month'));
-            } elseif ($request->input('duration') == "day" && $request->has('day')) {
-                $orders->whereDate('created_at', $request->input('day'));
-            } elseif ($request->input('duration') == "week") {
-                $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
-                $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
-                $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
+    
+        public function getDelivery(Request $request)
+        {
+            $validateRequest = Validator::make($request->all(), [
+                'duration' => 'in:day,week,month',
+                'day' => 'date', // Validate day as a date
+                'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
+            ]);
+    
+            // Return an error response if validation fails
+            if ($validateRequest->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation fails',
+                    'errors' => $validateRequest->errors()
+                ], 403);
             }
+            $orders = OrderMaster::query();
+    
+            if ($request->has('duration')) {
+                if ($request->input('duration') == "month" && $request->has('month')) {
+                    $orders->whereMonth('created_at', $request->input('month'));
+                } elseif ($request->input('duration') == "day" && $request->has('day')) {
+                    $orders->whereDate('created_at', $request->input('day'));
+                } elseif ($request->input('duration') == "week") {
+                    $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
+                    $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
+                    $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
+                }
+            }
+    
+            $deliveryMethods = [
+                'delivery' => $orders->clone()->where('order_type', 'delivery')->count(),
+                'withdrawal' => $orders->clone()->where('order_type', 'withdrawal')->count(),
+                'local' => $orders->clone()->where('order_type', 'local')->count(),
+                'platform' => $orders->clone()->where('order_type', 'platform')->count()
+            ];
+    
+            return response()->json(['delivery_methods' => $deliveryMethods], 200);
+    
+    
         }
-
-        $deliveryMethods = [
-            'delivery' => $orders->clone()->where('order_type', 'delivery')->count(),
-            'withdrawal' => $orders->clone()->where('order_type', 'withdrawal')->count(),
-            'local' => $orders->clone()->where('order_type', 'local')->count(),
-            'platform' => $orders->clone()->where('order_type', 'platform')->count()
-        ];
-
-        return response()->json(['delivery_methods' => $deliveryMethods], 200);
-
-
-    }
-
+    
     public function getStatisticalData(Request $request)
     {
         $validateRequest = Validator::make($request->all(), [
@@ -362,10 +361,8 @@ class UserController extends Controller
             $orderDetails->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
             $payment->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
         }
-
-        $totalOrdersCount = $orders->count();
-
-        $totalDays = 0;
+         $totalOrdersCount = $orders->count();
+         $totalDays = 0;
 
         if ($request->has('duration')) {
             $duration = $request->input('duration');
@@ -379,11 +376,13 @@ class UserController extends Controller
         } else {
             $totalDays = 365; // Default to 1 year if no duration is provided
         }
+         
 
         $sale = $payment->sum('amount');
         $returns = $payment->sum('return');
-
-        $totalAverage =( $sale - $returns )/ $totalDays;
+        
+        $totalAverage = ($sale - $returns)/ $totalDays;
+        
 
         $statisticalData = [
             "total_orders_count" => $orders->count(),
@@ -398,8 +397,8 @@ class UserController extends Controller
 
         return response()->json(['statistical_data' => $statisticalData], 200);
     }
-
-    public function getPaymentMethods(Request $request)
+    
+     public function getPaymentMethods(Request $request)
     {
         // Validate the request inputs
         $validateRequest = Validator::make($request->all(), [
@@ -422,107 +421,71 @@ class UserController extends Controller
 
 
         // Filter by month, day, or week based on the 'duration' input
-        if ($request->has('duration')) {
-            if ($request->input('duration') == "month" && $request->has('month')) {
-                $orders->whereMonth('created_at', $request->input('month'));
-            } elseif ($request->input('duration') == "day" && $request->has('day')) {
-                $orders->whereDate('created_at', $request->input('day'));
-            } elseif ($request->input('duration') == "week") {
-                $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
-                $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
-                $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
-            }
+        if ($request->input('duration') == "month") {
+            $orders->whereMonth('created_at', $request->input('month'));
+        } elseif ($request->input('duration') == "day") {
+            $orders->whereDate('created_at', $request->input('day'));
+        } elseif ($request->input('duration') == "week") {
+            $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
+            $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
+            $orders->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
         }
 
         // Count orders by payment type
-        $paymentMethods = [
-            'cash' => $orders->clone()->where('payment_type', 'cash')->count(),
-            'debit' => $orders->clone()->where('payment_type', 'debit')->count(),
-            'credit' => $orders->clone()->where('payment_type', 'credit')->count(),
-            'transfer' => $orders->clone()->where('payment_type', 'transfer')->count()
-        ];
-
+          $paymentMethods = [
+                'cash' => $orders->clone()->where('payment_type', 'cash')->count(),
+                'debit' => $orders->clone()->where('payment_type', 'debit')->count(),
+                'credit' => $orders->clone()->where('payment_type', 'credit')->count(),
+                'transfer' => $orders->clone()->where('payment_type', 'transfer')->count()
+            ];
 
         // Return the payment methods data as a JSON response
         return response()->json(['payment_methods' => $paymentMethods], 200);
     }
-
-    // public function getTotalRevenue(Request $request)
-    // {
-    //     $validateRequest = Validator::make($request->all(), [
-    //         'duration' => 'in:day,week,month',
-    //         'day' => 'date',
-    //         'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
-    //     ]);
-
-    //     if ($validateRequest->fails()) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Validation fails',
-    //             'errors' => $validateRequest->errors()
-    //         ], 403);
-    //     }
-
-    //     $orderDetails = OrderDetails::query();
-
-    //     if ($request->input('duration') == "month") {
-    //         $orderDetails = $orderDetails->whereMonth('created_at', $request->input('month'));
-    //     } elseif ($request->input('duration') == "day") {
-    //         $orderDetails = $orderDetails->whereDate('created_at', $request->input('day'));
-    //     } elseif ($request->input('duration') == "week") {
-    //         $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
-    //         $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
-    //         $orderDetails = $orderDetails->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
-    //     }
-
-    //     $totalRevenue = $orderDetails->sum(DB::raw('amount * quantity'));
-
-    //     return response()->json(['total_revenue' => $totalRevenue], 200);
-    // }
-
-    public function getTotalRevenue(Request $request)
-    {
-        $validateRequest = Validator::make($request->all(), [
-            'duration' => 'in:day,week,month',
-            'day' => 'date',
-            'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
-        ]);
     
-        if ($validateRequest->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
-            ], 403);
-        }
-    
-        $orderDetails = OrderDetails::query();
-    
-        if ($request->input('duration') == "month") {
-            $orderDetails = $orderDetails->whereMonth('created_at', $request->input('month'));
-        } elseif ($request->input('duration') == "day") {
-            $orderDetails = $orderDetails->whereDate('created_at', $request->input('day'));
-        } elseif ($request->input('duration') == "week") {
-            $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
-            $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
-            $orderDetails = $orderDetails->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
-        }
-    
-        $totalRevenue = $orderDetails->sum(DB::raw('amount * quantity'));
-    
-        $orderDetails = $orderDetails->get(['amount', 'quantity', 'created_at']);
-    
-       $data = [
-    'total_revenue' => $totalRevenue,
-            'order_details' => $orderDetails
-    ];
+  public function getTotalRevenue(Request $request)
+{
+    $validateRequest = Validator::make($request->all(), [
+        'duration' => 'in:day,week,month',
+        'day' => 'date',
+        'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12'
+    ]);
+
+    if ($validateRequest->fails()) {
         return response()->json([
-            'total_revenue' => $data
-            
-        ], 200);
-    
-    
+            'success' => false,
+            'message' => 'Validation fails',
+            'errors' => $validateRequest->errors()
+        ], 403);
     }
+
+    $orderDetails = OrderDetails::query();
+
+    if ($request->input('duration') == "month") {
+        $orderDetails = $orderDetails->whereMonth('created_at', $request->input('month'));
+    } elseif ($request->input('duration') == "day") {
+        $orderDetails = $orderDetails->whereDate('created_at', $request->input('day'));
+    } elseif ($request->input('duration') == "week") {
+        $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
+        $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
+        $orderDetails = $orderDetails->whereBetween('created_at', [$startOfWeek, $endOfWeek]);
+    }
+
+    $totalRevenue = $orderDetails->sum(DB::raw('amount * quantity'));
+
+    $orderDetails = $orderDetails->get(['amount', 'quantity', 'created_at']);
+
+   $data = [
+'total_revenue' => $totalRevenue,
+        'order_details' => $orderDetails
+];
+    return response()->json([
+        'total_revenue' => $data
+        
+    ], 200);
+
+
+}
     public function getStatusSummary(Request $request)
     {
         $validateRequest = Validator::make($request->all(), [
@@ -538,9 +501,8 @@ class UserController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
-
         $orders = OrderMaster::get();
-
+        
         if ($request->input('duration') == "month") {
             $orders = $orders->whereMonth('created_at', $request->input('month'));
         } elseif ($request->input('duration') == "day") {
@@ -560,49 +522,8 @@ class UserController extends Controller
 
         return response()->json(['statusSummary' => $statusSummary], 200);
     }
-
-    // public function getPopularProducts(Request $request)
-    // {
-    //     // Validate the input
-    //     $validateRequest = Validator::make($request->all(), [
-    //         'duration' => 'in:day,week,month',
-    //         'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12',
-    //         'day' => 'date',
-    //         'week' => 'integer|min:1|max:53' // Assuming week can be 1 to 53
-    //     ]);
-
-    //     if ($validateRequest->fails()) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Validation fails',
-    //             'errors' => $validateRequest->errors()
-    //         ], 403);
-    //     }
-
-    //     $orderDetailsQuery = OrderDetails::select('items.name', 'items.image', DB::raw('COUNT(order_details.item_id) as order_count'))
-    //         ->join('items', 'order_details.item_id', '=', 'items.id')
-    //         ->groupBy('order_details.item_id', 'items.name', 'items.image')
-    //         ->orderBy('order_count', 'desc');
-
-
-
-    //     // Apply the filter based on the duration
-    //     if ($request->input('duration') == "month") {
-    //         $orderDetailsQuery->whereMonth('order_details.created_at', $request->input('month'));
-    //     } elseif ($request->input('duration') == "day") {
-    //         $orderDetailsQuery->whereDate('order_details.created_at', $request->input('day'));
-    //     } elseif ($request->input('duration') == "week") {
-    //         $startOfWeek = Carbon::now()->startOfWeek()->format('Y-m-d');
-    //         $endOfWeek = Carbon::now()->endOfWeek()->format('Y-m-d');
-    //         $orderDetailsQuery->whereBetween('order_details.created_at', [$startOfWeek, $endOfWeek]);
-    //     }
-
-    //     $mostOrderedItems = $orderDetailsQuery->get();
-
-    //     return response()->json(['popular_products' => $mostOrderedItems], 200);
-    // }
-
-    public function getPopularProducts(Request $request)
+    
+     public function getPopularProducts(Request $request)
     {
         // Validate the input
         $validateRequest = Validator::make($request->all(), [
@@ -625,8 +546,8 @@ class UserController extends Controller
         //     ->groupBy('order_details.item_id', 'items.name', 'items.image')
         //     ->orderBy('order_count', 'desc');
          $orderDetailsQuery = OrderDetails::select(
-            'items.name',
-            'items.image',
+            'items.name', 
+            'items.image', 
             'order_details.amount', // Include the amount from order_details
             DB::raw('COUNT(order_details.item_id) as order_count')
         )
@@ -649,8 +570,8 @@ class UserController extends Controller
 
         return response()->json(['popular_products' => $mostOrderedItems], 200);
     }
-
-    public function getBoxEntry(Request $request)
+    
+     public function getBoxEntry(Request $request)
     {
 
         // Validate the input
@@ -708,8 +629,8 @@ class UserController extends Controller
         // Return the box entries with their logs
         return response()->json(['box_entries' => $boxEntry], 200);
     }
-
-    public function cancelOrders(Request $request)
+    
+     public function cancelOrders(Request $request)
     {
         $validateRequest = Validator::make($request->all(), [
             'duration' => 'in:day,week,month',
@@ -743,12 +664,6 @@ class UserController extends Controller
             'cancelled_orders' => $cancelledOrders
         ], 200);
     }
-
-
-
-
-
-
 
 
 
@@ -789,8 +704,8 @@ class UserController extends Controller
             $sale += $orderDetail->amount * $orderDetail->quantity;
             $cost += $orderDetail->cost * $orderDetail->quantity;
         }
-
-        $totalOrdersCount = $orders->count();
+        
+         $totalOrdersCount = $orders->count();
 
         $totalDays = 0;
 
@@ -806,15 +721,14 @@ class UserController extends Controller
         } else {
             $totalDays = 365; // Default to 1 year if no duration is provided
         }
-
-
-        $totalAverage = $totalDays > 0 ? $totalOrdersCount / $totalDays : 0;
+        
+          $totalAverage = $totalDays > 0 ? $totalOrdersCount / $totalDays : 0;
 
         $responseData['statistical_data'] = [
             "total_orders" => $orders->count(),
             "total_income" => $sale - $cost,
             "delivery_orders" => $orders->where('order_type', 'delivery')->count(),
-            "total_average" => $totalAverage
+             "total_average" => $totalAverage
         ];
 
         $responseData['payment_methods'] = [
