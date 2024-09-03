@@ -7,21 +7,22 @@ use App\Models\Invite;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\FirstLoginMail;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Hash;
+
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+     public function login(Request $request)
     {
         $validateUser = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required'
         ]);
-
+    
         if ($validateUser->fails()) {
             return response()->json([
                 'success' => false,
@@ -29,23 +30,29 @@ class AuthController extends Controller
                 'error' => $validateUser->errors()
             ], 401);
         }
-
+    
         // Find user by email
         $user = User::where('email', $request->input('email'))->first();
-
+    
+    if ($user->status === 'Suspender') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Su cuenta está suspendida. Póngase en contacto con el servicio de asistencia.'
+            ], 403);
+        }
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid email or password'
+                'message' => 'El usuario ingresado no existe en la base de datos del sistema'
             ], 401);
         }
-
+    
         // Decrypt the stored password and compare
         $ciphering = "AES-128-CTR";
         $options = 0;
         $decryption_iv = '1234567891011121'; // Ensure this matches the encryption IV
         $decryption_key = "GeeksforGeeks"; // Ensure this matches the encryption key
-
+    
         try {
             $decrypted_password = openssl_decrypt($user->password, $ciphering, $decryption_key, $options, $decryption_iv);
         } catch (\Exception $e) {
@@ -54,28 +61,27 @@ class AuthController extends Controller
                 'message' => 'Error decrypting password'
             ], 500);
         }
-
-
+    
         // Check if the decrypted password matches the provided password
         if ($decrypted_password !== $request->input('password')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Credential does not found in our records'
+                'message' => 'La contraseña ingresada no coincide con el correo electrónico proporcionado'
             ], 401);
         }
-
+    
         // Create token and respond with user info
         $token = $user->createToken($user->role_id)->plainTextToken;
-
+    
         return response()->json([
-            'success' => true,
+            'id' => $user->id,
             'name' => $user->name,
+            'email' => $user->email,
             'access_token' => $token,
             'role' => Role::find($user->role_id)->name
         ]);
     }
-
-
+    
     public function invite(Request $request)
     {
         $validateUser = Validator::make($request->all(), [
@@ -113,7 +119,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function setPassword(Request $request, $id)
+   public function setPassword(Request $request, $id)
     {
         $invite = User::findOrFail($id);
 
@@ -121,7 +127,7 @@ class AuthController extends Controller
         if ($invite->password_reset || now()->greaterThan($invite->password_reset_expires_at)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Password reset link has either been used or expired.',
+                'message' => 'El enlace para restablecer contraseña se ha utilizado o ha expirado.',
             ], 400);
         }
 
@@ -159,5 +165,4 @@ class AuthController extends Controller
             'message' => 'Your password has been set successfully.'
         ], 200);
     }
-
 }
