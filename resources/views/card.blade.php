@@ -37,11 +37,12 @@
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.11.3/dist/echo.iife.js"></script>
 
     <script>
+        console.log(window.location.hostname);
         const defaultColor = 'lightgray';
         const activeColor = 'green';
         const socket = new window.Echo({
             broadcaster: "pusher",
-            key: "GoofNBCH",
+            key: "7ae046560a0ed83ad8c7",
             cluster: "mt1",
             wsHost: window.location.hostname,
             wsPort: 6001,
@@ -60,7 +61,7 @@
             });
 
 
-        socket.channel('box-channel')
+            socket.channel('box-channel')
             .listen('.CardClick', (e) => {
                 const box = document.querySelector(`.box[data-id="${e.card_id}"]`);
                 box.style.backgroundColor = e.selected ? activeColor : defaultColor;
