@@ -204,8 +204,7 @@ class ChatAppController extends Controller
             if (!$exists) {
                 DB::table('user_group_joins')->insert([
                     'group_id' => $request->group_id,
-                    'group_for_chat_id
-                    ' => $request->group_id,
+                    'group_for_chat_id' => $request->group_id,
                     'user_id' => $user_id,
                     'created_at' => now(),
                     'updated_at' => now(),
