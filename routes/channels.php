@@ -13,6 +13,20 @@ use Illuminate\Support\Facades\Broadcast;
 |
 */
 
-Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    return (int) $user->id === (int) $id;
+// Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
+//     return (int) $user->id === (int) $id;
+// });
+
+Broadcast::channel('chat.{sender_id}.{receiver_id}', function ($user, $sender_id, $receiver_id) {
+    // Check if the authenticated user is part of the conversation
+    return (int) $user->id === (int) $sender_id || (int) $user->id === (int) $receiver_id;
+});
+
+
+Broadcast::channel('group.{groupId}', function ($user, $groupId) {
+    return $user->groups->contains($groupId);
+});
+
+Broadcast::channel('presence-group.{groupId}', function ($user, $groupId) {
+    return $user->groups->contains($groupId);
 });

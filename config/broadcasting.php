@@ -40,7 +40,7 @@ return [
                 'host' => '127.0.0.1',
                 'port' => 6001,
                 'scheme' => 'http',
-                'useTLS' => true,
+                'useTLS' => false,
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html

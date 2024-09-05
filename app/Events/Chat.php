@@ -9,23 +9,29 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Log;
 
 class Chat implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    public $sender_id;
+    public $receiver_id;
     public $username;
     public $message;
-
+    public $group_id;
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct($username,$message)
+    public function __construct($sender_id, $receiver_id, $username, $message, $group_id)
     {
+        $this->sender_id = $sender_id;
+        $this->receiver_id = $receiver_id;
         $this->username = $username;
         $this->message = $message;
+        $this->group_id = $group_id;
     }
 
     /**
@@ -35,6 +41,18 @@ class Chat implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return new Channel('chatApplication');
+        // return new PrivateChannel('chat.' . $this->sender_id . '.' . $this->receiver_id );
+        // return new Channel('chatApplication');
+
+        if ($this->group_id) {
+            Log::info('Broadcasting data:', [
+                'sender_id' => $this->sender_id,
+                'username' => $this->username,
+                'message' => $this->message,
+            ]);
+            return new PresenceChannel('group.' . $this->group_id);
+        } else {
+            return new PrivateChannel('chat.' . $this->sender_id . '.' . $this->receiver_id);
+        }
     }
 }
