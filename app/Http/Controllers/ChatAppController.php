@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Models\GroupForChat;
 use Illuminate\Support\Facades\DB;
 
+
 class ChatAppController extends Controller
 {
 // Selected Box
@@ -56,6 +57,8 @@ class ChatAppController extends Controller
         if (!$user) {
             return redirect()->back()->withErrors(['email' => 'Email not found in our records.']);
         }
+       
+        
         $users = User::where('email', '!=', $email)->get();
         Auth::login($user);
         $groups = $user->groups;
@@ -139,11 +142,15 @@ class ChatAppController extends Controller
 
         return response()->json($messages);
     }
-    public function logout()
-    {
-        Auth::logout();
-        return redirect()->route('chat.loggin');
-    }
+ public function logout(Request $request)
+{
+    $user = Auth::user();
+    $user->status = false; // Mark user as offline
+    $user->save();
+
+    Auth::logout();
+    return redirect('/login');
+}
 
     public function storeGroup(Request $request)
     {
@@ -234,4 +241,8 @@ class ChatAppController extends Controller
 
         return response()->json(['status' => 'success', 'message' => 'User removed from group']);
     }
+
+
+
+
 }

@@ -25,7 +25,20 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        parent::boot();
+
+        Event::listen(Login::class, function ($event) {
+            $user = $event->user;
+            $user->status = true; // Mark user as online
+            $user->save();
+        });
+
+
+        Event::listen(Logout::class, function ($event) {
+            $user = $event->user;
+            $user->status = false; // Mark user as offline
+            $user->save();
+        });
     }
 
     /**

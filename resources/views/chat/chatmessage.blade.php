@@ -32,6 +32,7 @@
                             data-username="{{ $u->username }}" data-id="{{ $u->id }}"
                             data-email="{{ $u->email }}" onclick="selectUser(this)">
                             {{ $u->email }}
+                            <span class="badge bg-success ml-2" style="display: {{ $u->status ? 'inline' : 'none' }}">Online</span>
                         </a>
                     @endforeach
                 </div>
@@ -327,6 +328,21 @@
                         $("#chat-section").append(newMessage);
                     });
             }
+
+        // Status Online Or Offline
+
+        window.Echo.join('online-users')
+                .here((users) => {
+                    users.forEach(user => {
+                        $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
+                    });
+                })
+                .joining((user) => {
+                    $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
+                })
+                .leaving((user) => {
+                    $(`.user-item[data-id="${user.id}"] .badge`).remove();
+                });
         }
 
         subscribeToChat();

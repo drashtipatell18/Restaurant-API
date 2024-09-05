@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('image')->nullable();
             $table->string('username')->nullable();
+            $table->boolean('status')->default(false); // false = offline, true = online
             $table->rememberToken();
             $table->timestamps();
             $table->foreign('role_id')->references('id')->on('roles')->onUpdate('cascade')->onDelete('cascade');
