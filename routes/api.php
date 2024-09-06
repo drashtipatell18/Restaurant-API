@@ -60,7 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("/user/{id}/getOrders", [UserController::class, 'getOrders']);
 
     Route::get('/getCasherUser', [UserController::class, 'getCasherUser']);
-
+Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatus']); //new
      // Menu Routes
     Route::post('/menu/create', [MenuController::class, 'createMenu']);
     Route::post('/menu/update/{id}', [MenuController::class, 'updateMenu']);
@@ -121,7 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/table/updateStatus', [SectorController::class, 'updateTableStatus']);
     Route::get('/table/getStats/{id}', [SectorController::class, 'getTableStats']);
     Route::get('/kds/{table_id}', [SectorController::class, 'getKds']);
-
+Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //new
     // Items
     Route::post('/item/create', [ItemController::class, 'createItem']);
     Route::post('/item/update/{id}', [ItemController::class, 'updateItem']);
@@ -147,8 +147,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/order/addNote/{id}', [OrderController::class, 'addNote']);
     Route::get('/order/getLog/{id}', [OrderController::class,'getOrderLog']);
     Route::post('/order/updateorderreason/{id}', [OrderController::class,'UpdateOrderReason']);
-
     Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
+    Route::post('/order/orderUpdateItem/{order_id}', [OrderController::class, 'orderUpdateItem']); //new
+    
     // Group
     Route::post('/group/create', [GroupController::class,'create']);
     Route::post('/group/update/{id}', [GroupController::class,'update']);
