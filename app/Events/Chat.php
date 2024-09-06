@@ -47,7 +47,7 @@ class Chat implements ShouldBroadcast
         if ($this->group_id) {
             Log::info('Broadcasting data:', [
                 'sender_id' => $this->sender_id,
-                'username' => $this->username,
+                'name' => $this->username,
                 'message' => $this->message,
             ]);
             return new PresenceChannel('group.' . $this->group_id);

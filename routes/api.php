@@ -170,6 +170,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/getsinglepayments/{order_master_id}', [PaymentController::class, 'getsinglePayments']);
     Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
     Route::get('/getsinglepaymentById/{id}', [PaymentController::class, 'getPaymentById']);
+
+
+    // Chat Application Deep
+    Route::post('/chat/broadcast', [ChatAppController::class, 'broadcastChat'])->name('broadcast.chat');
+    Route::post('/chat/logout', [ChatAppController::class, 'logout'])->name('chat.logout');
+    Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
 });
 
 
@@ -202,3 +208,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('group/store', [ChatAppController::class, 'storeGroup']);
     Route::post('/add-user-to-group', [ChatAppController::class, 'addUserToGroup'])->name('addUserToGroup');
     Route::post('/remove-user-from-group', [ChatAppController::class, 'removeUserFromGroup'])->name('chat.removeUserFromGroup');
+
+    Route::post('/chat/login', [ChatAppController::class, 'chat'])->name('chat');

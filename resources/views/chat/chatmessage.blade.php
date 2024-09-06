@@ -26,24 +26,26 @@
     <div class="container content">
         <div class="row">
             <div class="col-md-3">
-                <div class="list-group">
-                    @foreach ($users as $u)
+                <h1>Users</h1>
+                <div class="list-group" id="userList">
+                    {{-- @foreach ($users as $u)
                         <a href="javascript:void(0)" class="list-group-item list-group-item-action user-item"
                             data-username="{{ $u->username }}" data-id="{{ $u->id }}"
                             data-email="{{ $u->email }}" onclick="selectUser(this)">
                             {{ $u->email }}
                             <span class="badge bg-success ml-2" style="display: {{ $u->status ? 'inline' : 'none' }}">Online</span>
                         </a>
-                    @endforeach
+                    @endforeach --}}
                 </div>
-                <div class="list-group" style="margin-top:50px !important">
-                    @foreach ($groups as $g)
+                <h1 style="margin-top:50px !important">Groups</h1>
+                <div class="list-group" id="groupList">
+                    {{-- @foreach ($groups as $g)
                         <a href="javascript:void(0)" class="list-group-item list-group-item-action group-item"
                             data-group-id="{{ $g->id }}" data-group-name="{{ $g->name }}"
                             onclick="selectGroup(this)">
                             {{ $g->name }}
                         </a>
-                    @endforeach
+                    @endforeach --}}
                 </div>
             </div>
 
@@ -51,7 +53,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <p class="mb-0">Receiver: <span id="chat-title"></span></p>
-                        <p class="mb-0">Sender: {{ $username }}</p>
+                        <p class="mb-0">Sender: <span id="currentUser"></span></p>
                     </div>
                     <div class="card-body height3">
                         <ul class="chat-list" id="chat-section">
@@ -61,7 +63,7 @@
                 </div>
                 <div class="row mt-3 justify-content-between">
                     <div class="col-lg-11">
-                        <input type="text" id="username" value="{{ $username }}" hidden class="form-control">
+                        <input type="text" id="email" value="" hidden class="form-control">
                         <input type="text" id="receiver_id" value="" hidden class="form-control">
                         <input type="text" id="group_id" value="" hidden class="form-control">
                         <input type="text" id="chat_message" class="form-control" placeholder="Write a text message...">
@@ -86,7 +88,32 @@
     <script>
         let receiverId = localStorage.getItem('receiverId') || null;
         let groupId = localStorage.getItem('groupId') || null;
-        const userId = "{{Auth::user()->id}}";
+        const currentUser = JSON.parse(window.localStorage.getItem('current_user'))
+        const totalUsers = JSON.parse(window.localStorage.getItem('total_users'))
+        const totalGroups = JSON.parse(window.localStorage.getItem('total_groups'))
+        const userId = currentUser.id;
+        $("#email").val(currentUser.email)
+        $("#currentUser").text(currentUser.name)
+
+        $.each(totalUsers, function(){
+            $("#userList").append(`
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action user-item"
+                    data-name="${this.name}" data-id="${this.id}"
+                    data-name="${this.email}" onclick="selectUser(this)">
+                    ${this.name}
+                    <span class="badge bg-warning ml-2">${this.email}</span>
+                </a>
+            `);
+        })
+        $.each(totalGroups, function(){
+            $("#groupList").append(`
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action group-item"
+                    data-group-id="${this.id}" data-group-name="${this.name}"
+                    onclick="selectGroup(this)">
+                    ${this.name}
+                </a>
+            `);
+        })
 
         document.addEventListener('DOMContentLoaded', function() {
             let receiverId = localStorage.getItem('receiverId');
@@ -112,11 +139,11 @@
         function selectUser(element) {
             const email = $(element).data('email');
             const id = $(element).data('id');
-            const username = $(element).data('username');
+            const name = $(element).data('name');
 
             receiverId = id;
             localStorage.setItem('receiverId', id);
-            localStorage.setItem('receiverName', username);
+            localStorage.setItem('receiverName', name);
 
             $("#receiver_id").val(id);
             $("#group_id").val(null);
@@ -124,7 +151,7 @@
             $('.user-item').removeClass('user-selected');
             $(element).addClass('user-selected');
 
-            $("#chat-title").text(username);
+            $("#chat-title").text(name);
             $("#chat-section").empty();
             window.localStorage.removeItem('groupId')
             window.localStorage.removeItem('groupName')
@@ -156,16 +183,19 @@
 
         function loadMessages(id = null, groupId = null) {
             $.ajax({
-                url: '{{ route('chat.messages') }}',
+                url: '/api/chat/messages',
                 type: 'GET',
                 data: {
                     receiver_id: id,
                     group_id: groupId,
                 },
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
                 success: function(data) {
                     data.forEach(message => {
                         let newMessage;
-                        if (message.sender_id === {{ auth()->user()->id }}) {
+                        if (message.sender_id === userId) {
                             newMessage = `<li class="out">
                                             <div class="chat-img">
                                                 <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
@@ -210,18 +240,18 @@
 
             $.ajax({
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
                 },
-                url: '{{ route('broadcast.chat') }}',
+                url: '/api/chat/broadcast',
                 type: 'POST',
                 data: {
-                    username: $("#username").val(),
+                    email: $("#email").val(),
                     receiver_id: receiver_id || null,
                     group_id: group_id || null,
                     msg: $('#chat_message').val()
                 },
                 success: function(data) {
-                    let u = "{{ $username }}";
+                    let u = null;
                     let newMessage;
                     if (group_id) {
                     //     newMessage = `<li class="out">
@@ -244,7 +274,7 @@
                                         </div>
                                         <div class="chat-body">
                                             <div class="chat-message">
-                                                <h5>${u}</h5>
+                                                <h5>${currentUser.name}</h5>
                                                 <p>${$('#chat_message').val()}</p>
                                             </div>
                                         </div>
@@ -267,7 +297,12 @@
             wsPort: 6001,
             forceTLS: false,
             disableStats: false,
-            enabledTransports: ['ws', 'wss']
+            enabledTransports: ['ws', 'wss'],
+            auth: {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            }
         });
 
         function subscribeToChat() {
@@ -276,7 +311,7 @@
                 window.Echo.join(`group.${groupId}`)
                     .listen('Chat', (data) => {
                         console.log(data);
-                        if(data.username != $("#username").val())
+                        if(data.username != currentUser.name)
                         {
                             let newMessage = `<li class="in">
                                                 <div class="chat-img">
@@ -314,6 +349,8 @@
                 // window.Echo.leaveChannel(`chat.${receiverId}.${userId}`);
                 window.Echo.private(`chat.${receiverId}.${userId}`)
                     .listen('Chat', (data) => {
+                        console.log(data);
+
                         let newMessage = `<li class="in">
                                             <div class="chat-img">
                                                 <img alt="Avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png">
@@ -331,18 +368,18 @@
 
         // Status Online Or Offline
 
-        window.Echo.join('online-users')
-                .here((users) => {
-                    users.forEach(user => {
-                        $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
-                    });
-                })
-                .joining((user) => {
-                    $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
-                })
-                .leaving((user) => {
-                    $(`.user-item[data-id="${user.id}"] .badge`).remove();
-                });
+        // window.Echo.join('online-users')
+        //         .here((users) => {
+        //             users.forEach(user => {
+        //                 $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
+        //             });
+        //         })
+        //         .joining((user) => {
+        //             $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
+        //         })
+        //         .leaving((user) => {
+        //             $(`.user-item[data-id="${user.id}"] .badge`).remove();
+        //         });
         }
 
         subscribeToChat();

@@ -43,7 +43,7 @@
                     </ul>
                 </div>
                 @endif
-                <form action="{{ route('chat') }}" method="POST">
+                <form action="#" id="loginFrm" method="POST">
                     @csrf
                     <div class="row gy-2 overflow-hidden">
                         <div class="col-12">
@@ -62,6 +62,7 @@
             </div>
         </div>
     </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -70,6 +71,27 @@
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.11.3/dist/echo.iife.js"></script>
 
     <script>
+        $("#loginFrm").submit(function(e){
+            e.preventDefault();
+            $.ajax({
+                type: "POST",
+                method: "POST",
+                dataType: "JSON",
+                data: {"email": $("#email").val()},
+                url: "/api/chat/login",
+                success: function(response){
+                    window.localStorage.setItem('token', response.token)
+                    window.localStorage.setItem('total_groups', JSON.stringify(response.groups));
+                    window.localStorage.setItem('current_user', JSON.stringify(response.user));
+                    window.localStorage.setItem('total_users', JSON.stringify(response.users));
+
+                    window.location.replace('/chatmsg')
+                },
+                error: function(err){
+                    alert(err.error)
+                }
+            })
+        })
         // Ensure Echo is correctly configured with your Laravel WebSocket settings
         const echo = new Echo({
             broadcaster: 'pusher',

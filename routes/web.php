@@ -20,9 +20,10 @@ Route::post('brodcastCardClicked',[ChatAppController::class,'cardClicked'])->nam
 
 // Chat Application
 Route::get('login',[ChatAppController::class,'chatLoggin'])->name('chat.loggin');
+Route::get('chatmsg',[ChatAppController::class,'chatPage']);
 Route::post('/brodcast',[ChatAppController::class,'broadcastChat'])->name('broadcast.chat');
 Route::post('/chat',[ChatAppController::class,'chat'])->name('chat');
 
 Route::get('logout',[ChatAppController::class,'logout']);
 
-Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
+// Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');

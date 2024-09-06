@@ -41,6 +41,11 @@ return [
                 'port' => 6001,
                 'scheme' => 'http',
                 'useTLS' => false,
+                'auth' => [
+                'headers' => [
+                        'Authorization' => 'Bearer ' . request()->bearerToken(),
+                    ],
+                ],
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html

@@ -20,12 +20,12 @@ use Illuminate\Support\Facades\Broadcast;
 Broadcast::channel('chat.{sender_id}.{receiver_id}', function ($user, $sender_id, $receiver_id) {
     // Check if the authenticated user is part of the conversation
     return (int) $user->id === (int) $sender_id || (int) $user->id === (int) $receiver_id;
-});
+}, ['guards' => ['api']]);
 
 
 Broadcast::channel('group.{groupId}', function ($user, $groupId) {
     return $user->groups->contains($groupId);
-});
+}, ['guards' => ['api']]);
 
 Broadcast::channel('presence-group.{groupId}', function ($user, $groupId) {
     return $user->groups->contains($groupId);

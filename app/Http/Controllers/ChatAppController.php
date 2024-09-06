@@ -41,7 +41,12 @@ class ChatAppController extends Controller
 
     public function chatLoggin()
     {
-        return view('chat/login');
+        return view('chat.login');
+    }
+
+    public function chatPage()
+    {
+        return view('chat.chatmessage');
     }
 
     public function chat(Request $request)
@@ -49,35 +54,44 @@ class ChatAppController extends Controller
         $request->validate([
             'email' => 'required|email',
         ]);
-        $email = $request->email;
 
-        $user = User::where('email', $email)->first();
-
+        $user = User::where('email', $request->email)->first();
 
         if (!$user) {
-            return redirect()->back()->withErrors(['email' => 'Email not found in our records.']);
+            return response()->json(['error' => 'Email not found'], 404);
         }
-       
-        
-        $users = User::where('email', '!=', $email)->get();
-        Auth::login($user);
-        $groups = $user->groups;
 
-        return view('chat/chatmessage')->with(['email'=> $email,'username'=>$user->username,'users' => $users,'groups'=>$groups]);
-        // return response()->json(['email'=> $email, 'username'=>$user->username]);
+        // Log in the user
+        Auth::login($user);
+
+        // Create a new API token for the user
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Return the token and user information in the response
+        return response()->json([
+            'status' => 'success',
+            'token' => $token,
+            'user' => [
+                'email' => $user->email,
+                'name' => $user->name,
+                'id' => $user->id,
+            ],
+            'groups' => $user->groups,
+            'users' => User::where('email', '!=', $user->email)->get()
+        ]);
     }
 
     public function broadcastChat(Request $request)
     {
         $request->validate([
-            'username' => 'required',
-            'msg' => 'required'
+            'msg' => 'required',
         ]);
 
         $sender = auth()->user();
-        $senderName = $sender->username;
+        if (!$sender) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
 
-        // Create a new chat message instance
         $chat = new Chats;
         $chat->sender_id = $sender->id;
         $chat->message = $request->msg;
@@ -87,8 +101,7 @@ class ChatAppController extends Controller
             $chat->group_id = $request->group_id;
             $chat->save();
 
-            // Broadcast the message to the group
-            broadcast(new Chat($sender->id, null, $senderName, $request->msg, $request->group_id));
+            broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id));
 
             return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat]);
         }
@@ -98,13 +111,12 @@ class ChatAppController extends Controller
             $chat->receiver_id = $request->receiver_id;
             $chat->save();
 
-            // Broadcast the message to the receiver
-            broadcast(new Chat($sender->id, $request->receiver_id, $senderName, $request->msg, null));
+            broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null));
 
             return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat]);
         }
 
-        return response()->json(['status' => 'error', 'message' => 'Failed to send message']);
+        return response()->json(['status' => 'error', 'message' => 'Failed to send message'], 400);
     }
 
     public function notFound()
@@ -117,40 +129,49 @@ class ChatAppController extends Controller
         $groupId = $request->group_id;
         $receiverId = $request->receiver_id;
 
+        if (!$groupId && !$receiverId) {
+            return response()->json(['error' => 'No chat identifier provided'], 400);
+        }
+
         // If group chat
         if ($groupId) {
             $messages = Chats::where('group_id', $groupId)
                 ->with('sender')
                 ->orderBy('created_at', 'asc')
                 ->get();
-        }
-        // If one-to-one chat
-        else {
+        } else {
+            // If one-to-one chat
             $messages = Chats::where(function ($query) use ($receiverId) {
                 $query->where('sender_id', auth()->id())
-                      ->where('receiver_id', $receiverId);
+                    ->where('receiver_id', $receiverId);
             })->orWhere(function ($query) use ($receiverId) {
                 $query->where('sender_id', $receiverId)
-                      ->where('receiver_id', auth()->id());
+                    ->where('receiver_id', auth()->id());
             })->with('sender')->orderBy('created_at', 'asc')->get();
         }
 
         $messages->transform(function ($message) {
-            $message->sender_name = $message->sender->username;
+            $message->sender_name = $message->sender->name;
             return $message;
         });
 
         return response()->json($messages);
     }
- public function logout(Request $request)
-{
-    $user = Auth::user();
-    $user->status = false; // Mark user as offline
-    $user->save();
 
-    Auth::logout();
-    return redirect('/login');
-}
+    public function logout(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user->status = false; // Mark user as offline
+        $user->save();
+
+        Auth::logout();
+
+        return response()->json(['status' => 'success', 'message' => 'Logged out successfully']);
+    }
 
     public function storeGroup(Request $request)
     {
