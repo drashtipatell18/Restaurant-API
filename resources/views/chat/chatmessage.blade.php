@@ -24,6 +24,7 @@
 </head>
 <body>
     <div class="container content">
+        <button class="btn btn-danger" onclick="window.localStorage.clear();window.location.replace('/login')">Logout</button>
         <div class="row">
             <div class="col-md-3">
                 <h1>Users</h1>
@@ -365,24 +366,23 @@
                         $("#chat-section").append(newMessage);
                     });
             }
-
-        // Status Online Or Offline
-
-        // window.Echo.join('online-users')
-        //         .here((users) => {
-        //             users.forEach(user => {
-        //                 $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
-        //             });
-        //         })
-        //         .joining((user) => {
-        //             $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
-        //         })
-        //         .leaving((user) => {
-        //             $(`.user-item[data-id="${user.id}"] .badge`).remove();
-        //         });
         }
 
         subscribeToChat();
+
+        // Online offline
+        window.Echo.join('online-users')
+        .here((users) => {
+            users.forEach(user => {
+                $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
+            });
+        })
+        .joining((user) => {
+            $(`.user-item[data-id="${user.id}"]`).append(`<span class="badge bg-success ml-2">Online</span>`);
+        })
+        .leaving((user) => {
+            $(`.user-item[data-id="${user.id}"] .badge`)[1].remove();
+        });
     </script>
 </body>
 </html>

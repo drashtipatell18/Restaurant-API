@@ -34,4 +34,4 @@ Broadcast::channel('presence-group.{groupId}', function ($user, $groupId) {
 
 Broadcast::channel('online-users', function ($user) {
     return ['id' => $user->id, 'username' => $user->username, 'status' => $user->status];
-});
+}, ['guards' => ['api']]);

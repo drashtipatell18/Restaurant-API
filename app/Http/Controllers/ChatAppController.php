@@ -262,8 +262,4 @@ class ChatAppController extends Controller
 
         return response()->json(['status' => 'success', 'message' => 'User removed from group']);
     }
-
-
-
-
 }

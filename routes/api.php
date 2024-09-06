@@ -199,12 +199,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('initialState',[ChatAppController::class,'initialState'])->name('broadcast.initialState');
 
 
-    // Chat Application
-    // Route::get('login',[ChatAppController::class,'chatLoggin'])->name('chat.loggin');
-    // Route::post('/brodcast',[ChatAppController::class,'broadcastChat'])->name('broadcast.chat');
-    // Route::post('/chat',[ChatAppController::class,'chat'])->name('chat');
-    // Route::get('/chat',[ChatAppController::class,'notFound'])->name('noChat');
-
     Route::post('group/store', [ChatAppController::class, 'storeGroup']);
     Route::post('/add-user-to-group', [ChatAppController::class, 'addUserToGroup'])->name('addUserToGroup');
     Route::post('/remove-user-from-group', [ChatAppController::class, 'removeUserFromGroup'])->name('chat.removeUserFromGroup');

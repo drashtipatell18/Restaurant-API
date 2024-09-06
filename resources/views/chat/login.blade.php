@@ -103,27 +103,27 @@
             enabledTransports: ['ws', 'wss'],
         });
 
-        function fireEvent() {
-            $.ajax({
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                url: '{{ route('broadcast.chat') }}',
-                type: 'POST',
-                success: function(data) {
-                    console.log(data);
-                    alert('Event has been fired.');
-                }
-            });
-        }
+        // function fireEvent() {
+        //     $.ajax({
+        //         headers: {
+        //             'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        //         },
+        //         url: '{{ route('broadcast.chat') }}',
+        //         type: 'POST',
+        //         success: function(data) {
+        //             console.log(data);
+        //             alert('Event has been fired.');
+        //         }
+        //     });
+        // }
 
         // Listening to the chatApplication channel and the Chat event
-        setTimeout(() => {
-            echo.channel('chatApplication')
-                .listen('Chat', (data) => {
-                    console.log(data);
-                });
-        }, 100);
+        // setTimeout(() => {
+        //     echo.channel('chatApplication')
+        //         .listen('Chat', (data) => {
+        //             console.log(data);
+        //         });
+        // }, 100);
     </script>
 </body>
 </html>
