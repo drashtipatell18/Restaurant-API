@@ -158,6 +158,26 @@ class ChatAppController extends Controller
         return response()->json($messages);
     }
 
+    public function chatUsers()
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Email not found'], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'user' => [
+                'email' => $user->email,
+                'name' => $user->name,
+                'id' => $user->id,
+            ],
+            'groups' => $user->groups,
+            'users' => User::where('email', '!=', $user->email)->get()
+        ]);
+    }
+
     public function logout(Request $request)
     {
         $user = Auth::user();

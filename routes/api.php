@@ -177,6 +177,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/chat/broadcast', [ChatAppController::class, 'broadcastChat'])->name('broadcast.chat');
     Route::post('/chat/logout', [ChatAppController::class, 'logout'])->name('chat.logout');
     Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
+    Route::get('/chat/user', [ChatAppController::class, 'chatUsers']);
 });
 
 
@@ -205,3 +206,5 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/remove-user-from-group', [ChatAppController::class, 'removeUserFromGroup'])->name('chat.removeUserFromGroup');
 
     Route::post('/chat/login', [ChatAppController::class, 'chat'])->name('chat');
+
+
