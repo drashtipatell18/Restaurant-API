@@ -195,7 +195,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::get('/item/getAll', [ItemController::class, 'getAll']);
     Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
 
-
+// Card Click
     Route::post('brodcastCardClicked',[ChatAppController::class,'cardClicked'])->name('broadcast.cardclicked');
     Route::get('initialState',[ChatAppController::class,'initialState'])->name('broadcast.initialState');
 
