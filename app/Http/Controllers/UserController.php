@@ -859,4 +859,34 @@ class UserController extends Controller
         $users = User::where('role_id', 2)->get();
         return response()->json($users, 200);
     }
+    public function updateUserStatus(Request $request, $id)
+    {
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|string|in:Activa,Suspender', // Define valid statuses
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'error' => $validator->errors()
+            ], 401);
+        }
+
+        $user = User::find($id);
+        if (is_null($user)) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Update the user's status
+        $user->status = $request->status;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User status updated successfully',
+            'user' => $user,
+        ], 200);
+    }
 }
