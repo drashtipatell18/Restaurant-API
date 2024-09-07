@@ -622,6 +622,9 @@ public function orderUpdateItem(Request $request, $order_id)
     if ($request->has('payment_type')) {
         $orderUpdateData['payment_type'] = $request->input('payment_type');
     }
+        if ($request->has('box_id')) {
+        $orderUpdateData['box_id'] = $request->input('box_id');
+    }
 
     // Generate and update transaction code if requested
     if ($request->input('transaction_code') === true) {
