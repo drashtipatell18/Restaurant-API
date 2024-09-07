@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Str;
 
 class ItemController extends Controller
 {
@@ -29,7 +30,7 @@ class ItemController extends Controller
 
         $validateRequest = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'code' => 'required|unique:items,code',
+          
             'production_center_id' => 'required|exists:production_centers,id',
             'cost_price' => 'required|numeric|min:1',
             'sale_price' => 'required|numeric|min:1',
@@ -64,9 +65,11 @@ class ItemController extends Controller
         $filename = time() . '.' . $image->getClientOriginalExtension();
         $image->move(public_path('images'), $filename);
 
+        $code = $this->generateUniqueCode();
+
         $item = Item::create([
             "name" => $request->name,
-            "code" => $request->code,
+            "code" => $code,
             "production_center_id" => $request->production_center_id,
             "cost_price" => $request->cost_price,
             "sale_price" => $request->sale_price,
@@ -82,6 +85,16 @@ class ItemController extends Controller
             'item' => $item
         ]);
     }
+
+    private function generateUniqueCode()
+    {
+        do {
+            $code = mt_rand(10000000, 99999999); // Generates an 8-digit number
+        } while (Item::where('code', $code)->exists()); // Ensure it's unique
+    
+        return $code;
+    }
+    
 
     public function updateItem(Request $request, $id)
     {
