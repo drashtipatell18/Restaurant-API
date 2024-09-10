@@ -207,4 +207,4 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
 
     Route::post('/chat/login', [ChatAppController::class, 'chat'])->name('chat');
 
-
+    Route::post('/mark-as-read', [ChatAppController::class,'markAsRead']);
