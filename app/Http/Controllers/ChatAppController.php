@@ -330,4 +330,26 @@ class ChatAppController extends Controller
 
         return response()->json(['status' => 'success', 'message' => 'User removed from group']);
     }
+    public function markAsRead(Request $request)
+    {
+        $chatIds = $request->input('chat_id');
+        $userId = auth()->id();
+    
+        if (!is_array($chatIds)) {
+            $chatIds = [$chatIds]; // Convert single ID to an array
+        }
+    
+        foreach ($chatIds as $chatId) {
+            $chat = Chats::find($chatId);
+    
+            if (!$chat) {
+                continue; // Skip if chat not found
+            }
+    
+            $chat->read_by = json_encode("yes"); // Directly set the field to 'yes'
+            $chat->save();
+        }
+    
+        return response()->json(['status' => 'success', 'message' => 'Chats marked as read successfully.', 'chat' => $chat]);
+    }
 }
