@@ -195,7 +195,7 @@ class ChatAppController extends Controller
                 $query->where('sender_id', $otherUser->id)
                       ->where('receiver_id', $user->id);
             })->orderBy('created_at', 'desc')
-              ->take(10)
+            
               ->get();
     
             return [
@@ -210,7 +210,7 @@ class ChatAppController extends Controller
         $userMessages = Chats::where('sender_id', $user->id)
                                ->orWhere('receiver_id', $user->id)
                                ->orderBy('created_at', 'desc')
-                               ->take(10)
+                              
                                ->get();
     
         return response()->json([
