@@ -453,6 +453,10 @@ class OrderController extends Controller
 
         $order = OrderMaster::find($request->input('order_id'));
         $order->status = $request->input('status');
+         if ($request->input('status') === 'delivered') {
+            $order->finished_at = now(); // Update current date in finish_at column if status is delivered
+        }
+
         $order->save();
 
         return response()->json([
