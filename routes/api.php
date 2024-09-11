@@ -176,7 +176,8 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     // Chat Application Deep
     Route::post('/chat/broadcast', [ChatAppController::class, 'broadcastChat'])->name('broadcast.chat');
     Route::post('/chat/logout', [ChatAppController::class, 'logout'])->name('chat.logout');
-    Route::post('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
+    Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
+    // Route::post('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
     Route::get('/chat/user', [ChatAppController::class, 'chatUsers']);
 });
 
