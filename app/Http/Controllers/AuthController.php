@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\FirstLoginMail;
 use Illuminate\Support\Str;
+// use App\Models\Notification;
+// use App\Events\NotificationMessage;
 
 
 class AuthController extends Controller
@@ -33,6 +35,24 @@ class AuthController extends Controller
     
         // Find user by email
         $user = User::where('email', $request->input('email'))->first();
+      
+
+        // $errorMessage = 'No se pudo ingresar al sistema. Verifica tu correo y contraseña e intenta nuevamente.';
+        if (!$user) {
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+
+            // Notification::create([
+            //     'user_id' => 1, // No specific user associated with this notification
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            // ]);
+
+    
+            return response()->json([
+                'success' => false,
+                // 'alert' => $errorMessage,
+            ], 401);
+        }
     
     if ($user->status === 'Suspender') {
             return response()->json([
@@ -64,21 +84,34 @@ class AuthController extends Controller
     
         // Check if the decrypted password matches the provided password
         if ($decrypted_password !== $request->input('password')) {
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
             return response()->json([
-                'success' => false,
-                'message' => 'La contraseña ingresada no coincide con el correo electrónico proporcionado'
-            ], 401);
+                    'success' => false,
+                    'message' => 'La contraseña ingresada no coincide con el correo electrónico proporcionado',
+                    // 'alert' => $errorMessage,
+                ], 401);
         }
     
         // Create token and respond with user info
         $token = $user->createToken($user->role_id)->plainTextToken;
     
+        // $successMessage = "Bienvenido, {$user->name}. Has ingresado exitosamente al sistema.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+
+        // Notification::create([
+        //     'user_id' => $user->id,
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
+
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'access_token' => $token,
-            'role' => Role::find($user->role_id)->name
+            'role' => Role::find($user->role_id)->name,
+            // 'notification' => $successMessage,
+            'admin_id' => $user->admin_id
         ]);
     }
     
