@@ -13,18 +13,29 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
 
 class BoxController extends Controller
 {
     public function index()
     {
-        $boxs = Boxs::all();
+        // Check if the user is an admin
+        if (auth()->user()->role == 'admin') {
+            // If the user is an admin, retrieve all records
+            $boxs = Boxs::all();
+        } else {
+            // Otherwise, retrieve records where admin_id matches the authenticated user
+            $boxs = Boxs::where('admin_id', auth()->user()->id)->get();
+        }
+    
         return response()->json($boxs, 200);
     }
 
     public function createBox(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        
         if($role != "admin")
         {
             return response()->json([
@@ -39,10 +50,19 @@ class BoxController extends Controller
 
         if($validateFamily->fails())
         {
+            // $errorMessage = 'No se pudo crear la caja. Verifica la información ingresada e intenta nuevamente.';
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            // ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validateFamily->errors()
+                'errors' => $validateFamily->errors(),
+                // 'alert' => $errorMessage,
             ], 401);
         }
 
@@ -59,7 +79,8 @@ class BoxController extends Controller
             ], 401);
         }
 
-        $checkBox = Boxs::where('user_id', $request->input('user_id'))->count();
+        $checkBox = Boxs::where('user_id', $request->input('user_id'))->where('admin_id', auth()->user()->id)->count();
+      
 
         if($checkBox != 0)
         {
@@ -74,13 +95,23 @@ class BoxController extends Controller
 
         $box = Boxs::create([
             'user_id' => $request->input('user_id'),
-            'name' => $request->input('name')
+            'name' => $request->input('name'),
+            'admin_id' => auth()->user()->id 
         ]);
+
+        // $successMessage = "La caja {$box->name} ha sido creada exitosamente y asignada a {$user->name}.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        // Notification::create([
+        //     'user_id' => auth()->user()->id, 
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
 
         return response()->json([
             'success' => true,
             'box' => $box,
-            'message' => 'Box added successfully.'
+            'message' => 'Box added successfully.',
+            // 'notification' => $successMessage,
         ], 200);
     }
     
@@ -106,10 +137,19 @@ class BoxController extends Controller
 
         if($validateFamily->fails())
         {
+            // $errorMessage = 'No se pudo actualizar la caja. Verifica la información ingresada e intenta nuevamente.';
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            // ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validateFamily->errors()
+                'errors' => $validateFamily->errors(),
+                // 'alert' => $errorMessage,
             ], 401);
         }
 
@@ -129,13 +169,24 @@ class BoxController extends Controller
         $box = Boxs::find($id);
         $box->update([
             'user_id' => $request->input('user_id'),
-            'name' => $request->input('name')
+            'name' => $request->input('name'),
+            'admin_id' => auth()->user()->id 
         ]);
+
+        // $successMessage = "La caja {$box->name} ha sido actualizada exitosamente.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        // Notification::create([
+        //     'user_id' => auth()->user()->id, 
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
+
 
         return response()->json([
             'success' => true,
             'box' => $box,
-            'message' => 'Box Updated Successfully.'
+            'message' => 'Box Updated Successfully.',
+            // 'notification' => $successMessage,
         ], 200);
     }
 
@@ -143,10 +194,26 @@ class BoxController extends Controller
     {
         $boxs = Boxs::find($id);
         if (is_null($boxs)) {
-            return response()->json(['message' => 'Box not found'], 404);
+            // $errorMessage = 'No se pudo eliminar la caja. Verifica si la caja está asociada a otros registros e intenta nuevamente.';
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            // ]);
+            return response()->json(['message' => 'Box not found','alert'=>$errorMessage], 404);
         }
         $boxs->delete();
-        return response()->json(['message' => 'Box deleted successfully'], 200);
+
+        // $successMessage = "La caja {$boxs->name} ha sido eliminada del sistema.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        // Notification::create([
+        //     'user_id' => auth()->user()->id, 
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
+
+        return response()->json(['message' => 'Box deleted successfully','notification'=>$successMessage], 200);
     }
 
     public function Boxsearch(Request $request)
@@ -311,7 +378,7 @@ public function GetAllBoxLog(Request $request, $id)
                 'box' => $log
             ], 200);
         }
-        else if($boxLog->close_time != null)
+        else if($boxLog->close_time != null)   
         {
             $validateLater = Validator::make($request->all(), [
                 'open_amount' => 'required|numeric|min:0'
@@ -319,13 +386,24 @@ public function GetAllBoxLog(Request $request, $id)
 
             if($validateLater->fails())
             {
+                // $errorMessage = 'No se pudo abrir la caja. Verifica la información ingresada e intenta nuevamente.';
+                // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                // Notification::create([
+                //     'user_id' => auth()->user()->id,
+                //     'notification_type' => 'alert',
+                //     'notification' => $errorMessage,
+                // ]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
-                    'errors' => $validateLater->errors()
+                    'errors' => $validateLater->errors(),
+                    // 'alert' => $errorMessage,
                 ], 403);
             }
-
+        
+            $box = Boxs::find($request->box_id);
+           
             $log = BoxLogs::create([
                 'box_id' => $request->input('box_id'),
                 'open_amount' => $request->input('open_amount'),
@@ -334,9 +412,18 @@ public function GetAllBoxLog(Request $request, $id)
                 'collected_amount' => 0
             ]);
 
+            // $successMessage = "La caja {$box->name} ha sido abierta exitosamente con un monto inicial de {$request->open_amount}.";
+            // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id, 
+            //     'notification_type' => 'notification',
+            //     'notification' => $successMessage,
+            // ]);
+
             return response()->json([
                 'success' => true,
-                'box' => $log
+                'box' => $log,
+                // 'notification' => $successMessage,
             ], 200);
         }
         else
@@ -347,12 +434,22 @@ public function GetAllBoxLog(Request $request, $id)
 
             if($validateLater->fails())
             {
+                // $errorMessage = 'No se pudo cerrar la caja. Verifica la información ingresada e intenta nuevamente.';
+                // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                // Notification::create([
+                //     'user_id' => auth()->user()->id,
+                //     'notification_type' => 'alert',
+                //     'notification' => $errorMessage,
+                // ]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
-                    'errors' => $validateLater->errors()
+                    'errors' => $validateLater->errors(),
+                    // 'alert' => $errorMessage
                 ], 403);
             }
+            $box = Boxs::find($request->box_id);
 
             $boxLog->close_amount = $request->input('close_amount');
             $boxLog->close_by = Auth::user()->id;
@@ -360,9 +457,18 @@ public function GetAllBoxLog(Request $request, $id)
 
             $boxLog->save();
 
+            // $successMessage = "La caja {$box->name} ha sido cerrada exitosamente con un monto final de {$request->close_amount}.";
+            // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id, 
+            //     'notification_type' => 'notification',
+            //     'notification' => $successMessage,
+            // ]);
+
             return response()->json([
                 'success' => true,
-                'box' => $boxLog
+                'box' => $boxLog,
+                // 'notification'=> $successMessage
             ],200);
         }
     }
@@ -409,7 +515,15 @@ public function GetAllBoxLog(Request $request, $id)
 
             $responseData[] = $order;
         }
+        $box = Boxs::find($id);
+        // $successMessage = "La consulta de la caja {$box->name} se ha realizado exitosamente.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        // Notification::create([
+        //     'user_id' => auth()->user()->id, 
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
 
-        return response()->json($orders, 200);
+        return response()->json([$orders, 200]);
     }
 }

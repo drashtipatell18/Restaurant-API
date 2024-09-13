@@ -10,7 +10,7 @@ class Boxs extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'boxs';
-    protected $fillable = ['user_id','name'];
+    protected $fillable = ['user_id','name','admin_id'];
 
     public function user()
     {
