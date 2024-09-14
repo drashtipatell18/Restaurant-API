@@ -8,13 +8,14 @@ use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Models\User;
 
 class MenuController extends Controller
 {
     public function createMenu(Request $request)
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
-        if($role != "admin")
+        if($role != "admin" &&  $role != "cashier")
         {
             return response()->json([
                 'success' => false,
@@ -34,13 +35,25 @@ class MenuController extends Controller
             ], 401);
         }
 
+        $admin_id = null;
+        if ($role == 'admin') {
+            // If the user is an admin, store their own ID
+            $admin_id = auth()->user()->id;
+        } elseif ($role == 'cashier') {
+           $admin_id = auth()->user()->admin_id;
+        }
+
+
+
         Menu::create([
-            'name' => $request->input('name')
+            'name' => $request->input('name'),
+            'admin_id' => $admin_id
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Menu added successfully.'
+            'message' => 'Menu added successfully.',
+            'admin_id' => $admin_id
         ], 200);
     }
 
@@ -111,10 +124,17 @@ class MenuController extends Controller
 
         if(isset($request->menu_ids) && is_array($request->menu_ids))
         {
-            $menus = DB::table('item__menu__joins')
-                ->leftJoin('menus', 'item__menu__joins.menu_id', '=', 'menus.id')
+            // $menus = DB::table('item__menu__joins')
+            //     ->leftJoin('menus', 'item__menu__joins.menu_id', '=', 'menus.id')
+            //     ->select('menus.*')
+            //     ->whereIn('menu_id', $request->menu_ids)
+            //     ->get();
+
+                $menus =DB::table('item__menu__joins')
                 ->select('menus.*')
-                ->whereIn('menu_id', $request->menu_ids)
+                ->leftJoin('menus','item__menu__joins.menu_id','=','menus.id')
+                ->whereIn('item__menu__joins.menu_id',$request->menu_ids)
+                ->where('menus.admin_id','=',$req)
                 ->get();
         }
         else
@@ -122,12 +142,15 @@ class MenuController extends Controller
             $menus = Menu::all();
         }
 
+     
         foreach ($menus as $menu) {
             $items = DB::table('item__menu__joins')
                 ->leftJoin('items', 'item__menu__joins.item_id', '=', 'items.id')
                 ->select('items.*')
                 ->where('item__menu__joins.menu_id', $menu->id)
+                ->where('item__menu__joins.admin_id', $menu->admin_id)
                 ->get();
+                
                 
             array_push($returnData, [
                 'id' => $menu->id,
@@ -139,7 +162,7 @@ class MenuController extends Controller
         return response()->json([
             'success' => true,
             'menus' => $returnData
-        ], 200);
+        ], 200);    
     }
    public function deleteItem($menuId, $itemId)
 {

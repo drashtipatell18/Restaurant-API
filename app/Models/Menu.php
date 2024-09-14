@@ -10,7 +10,7 @@ class Menu extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'menus';
-    protected $fillable = ['name'];
+    protected $fillable = ['name','admin_id'];
 
     public function items()
     {
