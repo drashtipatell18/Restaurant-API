@@ -108,7 +108,7 @@ Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatu
 
 
      // Production Center
-    Route::get('/production-centers', [ProductionCenterController::class, 'viewProductionCenter']);
+    Route::post('/production-centers', [ProductionCenterController::class, 'viewProductionCenter']);
     Route::post('/create/production-centers', [ProductionCenterController::class, 'storeProductionCenter']);
     Route::post('/update/production-centers/{id}', [ProductionCenterController::class, 'updateProductionCenter']);
     Route::get('/delete/production-centers/{id}', [ProductionCenterController::class, 'destroyProductionCenter']);

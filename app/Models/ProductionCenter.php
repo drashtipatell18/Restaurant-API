@@ -10,5 +10,5 @@ class ProductionCenter extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'production_centers';
-    protected $fillable = ['name','printer_code'];
+    protected $fillable = ['name','printer_code','admin_id'];
 }

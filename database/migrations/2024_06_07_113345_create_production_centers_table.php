@@ -15,8 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('name')->nullable();
             $table->integer('printer_code')->nullable();
+            $table->string('order_type')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
+
         });
     }
 
