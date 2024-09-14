@@ -15,9 +15,11 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('family_id')->nullable();
             $table->string('name')->nullable();
+            $table->unsignedBigInteger('admin_id')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->foreign('family_id')->references('id')->on('families')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
         });
     }
 

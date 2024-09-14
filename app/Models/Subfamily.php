@@ -10,7 +10,7 @@ class Subfamily extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'subfamilies';
-    protected $fillable = ['family_id','name'];
+    protected $fillable = ['family_id','name','admin_id'];
 
     public function family()
     {

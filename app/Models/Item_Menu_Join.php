@@ -10,5 +10,5 @@ class Item_Menu_Join extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'item__menu__joins';
-    protected $fillable = ['menu_id','item_id'];
+    protected $fillable = ['menu_id','item_id','admin_id'];
 }

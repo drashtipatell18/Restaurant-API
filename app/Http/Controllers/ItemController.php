@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Str;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
 
 class ItemController extends Controller
 {
@@ -41,12 +43,30 @@ class ItemController extends Controller
 
         if($validateRequest->fails())
         {
+            // $errorMessage = 'No se pudo crear el artículo. Verifica la información ingresada e intenta nuevamente.';
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            // ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                // 'alert' => $errorMessage,
             ], 403);
         }
+
+        $admin_id = null;
+        if ($role == 'admin') {
+            // If the user is an admin, store their own ID
+            $admin_id = auth()->user()->id;
+        } elseif ($role == 'cashier') {
+           $admin_id = auth()->user()->admin_id;
+        }
+
+
 
         $filename = '';
         if (!$request->hasFile('image')) 
@@ -76,13 +96,24 @@ class ItemController extends Controller
             "family_id" => $request->family_id,
             "sub_family_id" => $request->sub_family_id,
             "description" => $request->description,
-            "image" => $filename
+            "image" => $filename,
+           'admin_id' => $admin_id
         ]);
+
+        // $successMessage = "El artículo {$item->name} ha sido creado exitosamente.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        // Notification::create([
+        //     'user_id' => auth()->user()->id, 
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
+
 
         return response()->json([
             'success' => true,
             'message' => 'Item added successfully',
-            'item' => $item
+            'item' => $item,
+            // 'notification' => $successMessage
         ]);
     }
 
@@ -119,10 +150,18 @@ class ItemController extends Controller
 
         if($validateRequest->fails())
         {
+            $errorMessage = 'No se pudo actualizar el artículo. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage
             ], 403);
         }
 
@@ -151,15 +190,24 @@ class ItemController extends Controller
             $item->image = $filename;
         }
           if($request->has('description'))
-    {
-        $item->description = $request->description;
-    }
+            {
+                $item->description = $request->description;
+            }
         $item->save();
+
+        $successMessage = "El artículo {$item->name} ha sido actualizado exitosamente.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id, 
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Item updated successfully',
-            'item' => $item
+            'item' => $item,
+            'notification' => $successMessage,
         ], 200);
     }
 
@@ -178,43 +226,104 @@ class ItemController extends Controller
 
         if($item == null)
         {
+            // $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id, 
+            //     'notification_type' => 'notification',
+            //     'notification' => $errorMessage,
+            // ]);
             return response()->json([
                 'success' => false,
-                'message' => "Provided id is not found"
+                'message' => "Provided id is not found",
+                // 'alert' =>  $errorMessage
             ], 403);
         }
 
         $item->delete();
-
+        
+        // $successMessage = "El artículo {$item->name} ha sido eliminado del sistema.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        // Notification::create([
+        //     'user_id' => auth()->user()->id, 
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
         return response()->json([
             'success' => true,
-            'message' => 'Item deleted successfully.'
+            'message' => 'Item deleted successfully.',
+            // 'notification' => $successMessage
         ], 200);
     }
 
     public function getSingleItem($id)
     {
-        $item = Item::find($id);
-
-        if($item == null)
-        {
+        $user = auth()->user();
+       
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => "Provided id is not found"
-            ], 403);
+                'message' => "User not authenticated"
+            ], 401);
         }
 
+        $admin_id = $user->admin_id;
+        if($admin_id)
+        {
+            $item = Item::where('id', $id)->where('admin_id', $admin_id)->get();
+        }
+        else{
+            $item = Item::where('admin_id', auth()->user()->id)->get();
+        }
+    
+        if ($item == null) {
+            return response()->json([
+                'success' => false,
+                'message' => "Item not found or you don't have permission"
+            ], 403);
+        }
+    
+        return response()->json([
+            'success' => true,
+            'item' => $item
+        ], 200);
+    }
+    
+
+    public function getAll()
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => "User not authenticated"
+            ], 401);
+        }
+
+        $admin_id = $user->admin_id;
+        if($admin_id)
+        {
+            $item = Item::where('admin_id', $admin_id)->get();
+        }
+        else{
+            $item = Item::where('admin_id', auth()->user()->id)->get();
+        }
+
+         if ($item == null) {
+            return response()->json([
+                'success' => false,
+                'message' => "Item not found or you don't have permission"
+            ], 403);
+        }
+    
         return response()->json([
             'success' => true,
             'item' => $item
         ], 200);
     }
 
-    public function getAll()
-    {
-        $items = Item::all();
-        return response()->json(['success' => true, 'items' => $items]);
-    }
+    
 
     public function getSubFamilyWiseItem(Request $request)
     {
@@ -225,8 +334,7 @@ class ItemController extends Controller
             'families.*' => 'integer|exists:families,id'
         ]);
 
-        if($validateRequest->fails())
-        {
+        if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -234,11 +342,29 @@ class ItemController extends Controller
             ], 403);
         }
 
-        $items = Item::all()->whereIn('sub_family_id', $request->subfamilies);
-        if($request->has('families'))
-        {
-            $items = Item::all()->whereIn('family_id', $request->families);
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => "User not authenticated"
+            ], 401);
         }
+
+        $admin_id = $user->admin_id ?? $user->id; // Use admin_id if exists, otherwise user id
+
+        $query = Item::where('admin_id', $admin_id);
+
+        if ($request->has('subfamilies')) {
+            $query->whereIn('sub_family_id', $request->subfamilies);
+        }
+
+        if ($request->has('families')) {
+            $query->whereIn('family_id', $request->families);
+        }
+
+        $items = $query->get();
+
         return response()->json([
             'success' => true,
             'items' => $items
@@ -270,6 +396,15 @@ class ItemController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
+
+        $admin_id = null;
+        if ($role == 'admin') {
+            // If the user is an admin, store their own ID
+            $admin_id = auth()->user()->id;
+        } elseif ($role == 'cashier') {
+           $admin_id = auth()->user()->admin_id;
+        }
+
         $menu = Menu::find($request->menu_id);
         for($i = 0; $i < count($request->item_ids); $i++)
         {
@@ -277,7 +412,8 @@ class ItemController extends Controller
 
             Item_Menu_Join::create([
                 'menu_id' => $menu->id,
-                'item_id' => $item->id
+                'item_id' => $item->id,
+                'admin_id'=> $admin_id
             ]);
         }
 

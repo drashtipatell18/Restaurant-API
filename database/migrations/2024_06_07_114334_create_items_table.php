@@ -22,10 +22,12 @@ return new class extends Migration
             $table->decimal('sale_price',10,2)->nullable();
             $table->longText('description')->nullable();
             $table->longText('image')->nullable();
+            $table->unsignedBigInteger('admin_id')->nullable();
             $table->timestamps();
             $table->foreign('sub_family_id')->references('id')->on('subfamilies')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('family_id')->references('id')->on('families')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('production_center_id')->references('id')->on('production_centers')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             $table->softDeletes();
 
         });

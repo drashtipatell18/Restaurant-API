@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-Route::post('/create-user', [UserController::class, 'storeUser']);
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Dasboard
@@ -50,7 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Register Routes
     Route::get('/users', [UserController::class, 'index']);
-
+    Route::post('/create-user', [UserController::class, 'storeUser']);
     Route::post('/update-user/{id}', [UserController::class, 'updateUser']);
     Route::delete('/delete-user/{id}', [UserController::class, 'destroyUser']);
     Route::get('/get-user/{id}', [UserController::class, 'getUser']);
@@ -68,6 +68,7 @@ Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatu
 
 
     Route::delete('/menu/{menuId}/item/{itemId}', [MenuController::class, 'deleteItem'])->name('menu.item.remove');
+    Route::post('/menu/get', [MenuController::class, 'getMenu']);
 
     // Wallet Routes
     Route::post('/wallet/create', [WalletController::class, 'createWallet']);
@@ -96,11 +97,14 @@ Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatu
     Route::post('/family/create', [FamilyController::class, 'createFamily']);
     Route::post('/family/update/{id}', [FamilyController::class, 'updateFamily']);
     Route::delete("/family/delete/{id}", [FamilyController::class, 'deleteFamily']);
+    Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
 
     // Sub Family
     Route::post('/subfamily/create', [FamilyController::class, 'createSubFamily']);
     Route::post('/subfamily/update/{id}', [FamilyController::class, 'updateSubFamily']);
     Route::delete('/subfamily/delete/{id}', [FamilyController::class, 'deleteSubFamily']);
+    Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
+    Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
 
 
      // Production Center
@@ -128,6 +132,10 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::delete('/item/delete/{id}', [ItemController::class, 'deleteItem']);
     Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
     Route::get("/item/getSaleReport/{id}", [ItemController::class, 'getSaleReport']);
+    Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
+    Route::get('/item/getAll', [ItemController::class, 'getAll']);
+
+    Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
 
     Route::post('/order/creditNote', [OrderController::class, 'creditNote']);
     Route::get('/order/getCredit', [OrderController::class, 'getCredit']);
@@ -186,16 +194,16 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/invite', [AuthController::class, 'invite']);
     Route::post('set-password/{id}', [AuthController::class, 'setPassword']);
-    Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
-    Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
-    Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
+    // Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
+    // Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
+    // Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
     Route::get('/sector/getAll', [SectorController::class, 'getSector']);
     Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
     Route::get('/sector/by-table/{tableId}', [SectorController::class, 'getSectorByTableId']);
-    Route::post('/menu/get', [MenuController::class, 'getMenu']);
-    Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
-    Route::get('/item/getAll', [ItemController::class, 'getAll']);
-    Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
+    // Route::post('/menu/get', [MenuController::class, 'getMenu']);
+    // Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
+    // Route::get('/item/getAll', [ItemController::class, 'getAll']);
+    // Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
 
 // Card Click
     Route::post('brodcastCardClicked',[ChatAppController::class,'cardClicked'])->name('broadcast.cardclicked');
