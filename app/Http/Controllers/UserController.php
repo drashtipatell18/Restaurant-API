@@ -100,6 +100,7 @@ class UserController extends Controller
             'role_id' => $request->role_id,
             'password' => $encryption,
             'image' => $filename,
+            'status' => 'Activa', // Set default status to 'Activa'
         ]);
 
 
