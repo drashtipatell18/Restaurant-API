@@ -8,13 +8,15 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\BoxLogs;
 class PaymentController extends Controller
 {
+
     public function GetPayment(Request $request){
-    $payment = Payment::all();
-    return response()->json([
-        'success' => true,
-        'result' => $payment,
-        'message' => 'Payment Data successfully.'
-    ], 200);
+        $admin_id = $request->admin_id;
+        $payment = Payment::where('admin_id', $admin_id)->get();
+        return response()->json([
+            'success' => true,
+            'result' => $payment,
+            'message' => 'Payment Data successfully.'
+        ], 200);
     }
   public function getsinglePayments($order_master_id)
     {
@@ -34,6 +36,7 @@ class PaymentController extends Controller
         }
     }
     public function InsertPayment(Request $request){
+        $adminId = $request->admin_id;
         $validateRequest = Validator::make($request->all(), [
             'order_master_id' => 'required|exists:order_masters,id',
             'rut' => 'required',
@@ -51,8 +54,10 @@ class PaymentController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
+
         $payment = Payment::create([
             'order_master_id' => $request->input('order_master_id'),
+            'admin_id' => $request->admin_id,
             'rut' => $request->input('rut'),
             'firstname' => $request->input('firstname'),
             'lastname' => $request->input('lastname'),
@@ -65,7 +70,7 @@ class PaymentController extends Controller
             'type' => $request->input('type'),
             'amount' => $request->input('amount'),
             'return' => $request->input('return'),
-            'tax' => $request->input('tax')
+            'tax' => $request->input('tax'),
         ]);
         
         $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
@@ -97,22 +102,25 @@ class PaymentController extends Controller
             'message' => 'Payment added successfully.'
         ], 200);
     }
-    public function getPaymentById($id)
-{
-    // Retrieve the payment record by ID
-    $payment = Payment::find($id);
-
-    if ($payment) {
-        return response()->json([
-            'success' => true,
-            'data' => $payment
-        ], 200);
-    } else {
-        return response()->json([
-            'success' => false,
-            'message' => 'Payment not found'
-        ], 404);
+    public function getPaymentById(Request $request,$id)
+    {
+        // Retrieve the payment record by ID
+        $adminId = $request->input('admin_id');
+        
+        $payment = Payment::find($id);
+        // dd($payment->id,$adminId);
+        
+        if ($payment && $payment->admin_id == $adminId) {
+            return response()->json([
+                'success' => true,
+                'data' => $payment
+            ], 200);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found or Admin ID does not match'
+            ], 404);
+        }
     }
-}
 
 }

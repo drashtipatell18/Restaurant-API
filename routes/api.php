@@ -175,10 +175,10 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::get('/chat/getSpecificUserChat/{id}',[ChatController::class, 'getSpecificUserChat']);
 
     //Payment
-    Route::get('/get-payments', [PaymentController::class, 'GetPayment']);
+    Route::post('/get-payments', [PaymentController::class, 'GetPayment']);
     Route::get('/getsinglepayments/{order_master_id}', [PaymentController::class, 'getsinglePayments']);
     Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
-    Route::get('/getsinglepaymentById/{id}', [PaymentController::class, 'getPaymentById']);
+    Route::post('/getsinglepaymentById/{id}', [PaymentController::class, 'getPaymentById']);
 
 
     // Chat Application Deep
