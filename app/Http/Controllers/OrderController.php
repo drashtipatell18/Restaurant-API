@@ -60,7 +60,7 @@ class OrderController extends Controller
             'errors' => $validateRequest->errors()
         ], 403);
     }
-
+   
     $orderMaster = [
         'order_type' => $request->order_master['order_type'],
         'payment_type' => $request->order_master['payment_type'],
@@ -69,7 +69,8 @@ class OrderController extends Controller
         'delivery_cost' => $request->order_master['delivery_cost'],
         'customer_name' => $request->order_master['customer_name'],
         'person' => $request->order_master['person'],
-        'reason' => $request->order_master['reason']
+        'reason' => $request->order_master['reason'],
+        'admin_id' => $request->admin_id ?? Auth::user()->id
     ];
 
     // Generate and add transaction code if requested
@@ -83,14 +84,17 @@ class OrderController extends Controller
 
    if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->first();
+          
             if (!$box) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Box not found'
                 ], 403);
             }
-            
+
+          
             $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+          
 
             // $log->collected_amount += $totalAmount;
             
@@ -127,6 +131,10 @@ class OrderController extends Controller
             // $log->save();
         }
 
+    if ($role == "admin") {
+        $orderMaster['admin_id'] = Auth::user()->id;
+    }
+
     if (isset($request->order_master['table_id'])) {
         $orderMaster['table_id'] = $request->order_master['table_id'];
     }
@@ -160,7 +168,7 @@ class OrderController extends Controller
             'item_id' => $order_detail['item_id'],
             'amount' => $item->sale_price,
             'cost' => $item->cost_price,
-            'notes' => $order_detail['notes'],
+            // 'notes' => $order_detail['notes'],
             'quantity' => $order_detail['quantity']
         ]);
 
@@ -237,6 +245,7 @@ class OrderController extends Controller
                 'quantity' => $order_detail['quantity'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
+                'admin_id' => $request->admin_id
             ]);
 
             array_push($responseData['order_details'], $detail);

@@ -11,7 +11,7 @@ class OrderMaster extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'order_masters';
 
-    protected $fillable = ['table_id','user_id','box_id','order_type','finished_at','payment_type','status','tip','discount','delivery_cost','customer_name','person','reason'];
+    protected $fillable = ['table_id','user_id','box_id','order_type','finished_at','payment_type','status','tip','discount','delivery_cost','customer_name','person','reason','admin_id'];
 
 
     protected static function booted()
