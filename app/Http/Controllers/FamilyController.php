@@ -349,7 +349,16 @@ class FamilyController extends Controller
             ], 403);
         }
 
-        $adminId = Auth::user()->admin_id;
+
+        $adminId = $request->admin_id;
+
+
+        if (is_null($adminId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Admin ID is not set for the current user.'
+            ], 403);
+        }
 
 
         $data = [];

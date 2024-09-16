@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Auth;
 
 class ProductionCenterController extends Controller
 {
-    public function viewProductionCenter()
+    public function viewProductionCenter(Request $request)
     {
-        $productionCenters = ProductionCenter::all();
+        $productionCenters = ProductionCenter::where('admin_id', $request->admin_id)->get(); // Filter by admin_id
         return response()->json([
             'success' => true,
             'data' => $productionCenters
@@ -32,7 +32,7 @@ class ProductionCenterController extends Controller
         // }
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'printer_code' => 'nullable|integer'
+            'printer_code' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -42,8 +42,12 @@ class ProductionCenterController extends Controller
                 'errors' => $validator->errors()
             ], 403);
         }
-
-        $productionCenter = ProductionCenter::create($request->all());
+    
+        $productionCenter = ProductionCenter::create([
+            'name' => $request->name,
+            'printer_code' => $request->printer_code,
+            'admin_id' => $request->admin_id
+        ]);
 
         return response()->json([
             'success' => true,
@@ -75,12 +79,12 @@ class ProductionCenterController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
-
         $production = ProductionCenter::find($request->production_id);
         foreach ($request->item_ids as $item_id) {
             Item_Production_Join::create([
                 'production_id' => $production->id,
-                'item_id' => $item_id
+                'item_id' => $item_id,
+                'admin' => $request->admin_id,
             ]);
         }
 
@@ -155,7 +159,7 @@ class ProductionCenterController extends Controller
         $Ids = $request->input('ids', []);
         $productioncenterQuery = ProductionCenter::query();
         if (!empty($Ids)) {
-            $productioncenterQuery->whereIn('id', $Ids);
+            $productioncenterQuery->whereIn('id', $Ids)->where('admin_id', $request->admin_id); 
         }
         $productioncenter = $productioncenterQuery->get();
         return response()->json($productioncenter, 200);
@@ -175,9 +179,9 @@ class ProductionCenterController extends Controller
                 'errors' => $validator->errors()
             ], 403);
         }
-
-        $items = Item::whereIn('production_center_id', $request->productioncenter_ids)->get();
-
+        $items = Item::whereIn('production_center_id', $request->productioncenter_ids)
+                     ->where('admin_id', $request->admin_id) 
+                     ->get();
         return response()->json($items, 200);
     }
 }

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('order_master_id')->nullable();
+            $table->unsignedBigInteger('admin_id')->nullable();
             $table->string('rut')->nullable();
             $table->string('firstname')->nullable();
             $table->string('lastname')->nullable();
@@ -28,6 +29,7 @@ return new class extends Migration
             $table->decimal('return',10,2)->nullable();
             $table->decimal('tax',10,2)->nullable();
             $table->foreign('order_master_id')->references('id')->on('order_masters')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             $table->timestamps();
             $table->softDeletes();
         });
