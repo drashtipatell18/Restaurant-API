@@ -319,7 +319,7 @@ class ItemController extends Controller
     
         return response()->json([
             'success' => true,
-            'item' => $item
+            'items' => $item
         ], 200);
     }
 
