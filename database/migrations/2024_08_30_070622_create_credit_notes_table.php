@@ -21,9 +21,11 @@ return new class extends Migration
             $table->string('destination')->nullable();
             $table->enum('status', ['pending', 'completed'])->default('pending');
             $table->string('credit_method');
+            $table->unsignedBigInteger('admin_id')->nullable();
             $table->timestamps();
             $table->foreign('order_id')->references('id')->on('order_masters')->onDelete('cascade');
             $table->foreign('payment_id')->references('id')->on('payments')->onDelete('cascade');
+            $table->foreign('admin_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

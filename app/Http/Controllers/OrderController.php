@@ -351,7 +351,11 @@ class OrderController extends Controller
         //     ], 401);
         // }
 
-        $orders = OrderMaster::all();
+        $admin = $request->admin_id;
+       
+        $orders = OrderMaster::where('admin_id', $admin)->get();
+       
+      
 
         $filter = [];
         $flag = false;
@@ -393,10 +397,14 @@ class OrderController extends Controller
         return response()->json($orders, 200);
     }
 
-    public function getSingle($id)
+    public function getSingle(Request $request,$id)
     {
-        $order = OrderMaster::find($id);
 
+    
+        $adminId = $request->admin_id;
+        // $order = OrderMaster::find($id)->where('admin_id', $adminId)->get();
+        $order = OrderMaster::where('id', $id)->where('admin_id', $adminId)->first();
+      
         if($order == null)
         {
             return response()->json([
@@ -404,14 +412,16 @@ class OrderController extends Controller
                 'message' => "Invalid order id"
             ], 403);
         }
-
+        
         $order['total'] = OrderDetails::where('order_master_id', $order->id)->sum('amount');
+    
             $order['order_details'] = DB::table('order_details')
                 ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
                 ->where('order_master_id', $order->id)
                 ->whereNull('order_details.deleted_at')
                 ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
                 ->get();
+               
         return response()->json($order);
     }
 
@@ -555,8 +565,11 @@ class OrderController extends Controller
         ], 200);
     }
     
-    public function getLastOrder()
+    public function getLastOrder(Request $request)
     {
+        $adminId = $request->admin_id;
+        
+
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
         if ($role != "admin" && $role != "cashier" && $role != "waitress") {
             return response()->json([
@@ -564,8 +577,9 @@ class OrderController extends Controller
             'message' => 'Unauthorised'
         ], 401);
     }
+    
 
-    $lastOrder = OrderMaster::orderBy('id', 'desc')->first();
+    $lastOrder = OrderMaster::where('admin_id', $adminId)->orderBy('id', 'desc')->first();
 
     if ($lastOrder == null) {
         return response()->json([
@@ -691,10 +705,11 @@ public function orderUpdateItem(Request $request, $order_id)
 }
 
 
-    public function getCredit()
+    public function getCredit(Request $request)
     {
       
-        $creditNotes = CreditNot::with('returnItems')->get();
+        $adminId = $request->admin_id;
+        $creditNotes = CreditNot::where('admin_id', $adminId)->with('returnItems')->get();
      
 
         // Return the credit notes as JSON
@@ -712,6 +727,8 @@ public function orderUpdateItem(Request $request, $order_id)
         ]);
         $creditNoteData = $request->input('credit_note');
         $returnItemsData = $request->input('return_items');
+        $admin_id = $request->input('admin_id');
+       
 
         // Create the credit note
         $creditNote = CreditNot::create([
@@ -724,8 +741,10 @@ public function orderUpdateItem(Request $request, $order_id)
             'destination' => $creditNoteData['destination'],
             'delivery_cost' => $creditNoteData['delivery_cost'],
             'payment_status' => $creditNoteData['payment_status'],
-             'credit_method' => $creditNoteData['credit_method']
+             'credit_method' => $creditNoteData['credit_method'],
+             'admin_id' => $admin_id
         ]);
+        
 
         // Process return items (if you need to process them but not include in the response)
         $returnItems = [];
