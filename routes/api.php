@@ -138,7 +138,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/item/getSubFamilyWiseItem', [ItemController::class, 'getSubFamilyWiseItem']);
 
     Route::post('/order/creditNote', [OrderController::class, 'creditNote']);
-    Route::get('/order/getCredit', [OrderController::class, 'getCredit']);
+    Route::post('/order/getCredit', [OrderController::class, 'getCredit']);
     Route::post('/order/getCreditUpdate/{id}', [OrderController::class, 'orderCreditUpdate']);
     Route::delete('/order/creditnotes/{id}', [OrderController::class, 'orderCreditDelete']);
 
@@ -146,16 +146,16 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/order/place_new', [OrderController::class, 'placeOrder']);
     Route::post('/order/addItem', [OrderController::class, 'addItem']);
     Route::post('/order/updateItem/{id}', [OrderController::class, 'UpdateItem']);
-    Route::get('/order/getAll', [OrderController::class, 'getAll']);
+    Route::post('/order/getAll', [OrderController::class, 'getAll']);
     Route::delete('/order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::delete('/order/deleteSingle/{id}', [OrderController::class, 'deleteSingle']);
-    Route::get('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
+    Route::post('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
     Route::post('/order/updateStatus', [OrderController::class, 'updateOrderStatus']);
     Route::get('/order/addTip/{id}', [OrderController::class, 'addTip']);
     Route::post('/order/addNote/{id}', [OrderController::class, 'addNote']);
     Route::get('/order/getLog/{id}', [OrderController::class,'getOrderLog']);
     Route::post('/order/updateorderreason/{id}', [OrderController::class,'UpdateOrderReason']);
-    Route::get('/orders/last', [OrderController::class, 'getLastOrder']);
+    Route::post('/orders/last', [OrderController::class, 'getLastOrder']);
     Route::post('/order/orderUpdateItem/{order_id}', [OrderController::class, 'orderUpdateItem']); //new
     
     // Group
