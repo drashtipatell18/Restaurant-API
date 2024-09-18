@@ -10,7 +10,7 @@ class Chats extends Model
 {
     use HasFactory, SoftDeletes;
     protected $table = 'chats';
-    protected $fillable = ['sender_id','receiver_id', 'group_id', 'message', 'read_by'];
+    protected $fillable = ['sender_id','receiver_id', 'group_id', 'message', 'read_by','admin_id'];
 
     public function sender()
     {

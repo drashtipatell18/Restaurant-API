@@ -18,10 +18,12 @@ return new class extends Migration
             $table->unsignedBigInteger('group_id')->nullable();
             $table->text('message')->nullable();
             $table->string('read_by')->default('no');
+            $table->unsignedBigInteger('admin_id');
             $table->softDeletes();
             $table->foreign('sender_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('receiver_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('group_id')->references('id')->on('group_for_chats')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             $table->timestamps();
         });
     }

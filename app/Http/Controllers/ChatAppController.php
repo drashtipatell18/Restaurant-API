@@ -93,6 +93,7 @@ class ChatAppController extends Controller
         }
 
         $chat = new Chats;
+        $chat->admin_id = $request->admin_id;
         $chat->sender_id = $sender->id;
         $chat->message = $request->msg;
 
@@ -101,7 +102,7 @@ class ChatAppController extends Controller
             $chat->group_id = $request->group_id;
             $chat->save();
 
-            broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id));
+            broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id,$request->admin_id));
 
             return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat]);
         }
@@ -111,7 +112,7 @@ class ChatAppController extends Controller
             $chat->receiver_id = $request->receiver_id;
             $chat->save();
 
-            broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null));
+            broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null,$request->admin_id));
 
             return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat]);
         }
@@ -184,8 +185,9 @@ class ChatAppController extends Controller
         if (!$user) {
             return response()->json(['error' => 'User not authenticated'], 401);
         }
-
-        $allUsers = User::where('id', '!=', $user->id)->get();
+        $adminId = request()->input('admin_id');
+       
+        $allUsers = User::where('id', '!=', $user->id)->where('admin_id',$adminId)->get();
 
         $usersWithMessages = $allUsers->map(function ($otherUser) use ($user) {
             $messages = Chats::where(function ($query) use ($user, $otherUser) {
@@ -203,11 +205,13 @@ class ChatAppController extends Controller
                 'messages' => $messages
             ];
         });
+        
 
         // Get the authenticated user's messages
         $userMessages = Chats::where('sender_id', $user->id)
                                ->orWhere('receiver_id', $user->id)
                                ->orderBy('created_at', 'desc')
+                               ->orWhere('admin_id',$adminId)
                                ->get();
 
         // Include group chats in the response
@@ -219,7 +223,8 @@ class ChatAppController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'messages' => $userMessages
+                'messages' => $userMessages,
+                
             ],
             'groups' => $user->groups,
             'users' => $usersWithMessages,
