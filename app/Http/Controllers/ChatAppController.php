@@ -255,6 +255,8 @@ class ChatAppController extends Controller
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        $adminId = $request->admin_id;
+      
         // Create a new group
         $group = new GroupForChat();
         $group->name = $request->input('name');
@@ -271,7 +273,7 @@ class ChatAppController extends Controller
 
             $group->photo = $fileName;
         }
-
+        $group->admin_id = $adminId;
         $group->save();
 
         return response()->json(['success' => true, 'group' => $group]);
@@ -281,13 +283,15 @@ class ChatAppController extends Controller
     public function addUserToGroup(Request $request)
     {
         // Validate the request
+       
         $request->validate([
             'group_id' => 'required|exists:group_for_chats,id',
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
         ]);
-
+        $adminId = $request->admin_id;
         $group = GroupForChat::find($request->group_id);
+       
 
         if (!$group) {
             return response()->json(['status' => 'error', 'message' => 'Group not found']);
@@ -308,6 +312,7 @@ class ChatAppController extends Controller
                     'group_id' => $request->group_id,
                     'group_for_chat_id' => $request->group_id,
                     'user_id' => $user_id,
+                    'admin_id'=> $group->admin_id,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
