@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('sectors', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('admin_id')->nullable();
             $table->string('name');
-            $table->timestamps();
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');            $table->timestamps();
             $table->softDeletes();
         });
     }

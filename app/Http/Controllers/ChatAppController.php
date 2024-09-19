@@ -93,6 +93,7 @@ class ChatAppController extends Controller
         }
 
         $chat = new Chats;
+        $chat->admin_id = $request->admin_id;
         $chat->sender_id = $sender->id;
         $chat->message = $request->msg;
 
@@ -101,7 +102,7 @@ class ChatAppController extends Controller
             $chat->group_id = $request->group_id;
             $chat->save();
 
-            broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id));
+            broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id,$request->admin_id));
 
             return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat]);
         }
@@ -111,7 +112,7 @@ class ChatAppController extends Controller
             $chat->receiver_id = $request->receiver_id;
             $chat->save();
 
-            broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null));
+            broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null,$request->admin_id));
 
             return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat]);
         }
@@ -184,8 +185,9 @@ class ChatAppController extends Controller
         if (!$user) {
             return response()->json(['error' => 'User not authenticated'], 401);
         }
-
-        $allUsers = User::where('id', '!=', $user->id)->get();
+        $adminId = request()->input('admin_id');
+       
+        $allUsers = User::where('id', '!=', $user->id)->where('admin_id',$adminId)->get();
 
         $usersWithMessages = $allUsers->map(function ($otherUser) use ($user) {
             $messages = Chats::where(function ($query) use ($user, $otherUser) {
@@ -203,11 +205,13 @@ class ChatAppController extends Controller
                 'messages' => $messages
             ];
         });
+        
 
         // Get the authenticated user's messages
         $userMessages = Chats::where('sender_id', $user->id)
                                ->orWhere('receiver_id', $user->id)
                                ->orderBy('created_at', 'desc')
+                               ->orWhere('admin_id',$adminId)
                                ->get();
 
         // Include group chats in the response
@@ -219,7 +223,8 @@ class ChatAppController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'messages' => $userMessages
+                'messages' => $userMessages,
+                
             ],
             'groups' => $user->groups,
             'users' => $usersWithMessages,
@@ -250,6 +255,8 @@ class ChatAppController extends Controller
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        $adminId = $request->admin_id;
+      
         // Create a new group
         $group = new GroupForChat();
         $group->name = $request->input('name');
@@ -266,7 +273,7 @@ class ChatAppController extends Controller
 
             $group->photo = $fileName;
         }
-
+        $group->admin_id = $adminId;
         $group->save();
 
         return response()->json(['success' => true, 'group' => $group]);
@@ -276,13 +283,15 @@ class ChatAppController extends Controller
     public function addUserToGroup(Request $request)
     {
         // Validate the request
+       
         $request->validate([
             'group_id' => 'required|exists:group_for_chats,id',
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
         ]);
-
+        $adminId = $request->admin_id;
         $group = GroupForChat::find($request->group_id);
+       
 
         if (!$group) {
             return response()->json(['status' => 'error', 'message' => 'Group not found']);
@@ -303,6 +312,7 @@ class ChatAppController extends Controller
                     'group_id' => $request->group_id,
                     'group_for_chat_id' => $request->group_id,
                     'user_id' => $user_id,
+                    'admin_id'=> $group->admin_id,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

@@ -10,7 +10,7 @@ class GroupForChat extends Model
 {
     use HasFactory, SoftDeletes;
     protected $table = 'group_for_chats';
-    protected $fillable = ['name','photo'];
+    protected $fillable = ['name','photo','admin_id'];
 
     public function chats()
     {

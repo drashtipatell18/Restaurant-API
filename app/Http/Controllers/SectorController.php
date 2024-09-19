@@ -41,7 +41,8 @@ class SectorController extends Controller
         }
 
         $sector = Sector::create([
-            'name' => $request->input('name')
+            'name' => $request->input('name'),
+            'admin_id' => $request->input('admin_id')
         ]);
 
         $tables = [];
@@ -50,6 +51,7 @@ class SectorController extends Controller
             $table = Table::create([
                 'user_id' => Auth()->user()->id,
                 'sector_id' => $sector->id,
+                'admin_id' => $sector->admin_id,
                 'name' => 'Table ' . ($i + 1)
             ]);
 
@@ -87,94 +89,105 @@ class SectorController extends Controller
         ], 200);
     }
 
-   public function getSector()
-{
-    $sections = Sector::all();
-    $sectorsWithTableCount = $sections->map(function ($sector) {
-        $tableCount = Table::where('sector_id', $sector->id)->count();
-        return [
-            'id' => $sector->id,
-            'name' => $sector->name,
-            'noOfTables' => $tableCount
-        ];
-    });
-
-    return response()->json([
-        'success' => true,
-        'sectors' => $sectorsWithTableCount
-    ], 200);
-}
-
-   public function getSectionWithTable(Request $request)
-{
-    // Validate the request
-    $validateRequest = Validator::make($request->all(), [
-        'sectors' => 'array',
-        'sectors.*' => 'integer|exists:sectors,id'
-    ]);
-    if ($validateRequest->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation error',
-            'errors' => $validateRequest->errors()
-        ], 403);
-    }
-
-    // Initialize the data array
-    $data = [];
-
-    if (isset($request->sectors) && is_array($request->sectors)) {
-        // Get sectors based on provided IDs
-        $sectors = Sector::whereIn('id', $request->sectors)->get(['id', 'name']);
-    } else {
-        // Get all sectors
-        $sectors = Sector::all(['id', 'name']);
-    }
-
-    // Loop through each sector
-    foreach ($sectors as $sector) {
-        // Get tables for the sector
-        $tables = Table::where('sector_id', $sector->id)->get(['id', 'name', 'status']);
-        $tableData = [];
-
-        // Loop through each table
-        foreach ($tables as $table) {
-            // Prepare table info
-            $tableInfo = [
-                'id' => $table->id,
-                'name' => $table->name,
-                'status' => $table->status,
+    public function getSector(Request $request)
+    {
+        $sections = Sector::where('admin_id', $request->admin_id)->get();
+        $sectorsWithTableCount = $sections->map(function ($sector) {
+            $tableCount = Table::where('sector_id', $sector->id)
+                ->where('admin_id', $sector->admin_id) // Replace $adminId with the actual admin ID variable
+                ->count();
+            return [
+                'id' => $sector->id,
+                'name' => $sector->name,
+                'admin_id' => $sector->admin_id,
+                'noOfTables' => $tableCount
             ];
+        });
 
-            // Check if table is busy and get the latest order ID and user_id
-            if ($table->status === 'busy') {
-                $order = OrderMaster::where('table_id', $table->id)->latest()->first(['id', 'user_id']);
-                if ($order) {
-                    $tableInfo['order_id'] = $order->id;
-                    $tableInfo['user_id'] = $order->user_id;
-                }
-            }
+        return response()->json([
+            'success' => true,
+            'sectors' => $sectorsWithTableCount
+        ], 200);
+    }
 
-            // Add table info to table data array
-            $tableData[] = $tableInfo;
+    public function getSectionWithTable(Request $request)
+    {
+        // Validate the request
+        $validateRequest = Validator::make($request->all(), [
+            'sectors' => 'array',
+            'sectors.*' => 'integer|exists:sectors,id'
+        ]);
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateRequest->errors()
+            ], 403);
         }
 
-        // Add sector info to data array
-        $data[] = [
-            'id' => $sector->id,
-            'name' => $sector->name,
-            'tables' => $tableData,
-        ];
-    }
+        // Initialize the data array
+        $data = [];
 
-    // Return response
-    return response()->json(["success" => true, "data" => $data], 200);
-}
+        if (isset($request->sectors) && is_array($request->sectors)) {
+            // Get sectors based on provided IDs
+            $sectors = Sector::whereIn('id', $request->sectors)
+                ->where('admin_id', $request->admin_id)
+                ->get(['id', 'name', 'admin_id']);
+        } else {
+            // Get all sectors
+            $sectors = Sector::where('admin_id', $request->admin_id)
+                ->get(['id', 'name', 'admin_id']);
+        }
+        // Loop through each sector
+        foreach ($sectors as $sector) {
+            // Get tables for the sector
+            $tables = Table::where('sector_id', $sector->id)
+                ->where('admin_id', $sector->admin_id)
+
+                ->get(['id', 'name', 'status']);
+            $tableData = [];
+
+            // Loop through each table
+            foreach ($tables as $table) {
+                // Prepare table info
+                $tableInfo = [
+                    'id' => $table->id,
+                    'name' => $table->name,
+                    'status' => $table->status,
+                ];
+
+                // Check if table is busy and get the latest order ID and user_id
+                if ($table->status === 'busy') {
+                    $order = OrderMaster::where('table_id', $table->id)
+                        ->where('admin_id', $table->admin_id)
+                        ->latest()->first(['id', 'user_id']);
+                    if ($order) {
+                        $tableInfo['order_id'] = $order->id;
+                        $tableInfo['user_id'] = $order->user_id;
+                    }
+                }
+
+                // Add table info to table data array
+                $tableData[] = $tableInfo;
+            }
+
+            // Add sector info to data array
+            $data[] = [
+                'id' => $sector->id,
+                'name' => $sector->name,
+                'admin_id' => $sector->admin_id,
+                'tables' => $tableData,
+            ];
+        }
+
+        // Return response
+        return response()->json(["success" => true, "data" => $data], 200);
+    }
 
     public function updateTableStatus(Request $request)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-       
+
         $validateRequest = Validator::make($request->all(), [
             'table_id' => 'required|exists:restauranttables,id',
             'status' => 'required|in:available,busy'
@@ -188,7 +201,9 @@ class SectorController extends Controller
             ], 403);
         }
 
-        $table = Table::find($request->table_id);
+        $table = Table::where('id', $request->table_id)
+            ->where('admin_id', $request->admin_id) // Ensure admin_id matches
+            ->first();
         $table->status = $request->status;
         $table->save();
 
@@ -232,6 +247,7 @@ class SectorController extends Controller
             $table = Table::create([
                 'user_id' => Auth()->user()->id,
                 'sector_id' => $request->sector_id,
+                'admin_id' => $request->admin_id,
                 'name' => 'Table ' . (++$lastNo)
             ]);
 
@@ -247,17 +263,20 @@ class SectorController extends Controller
 
     public function getTableStats(Request $request, $id)
     {
-        if (Table::find($id) == null) {
+        $table = Table::where('id', $id)
+            ->where('admin_id', $request->admin_id) // Ensure admin_id matches
+            ->first();
+        if ($table == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Table id invalid'
             ], 403);
         }
-
         $responseData = [];
 
-        $ordersQuery = OrderMaster::where('table_id', $id);
-
+        $ordersQuery = OrderMaster::where('table_id', $id)
+            ->where('admin_id', $request->admin_id);
+           
         if ($request->has('from_month') && $request->has('to_month')) {
             $startDate = Carbon::create(null, $request->query('from_month'), 1)->startOfMonth();
             $endDate = Carbon::create(null, $request->query('to_month'), 1)->endOfMonth();
@@ -265,15 +284,19 @@ class SectorController extends Controller
         }
 
         $orders = $ordersQuery->get();
-
+        
         foreach ($orders as $order) {
-            $customer = User::find($order->user_id);
+            $customer = User::where('id', $order->user_id)
+                ->where('admin_id', $request->admin_id) // Ensure admin_id matches
+                ->first();
 
             if ($customer != null) {
                 $order->customer = $customer->name;
             }
 
-            $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
+            $orderDetails = OrderDetails::where('order_master_id', $order->id)
+                ->where('admin_id', $request->admin_id) // Ensure admin_id matches
+                ->get();
             $order->items = $orderDetails;
 
             $total = 0;
@@ -334,35 +357,38 @@ class SectorController extends Controller
         return response()->json($responseData, 200);
     }
     public function getSectorByTableId($tableId)
-{
-    $table = Table::find($tableId);
-    
-    if (!$table) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Table not found'
-        ], 404);
-    }
-    
-    $sector = Sector::find($table->sector_id);
-    
-    if (!$sector) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Sector not found for this table'
-        ], 404);
-    }
-    
-    return response()->json([
-        'success' => true,
-        'sector' => [
-            'id' => $sector->id,
-            'name' => $sector->name
-        ]
-    ], 200);
-}
+    {
+        $table = Table::find($tableId);
 
-    public function updateSector(Request $request, $id) {
+        if (!$table) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Table not found'
+            ], 404);
+        }
+
+        $sector = Sector::where('id', $table->sector_id)
+        ->where('admin_id', $table->admin_id) // Ensure admin_id matches
+        ->first();
+
+        if (!$sector) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sector not found for this table'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'sector' => [
+                'id' => $sector->id,
+                'name' => $sector->name
+            ]
+        ], 200);
+    }
+
+    public function updateSector(Request $request, $id)
+    {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
         if ($role != "admin") {
             return response()->json([
@@ -370,12 +396,12 @@ class SectorController extends Controller
                 'message' => 'Unauthorised'
             ], 405);
         }
-    
+
         $validateRequest = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'noOfTables' => 'required|integer|min:1'
         ]);
-    
+
         if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
@@ -383,28 +409,29 @@ class SectorController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
-    
+
         $sector = Sector::findOrFail($id);
         $sector->update([
             'name' => $request->input('name')
         ]);
-    
+
         $tables = [];
-    
+
         // Delete existing tables
         Table::where('sector_id', $sector->id)->delete();
-    
+
         // Create new tables
         for ($i = 0; $i < $request->input('noOfTables'); $i++) {
             $table = Table::create([
                 'user_id' => Auth::user()->id,
                 'sector_id' => $sector->id,
+                'admin_id' => $sector->admin_id,
                 'name' => 'Table ' . ($i + 1)
             ]);
-    
+
             array_push($tables, $table);
         }
-    
+
         return response()->json([
             'success' => true,
             'message' => 'Sector and Tables updated successfully.',
@@ -412,7 +439,8 @@ class SectorController extends Controller
             'tables' => $tables
         ], 200);
     }
-    public function getTableSingle(Request $request, $id){
+    public function getTableSingle(Request $request, $id)
+    {
         $table = Table::find($id);
         return response()->json([
             'success' => true,
@@ -420,6 +448,4 @@ class SectorController extends Controller
             'tables' => $table
         ], 200);
     }
-
-
 }

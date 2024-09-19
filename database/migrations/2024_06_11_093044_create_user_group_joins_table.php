@@ -17,9 +17,11 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->timestamps();
             $table->integer('group_for_chat_id')->nullable();
+            $table->unsignedBigInteger('admin_id');
             $table->softDeletes();
             $table->foreign('group_id')->references('id')->on('group_for_chats')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
         });
     }
 

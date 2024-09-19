@@ -11,5 +11,5 @@ class Sector extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'sectors';
-    protected $fillable = ['name'];
+    protected $fillable = ['name','admin_id'];
 }

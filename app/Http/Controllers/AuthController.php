@@ -53,6 +53,12 @@ class AuthController extends Controller
                 // 'alert' => $errorMessage,
             ], 401);
         }
+         if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El usuario ingresado no existe en la base de datos del sistema'
+            ], 401);
+        }
     
     if ($user->status === 'Suspender') {
             return response()->json([
@@ -60,12 +66,7 @@ class AuthController extends Controller
                 'message' => 'Su cuenta está suspendida. Póngase en contacto con el servicio de asistencia.'
             ], 403);
         }
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'El usuario ingresado no existe en la base de datos del sistema'
-            ], 401);
-        }
+       
     
         // Decrypt the stored password and compare
         $ciphering = "AES-128-CTR";
