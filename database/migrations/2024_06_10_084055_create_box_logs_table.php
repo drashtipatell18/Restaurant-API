@@ -28,6 +28,7 @@ return new class extends Migration
             $table->foreign('box_id')->references('id')->on('boxs')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('open_by')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('close_by')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             // $table->foreign('payment_id')->references('id')->on('payments')->onUpdate('cascade')->onDelete('cascade');
             // $table->foreign('order_master_id')->references('id')->on('order_masters')->onUpdate('cascade')->onDelete('cascade');
 

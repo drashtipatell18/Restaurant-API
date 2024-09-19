@@ -54,8 +54,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/update-user/{id}', [UserController::class, 'updateUser']);
     Route::delete('/delete-user/{id}', [UserController::class, 'destroyUser']);
     Route::get('/get-user/{id}', [UserController::class, 'getUser']);
-    Route::post('/search-user', [UserController::class, 'Rolesearch']);
-    Route::post('/search-user-month', [UserController::class, 'Monthsearch']);
+        Route::post('/search-user', [UserController::class, 'Rolesearch']);
+        Route::post('/search-user-month', [UserController::class, 'Monthsearch']);
     Route::get('/get-users', [UserController::class, 'index']);
     Route::get("/user/{id}/getOrders", [UserController::class, 'getOrders']);
 
@@ -80,7 +80,7 @@ Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatu
     Route::post('/wallet-log/update/{id}', [WalletLogController::class, 'updateWalletLog']);
     Route::delete('/wallet-log/delete/{id}', [WalletLogController::class, 'deleteWalletLog']);
     Route::get("/wallet/getUserLog/{id}", [WalletLogController::class, 'getWalletLog']);
-
+    
     // Boxs Routes
     Route::post('/box/create', [BoxController::class, 'createBox']);
     Route::post('/box/update/{id}', [BoxController::class, 'updateBox']);
@@ -188,6 +188,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     // Route::post('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
     Route::get('/chat/user', [ChatAppController::class, 'chatUsers']);
 });
+
 
 
     // User Routes
