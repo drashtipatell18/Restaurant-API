@@ -123,7 +123,7 @@ Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatu
     Route::delete('/sector/delete/{id}', [SectorController::class, 'deleteSector']);
     Route::post('/sector/addTables', [SectorController::class, 'addTables']);
     Route::post('/table/updateStatus', [SectorController::class, 'updateTableStatus']);
-    Route::get('/table/getStats/{id}', [SectorController::class, 'getTableStats']);
+    Route::post('/table/getStats/{id}', [SectorController::class, 'getTableStats']);
     Route::get('/kds/{table_id}', [SectorController::class, 'getKds']);
 Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //new
     // Items
@@ -197,7 +197,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     // Route::get('/family/getFamily', [FamilyController::class, 'getFamily']);
     // Route::get('/subfamily/getSubFamily', [FamilyController::class, 'getSubFamily']);
     // Route::post('/subfamily/getMultipleSubFamily', [FamilyController::class, 'getMultipleSubFamily']);
-    Route::get('/sector/getAll', [SectorController::class, 'getSector']);
+    Route::post('/sector/getAll', [SectorController::class, 'getSector']);
     Route::post('/sector/getWithTable', [SectorController::class, 'getSectionWithTable']);
     Route::get('/sector/by-table/{tableId}', [SectorController::class, 'getSectorByTableId']);
     // Route::post('/menu/get', [MenuController::class, 'getMenu']);

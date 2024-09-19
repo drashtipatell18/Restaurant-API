@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name')->nullable();
             $table->integer('printer_code')->nullable();
+            $table->unsignedBigInteger('admin_id')->nullable();
             $table->string('order_type')->nullable();
             $table->timestamps();
             $table->softDeletes();

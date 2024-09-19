@@ -43,7 +43,7 @@ return [
                 'useTLS' => false,
                 'auth' => [
                 'headers' => [
-                        'Authorization' => 'Bearer ' . request()->bearerToken(),
+                        // 'Authorization' => 'Bearer ' . request()->bearerToken(),
                     ],
                 ],
             ],

@@ -10,5 +10,5 @@ class Table extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'restauranttables';
-    protected $fillable = ['user_id','sector_id','name','status'];
+    protected $fillable = ['user_id','sector_id','admin_id','name','status'];
 }
