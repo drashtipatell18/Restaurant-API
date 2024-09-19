@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\FirstLoginMail;
 use Illuminate\Support\Str;
-// use App\Models\Notification;
-// use App\Events\NotificationMessage;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
 
 
 class AuthController extends Controller
@@ -37,15 +37,15 @@ class AuthController extends Controller
         $user = User::where('email', $request->input('email'))->first();
       
 
-        // $errorMessage = 'No se pudo ingresar al sistema. Verifica tu correo y contraseña e intenta nuevamente.';
+        $errorMessage = 'No se pudo ingresar al sistema. Verifica tu correo y contraseña e intenta nuevamente.';
         if (!$user) {
-            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
 
-            // Notification::create([
-            //     'user_id' => 1, // No specific user associated with this notification
-            //     'notification_type' => 'alert',
-            //     'notification' => $errorMessage,
-            // ]);
+            Notification::create([
+                'user_id' => 1, // No specific user associated with this notification
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
 
     
             return response()->json([
@@ -96,14 +96,14 @@ class AuthController extends Controller
         // Create token and respond with user info
         $token = $user->createToken($user->role_id)->plainTextToken;
     
-        // $successMessage = "Bienvenido, {$user->name}. Has ingresado exitosamente al sistema.";
-        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        $successMessage = "Bienvenido, {$user->name}. Has ingresado exitosamente al sistema.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
 
-        // Notification::create([
-        //     'user_id' => $user->id,
-        //     'notification_type' => 'notification',
-        //     'notification' => $successMessage,
-        // ]);
+        Notification::create([
+            'user_id' => $user->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+        ]);
 
         return response()->json([
             'id' => $user->id,

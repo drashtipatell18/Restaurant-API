@@ -22,17 +22,25 @@ class ItemController extends Controller
     public function createItem(Request $request)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if($role != "admin" &&  $role != "cashier")
-        {
+        if ($role != "admin" &&  $role != "cashier") {
+            $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorised'
+                'message' => 'Unauthorised',
+                'notification' => $errorMessage
             ], 405);
         }
 
         $validateRequest = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-          
+
             'production_center_id' => 'required|exists:production_centers,id',
             'cost_price' => 'required|numeric|min:1',
             'sale_price' => 'required|numeric|min:1',
@@ -41,20 +49,19 @@ class ItemController extends Controller
             'image' => 'file|required|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
-        if($validateRequest->fails())
-        {
-            // $errorMessage = 'No se pudo crear el artículo. Verifica la información ingresada e intenta nuevamente.';
-            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            // Notification::create([
-            //     'user_id' => auth()->user()->id,
-            //     'notification_type' => 'alert',
-            //     'notification' => $errorMessage,
-            // ]);
+        if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo crear el artículo. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
                 'errors' => $validateRequest->errors(),
-                // 'alert' => $errorMessage,
+                'alert' => $errorMessage,
             ], 403);
         }
 
@@ -63,14 +70,13 @@ class ItemController extends Controller
             // If the user is an admin, store their own ID
             $admin_id = auth()->user()->id;
         } elseif ($role == 'cashier') {
-           $admin_id = auth()->user()->admin_id;
+            $admin_id = auth()->user()->admin_id;
         }
 
 
 
         $filename = '';
-        if (!$request->hasFile('image')) 
-        {
+        if (!$request->hasFile('image')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
@@ -97,16 +103,16 @@ class ItemController extends Controller
             "sub_family_id" => $request->sub_family_id,
             "description" => $request->description,
             "image" => $filename,
-           'admin_id' => $admin_id
+            'admin_id' => $admin_id
         ]);
 
-        // $successMessage = "El artículo {$item->name} ha sido creado exitosamente.";
-        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        // Notification::create([
-        //     'user_id' => auth()->user()->id, 
-        //     'notification_type' => 'notification',
-        //     'notification' => $successMessage,
-        // ]);
+        $successMessage = "El artículo {$item->name} ha sido creado exitosamente.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+        ]);
 
 
         return response()->json([
@@ -122,19 +128,28 @@ class ItemController extends Controller
         do {
             $code = mt_rand(10000000, 99999999); // Generates an 8-digit number
         } while (Item::where('code', $code)->exists()); // Ensure it's unique
-    
+
         return $code;
     }
-    
+
 
     public function updateItem(Request $request, $id)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if($role != "admin" &&  $role != "cashier")
-        {
+        if ($role != "admin" &&  $role != "cashier") {
+
+            $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorised'
+                'message' => 'Unauthorised',
+                'notification' => $errorMessage
             ], 405);
         }
 
@@ -148,8 +163,7 @@ class ItemController extends Controller
             'image' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
-        if($validateRequest->fails())
-        {
+        if ($validateRequest->fails()) {
             $errorMessage = 'No se pudo actualizar el artículo. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
             Notification::create([
@@ -166,8 +180,7 @@ class ItemController extends Controller
         }
 
         $item = Item::find($id);
-        if($item == null)
-        {
+        if ($item == null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Incorrect item id'
@@ -181,24 +194,22 @@ class ItemController extends Controller
         $item->family_id = $request->family_id;
         $item->sub_family_id = $request->sub_family_id;
 
-        if ($request->hasFile('image'))
-        {
+        if ($request->hasFile('image')) {
             $image = $request->file('image');
             $filename = time() . '.' . $image->getClientOriginalExtension();
             $image->move(public_path('images'), $filename);
 
             $item->image = $filename;
         }
-          if($request->has('description'))
-            {
-                $item->description = $request->description;
-            }
+        if ($request->has('description')) {
+            $item->description = $request->description;
+        }
         $item->save();
 
         $successMessage = "El artículo {$item->name} ha sido actualizado exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
         Notification::create([
-            'user_id' => auth()->user()->id, 
+            'user_id' => auth()->user()->id,
             'notification_type' => 'notification',
             'notification' => $successMessage,
         ]);
@@ -214,25 +225,30 @@ class ItemController extends Controller
     public function deleteItem($id)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if($role != "admin" &&  $role != "cashier")
-        {
+        if ($role != "admin" &&  $role != "cashier") {
+            $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorised'
+                'message' => 'Unauthorised',
+                'notification' => $errorMessage
             ], 405);
         }
 
         $item = Item::find($id);
-
-        if($item == null)
-        {
-            // $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
-            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            // Notification::create([
-            //     'user_id' => auth()->user()->id, 
-            //     'notification_type' => 'notification',
-            //     'notification' => $errorMessage,
-            // ]);
+        if ($item === null) {
+            $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => "Provided id is not found",
@@ -241,25 +257,25 @@ class ItemController extends Controller
         }
 
         $item->delete();
-        
-        // $successMessage = "El artículo {$item->name} ha sido eliminado del sistema.";
-        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        // Notification::create([
-        //     'user_id' => auth()->user()->id, 
-        //     'notification_type' => 'notification',
-        //     'notification' => $successMessage,
-        // ]);
+
+        $successMessage = "El artículo {$item->name} ha sido eliminado del sistema.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+        ]);
         return response()->json([
             'success' => true,
             'message' => 'Item deleted successfully.',
-            // 'notification' => $successMessage
+            'notification' => $successMessage
         ], 200);
     }
 
     public function getSingleItem($id)
     {
         $user = auth()->user();
-       
+
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -268,27 +284,25 @@ class ItemController extends Controller
         }
 
         $admin_id = $user->admin_id;
-        if($admin_id)
-        {
+        if ($admin_id) {
             $item = Item::where('id', $id)->where('admin_id', $admin_id)->get();
-        }
-        else{
+        } else {
             $item = Item::where('admin_id', auth()->user()->id)->get();
         }
-    
+
         if ($item == null) {
             return response()->json([
                 'success' => false,
                 'message' => "Item not found or you don't have permission"
             ], 403);
         }
-    
+
         return response()->json([
             'success' => true,
             'item' => $item
         ], 200);
     }
-    
+
 
     public function getAll()
     {
@@ -302,28 +316,26 @@ class ItemController extends Controller
         }
 
         $admin_id = $user->admin_id;
-        if($admin_id)
-        {
+        if ($admin_id) {
             $item = Item::where('admin_id', $admin_id)->get();
-        }
-        else{
+        } else {
             $item = Item::where('admin_id', auth()->user()->id)->get();
         }
 
-         if ($item == null) {
+        if ($item == null) {
             return response()->json([
                 'success' => false,
                 'message' => "Item not found or you don't have permission"
             ], 403);
         }
-    
+
         return response()->json([
             'success' => true,
             'items' => $item
         ], 200);
     }
 
-    
+
 
     public function getSubFamilyWiseItem(Request $request)
     {
@@ -374,8 +386,7 @@ class ItemController extends Controller
     public function addToMenu(Request $request)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if($role != "admin" &&  $role != "cashier")
-        {
+        if ($role != "admin" &&  $role != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -388,8 +399,7 @@ class ItemController extends Controller
             'menu_id' => 'required|exists:menus,id'
         ]);
 
-        if($validateRequest->fails())
-        {
+        if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -402,18 +412,17 @@ class ItemController extends Controller
             // If the user is an admin, store their own ID
             $admin_id = auth()->user()->id;
         } elseif ($role == 'cashier') {
-           $admin_id = auth()->user()->admin_id;
+            $admin_id = auth()->user()->admin_id;
         }
 
         $menu = Menu::find($request->menu_id);
-        for($i = 0; $i < count($request->item_ids); $i++)
-        {
+        for ($i = 0; $i < count($request->item_ids); $i++) {
             $item = Item::find($request->item_ids[$i]);
 
             Item_Menu_Join::create([
                 'menu_id' => $menu->id,
                 'item_id' => $item->id,
-                'admin_id'=> $admin_id
+                'admin_id' => $admin_id
             ]);
         }
 
@@ -427,8 +436,7 @@ class ItemController extends Controller
     {
         $order_ids = [];
 
-        if(Item::find($id) == null)
-        {
+        if (Item::find($id) == null) {
             return response()->json([
                 'success' => false,
                 'message' => "Item id invalid"
@@ -437,8 +445,7 @@ class ItemController extends Controller
 
         $details = OrderDetails::where('item_id', $id)->get();
         foreach ($details as $value) {
-            if(!in_array($value->order_master_id, $order_ids))
-            {
+            if (!in_array($value->order_master_id, $order_ids)) {
                 $order_ids[] = $value->order_master_id;
             }
         }
@@ -477,7 +484,7 @@ class ItemController extends Controller
         $cancelledOrders = OrderMaster::onlyTrashed()
             ->where('user_id', $id)
             ->get();
-        
+
         foreach ($cancelledOrders as $order) {
             $order['status'] = "cancelled";
             $customer = User::find($order->user_id);
@@ -501,12 +508,10 @@ class ItemController extends Controller
             $responseData[] = $order;
         }
 
-        if($request->has('order_id'))
-        {
+        if ($request->has('order_id')) {
             $order = [];
             foreach ($responseData as $response) {
-                if($response['id'] == $request->query('order_id'))
-                {
+                if ($response['id'] == $request->query('order_id')) {
                     $order = $response;
                     break;
                 }

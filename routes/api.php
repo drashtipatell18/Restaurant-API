@@ -44,13 +44,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/getdelivery', [UserController::class, 'getDelivery']);
 
 
-    // Chat Application Deep
-    Route::post('/chat/broadcast', [ChatAppController::class, 'broadcastChat'])->name('broadcast.chat');
-    Route::post('/chat/logout', [ChatAppController::class, 'logout'])->name('chat.logout');
-    Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
-    // Route::post('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
-    Route::post('/chat/user', [ChatAppController::class, 'chatUsers']);
 
+      // Chat Application Deep
+      Route::post('/chat/broadcast', [ChatAppController::class, 'broadcastChat'])->name('broadcast.chat');
+      Route::post('/chat/logout', [ChatAppController::class, 'logout'])->name('chat.logout');
+      Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
+      // Route::post('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
+      Route::post('/chat/user', [ChatAppController::class, 'chatUsers']);
 
     // Roles Routes
     Route::get('/roles', [RoleController::class, 'getRole']);
@@ -188,7 +188,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/getsinglepaymentById/{id}', [PaymentController::class, 'getPaymentById']);
 
 
- 
+   
 });
 
 
@@ -220,4 +220,3 @@ Route::post('/remove-user-from-group', [ChatAppController::class, 'removeUserFro
 Route::post('/chat/login', [ChatAppController::class, 'chat'])->name('chat');
 
 Route::post('/mark-as-read', [ChatAppController::class,'markAsRead']);
-

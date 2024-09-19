@@ -194,24 +194,24 @@ class BoxController extends Controller
     {
         $boxs = Boxs::find($id);
         if (is_null($boxs)) {
-            $errorMessage = 'No se pudo eliminar la caja. Verifica si la caja está asociada a otros registros e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
+            // $errorMessage = 'No se pudo eliminar la caja. Verifica si la caja está asociada a otros registros e intenta nuevamente.';
+            // broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            // ]);
             return response()->json(['message' => 'Box not found','alert'=>$errorMessage], 404);
         }
         $boxs->delete();
 
-        $successMessage = "La caja {$boxs->name} ha sido eliminada del sistema.";
-        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id, 
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+        // $successMessage = "La caja {$boxs->name} ha sido eliminada del sistema.";
+        // broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        // Notification::create([
+        //     'user_id' => auth()->user()->id, 
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        // ]);
 
         return response()->json(['message' => 'Box deleted successfully','notification'=>$successMessage], 200);
     }
