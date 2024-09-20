@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\CreditNot;
 use App\Models\ReturnItem;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
 
 class OrderController extends Controller
 {
@@ -53,11 +55,26 @@ class OrderController extends Controller
         'transaction_code' => 'boolean'
     ]);
 
+    $user = auth()->user();
+    $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
     if ($validateRequest->fails()) {
+        $errorMessage = 'No se pudo crear el pedido. Verifica la información ingresada e intenta nuevamente.';
+        broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+         Notification::create([
+            'user_id' => $user->id, 
+            'notification_type' => 'alert',
+            'notification' => $errorMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' => $user->role_id
+        ]);
+
         return response()->json([
             'success' => false,
             'message' => "Validation fails",
-            'errors' => $validateRequest->errors()
+            'errors' => $validateRequest->errors(),
+            'alert' => $errorMessage,
+
         ], 403);
     }
    
@@ -93,7 +110,8 @@ class OrderController extends Controller
             }
 
           
-            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+            $log = BoxLogs::where('box_id', $box->id)->first();
+           
           
 
             // $log->collected_amount += $totalAmount;
@@ -161,16 +179,18 @@ class OrderController extends Controller
     $order = OrderMaster::create($orderMaster);
     $response = ["order_master" => $order, "order_details" => []];
     $totalAmount = 0;
+    
     foreach ($request->order_details as $order_detail) {
         $item = Item::find($order_detail['item_id']);
         $orderDetail = OrderDetails::create([
             'order_master_id' => $order->id,
             'item_id' => $order_detail['item_id'],
-            'amount' => $item->sale_price,
-            'cost' => $item->cost_price,
+            // 'amount' => $item->sale_price,
+            // 'cost' => $item->cost_price,
             // 'notes' => $order_detail['notes'],
             'quantity' => $order_detail['quantity']
         ]);
+       
 
         $totalAmount += $item->sale_price * $order_detail['quantity'];
 
@@ -203,10 +223,21 @@ class OrderController extends Controller
         $log->save();
     }
 
+    $customerName = $request->order_master['customer_name'];
+    $successMessage = "El pedido {$order->id} ha sido creado exitosamente para el cliente {$customerName}.";
+    broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+    Notification::create([
+        'user_id' => auth()->user()->id,
+        'notification_type' => 'notification',
+        'notification' => $successMessage,
+         'admin_id' => $request->admin_id,
+         'role_id' => $user->role_id
+    ]);
     return response()->json([
         'success' => true,
         'message' => "Order placed successfully",
-        'details' => $response
+        'details' => $response,
+        'notification' => $successMessage,
     ], 200);
 }
 
@@ -225,6 +256,8 @@ class OrderController extends Controller
             'order_id' => 'required|exists:order_masters,id',
             'order_details' => 'required|array'
         ]);
+
+     
 
         if($validateRequest->fails())
         {
@@ -276,6 +309,7 @@ class OrderController extends Controller
     
     public function UpdateItem(Request $request, $id)
 {
+    
     $role = Role::where('id', Auth()->user()->role_id)->first()->name;
     if ($role != "admin" && $role != "cashier" && $role != "waitress") {
         return response()->json([
@@ -311,7 +345,6 @@ class OrderController extends Controller
     }
 
     $responseData = ["order" => $order, "order_details" => []];
-
     if ($request->has('order_details')) {
         foreach ($request->order_details as $order_detail) {
             $item = Item::find($order_detail['item_id']);
@@ -335,6 +368,8 @@ class OrderController extends Controller
             }
         }
     }
+
+
 
     return response()->json($responseData, 200);
 }
@@ -399,20 +434,42 @@ class OrderController extends Controller
 
     public function getSingle(Request $request,$id)
     {
+        $user = auth()->user();
+     
 
-    
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
         $adminId = $request->admin_id;
         // $order = OrderMaster::find($id)->where('admin_id', $adminId)->get();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
         $order = OrderMaster::where('id', $id)->where('admin_id', $adminId)->first();
+    
       
         if($order == null)
         {
+            $errorMessage = 'No se pudo consultar los detalles del pedido. Intenta nuevamente más tarde..';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => $user->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => "Invalid order id"
-            ], 403);
+                'message' => "Invalid order id",
+                'alert' => $errorMessage,
+            ], 405);
         }
         
+   
         $order['total'] = OrderDetails::where('order_master_id', $order->id)->sum('amount');
     
             $order['order_details'] = DB::table('order_details')
@@ -421,8 +478,24 @@ class OrderController extends Controller
                 ->whereNull('order_details.deleted_at')
                 ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
                 ->get();
+
+              
+                $successMessage = "Los detalles del pedido {$order->id} han sido consultados exitosamente.";
+                    // Broadcast notification message
+                    broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            
+                    // Save the notification to the database
+                    Notification::create([
+                        'user_id' => $user->id,
+                        'notification_type' => 'notification',
+                        'notification' => $successMessage,
+                        'admin_id' => $request->admin_id,
+                        'role_id' => $user->role_id
+                    ]);
+                 
+
                
-        return response()->json($order);
+        return response()->json([$order,'notification' => $successMessage]);
     }
 
     public function deleteOrder($id)
@@ -469,18 +542,60 @@ class OrderController extends Controller
                 'errors' => $validateRequest->errors()
             ],403);
         }
-
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+    
         $order = OrderMaster::find($request->input('order_id'));
+
+        if ($order->status === 'finalized') {
+            if ($role != "admin" && $role != "cashier") {
+                    $errorMessage = 'No se pudo anular el pedido. Verifica si el pedido ya ha sido finalizado o si hay problemas de conexión e intenta nuevamente.';
+                    broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                    Notification::create([
+                        'user_id' => $user->id, 
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $request->admin_id,
+                        'role_id' => $user->role_id
+                    ]);
+            
+                    return response()->json([
+                        'success' => false,
+                        'alert' => $errorMessage,
+            
+                    ], 403);
+
+                    return response()->json([
+                        'success' => false,
+                        'alert' => $errorMessage
+                    ], 403);
+            }
+        }
+            
+        
         $order->status = $request->input('status');
          if ($request->input('status') === 'delivered') {
             $order->finished_at = now(); // Update current date in finish_at column if status is delivered
+        }
+        if ($request->input('status') === 'cancelled') {
+            $successMessage = "El pedido {$order->id} ha sido anulado exitosamente.";
+            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+        
         }
 
         $order->save();
 
         return response()->json([
             'success' => true,
-            'message' => "Status updated successfully"
+            'message' => "Status updated successfully",
+            'notification' => $successMessage ?? null
         ], 200);
     }
 
@@ -576,7 +691,7 @@ class OrderController extends Controller
             'success' => false,
             'message' => 'Unauthorised'
         ], 401);
-    }
+        }
     
 
     $lastOrder = OrderMaster::where('admin_id', $adminId)->orderBy('id', 'desc')->first();
@@ -601,108 +716,131 @@ class OrderController extends Controller
             'order' => $lastOrder
         ], 200);
     }
-public function orderUpdateItem(Request $request, $order_id)
-{
-    // Check user role for authorization
-    $role = Role::where('id', Auth::user()->role_id)->first()->name;
-    if ($role != "admin" && $role != "cashier" && $role != "waitress") {
-        return response()->json([
-            'success' => false,
-            'message' => 'Unauthorized'
-        ], 401);
-    }
-
-    // Validate the request data
-    $validateRequest = Validator::make($request->all(), [
-        'order_details' => 'nullable|array',
-        'order_details.*.item_id' => 'required_with:order_details|exists:items,id',
-        'order_details.*.quantity' => 'required_with:order_details|integer|min:1',
-        'tip' => 'nullable|numeric|min:0',
-        'payment_type' => 'nullable|string',
-        'transaction_code' => 'nullable|boolean'
-    ]);
-
-    if ($validateRequest->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation fails',
-            'errors' => $validateRequest->errors()
-        ], 403);
-    }
-
-    // Find the order using the order_id from the URL
-    $order = OrderMaster::find($order_id);
-
-    // Check if the order exists
-    if (!$order) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Order not found'
-        ], 404);
-    }
-
-    // Update tip and payment_type if provided
-    $orderUpdateData = [];
-    if ($request->has('tip')) {
-        $orderUpdateData['tip'] = $request->input('tip');
-    }
-    if ($request->has('payment_type')) {
-        $orderUpdateData['payment_type'] = $request->input('payment_type');
-    }
-        if ($request->has('box_id')) {
-        $orderUpdateData['box_id'] = $request->input('box_id');
-    }
-
-    // Generate and update transaction code if requested
-    if ($request->input('transaction_code') === true) {
-        do {
-            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        } while (OrderMaster::where('transaction_code', $code)->exists());
-        
-        $orderUpdateData['transaction_code'] = $code;
-    }
-
-    if (!empty($orderUpdateData)) {
-        $order->update($orderUpdateData);
-    }
-
-    // Prepare response data
-    $responseData = ["order" => $order, "order_details" => []];
-
-    // Handle order details if provided
-    if ($request->has('order_details')) {
-        // Get the item IDs from the request
-        $requestedItemIds = collect($request->input('order_details'))->pluck('item_id')->toArray();
-
-        // Remove existing order details that are not in the request
-        OrderDetails::where('order_master_id', $order->id)
-            ->whereNotIn('item_id', $requestedItemIds)
-            ->delete();
-
-        // Loop through the order details from the request
-        foreach ($request->input('order_details') as $order_detail) {
-            // Find the existing detail or create a new one
-            $detail = OrderDetails::updateOrCreate(
-                [
-                    'order_master_id' => $order->id,
-                    'item_id' => $order_detail['item_id']
-                ],
-                [
-                    'quantity' => $order_detail['quantity']
-                ]
-            );
-
-            // Add the updated or newly created detail to the response
-            $responseData['order_details'][] = $detail;
+    public function orderUpdateItem(Request $request, $order_id)
+    {
+        // Check user role for authorization
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
         }
-    } else {
-        // If no order details provided, fetch existing ones for the response
-        $responseData['order_details'] = $order->orderDetails;
-    }
 
-    // Return the response
-    return response()->json($responseData, 200);
-}
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
+        // Validate the request data
+        $validateRequest = Validator::make($request->all(), [
+            'order_details' => 'nullable|array',
+            'order_details.*.item_id' => 'required_with:order_details|exists:items,id',
+            'order_details.*.quantity' => 'required_with:order_details|integer|min:1',
+            'tip' => 'nullable|numeric|min:0',
+            'payment_type' => 'nullable|string',
+            'transaction_code' => 'nullable|boolean'
+        ]);
+
+        if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo actualizar el pedido. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $adminId,
+                'role_id' => $user->role_id
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage,
+            ], 403);
+        }
+
+        // Find the order using the order_id from the URL
+        $order = OrderMaster::find($order_id);
+
+        // Check if the order exists
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+
+        // Update tip and payment_type if provided
+        $orderUpdateData = [];
+        if ($request->has('tip')) {
+            $orderUpdateData['tip'] = $request->input('tip');
+        }
+        if ($request->has('payment_type')) {
+            $orderUpdateData['payment_type'] = $request->input('payment_type');
+        }
+            if ($request->has('box_id')) {
+            $orderUpdateData['box_id'] = $request->input('box_id');
+        }
+
+        // Generate and update transaction code if requested
+        if ($request->input('transaction_code') === true) {
+            do {
+                $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            } while (OrderMaster::where('transaction_code', $code)->exists());
+            
+            $orderUpdateData['transaction_code'] = $code;
+        }
+
+        if (!empty($orderUpdateData)) {
+            $order->update($orderUpdateData);
+        }
+
+        // Prepare response data
+        $responseData = ["order" => $order, "order_details" => []];
+
+        // Handle order details if provided
+        if ($request->has('order_details')) {
+            // Get the item IDs from the request
+            $requestedItemIds = collect($request->input('order_details'))->pluck('item_id')->toArray();
+
+            // Remove existing order details that are not in the request
+            OrderDetails::where('order_master_id', $order->id)
+                ->whereNotIn('item_id', $requestedItemIds)
+                ->delete();
+
+            // Loop through the order details from the request
+            foreach ($request->input('order_details') as $order_detail) {
+                // Find the existing detail or create a new one
+                $detail = OrderDetails::updateOrCreate(
+                    [
+                        'order_master_id' => $order->id,
+                        'item_id' => $order_detail['item_id']
+                    ],
+                    [
+                        'quantity' => $order_detail['quantity']
+                    ]
+                );
+
+                // Add the updated or newly created detail to the response
+                $responseData['order_details'][] = $detail;
+            }
+        } else {
+            // If no order details provided, fetch existing ones for the response
+            $responseData['order_details'] = $order->orderDetails;
+        }
+
+        $successMessage = "El pedido {$order->id} ha sido actualizado exitosamente.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+            'admin_id' => $adminId,
+            'role_id' => $user->role_id
+        ]);
+
+        // Return the response
+        return response()->json([$responseData, 200,  'notification' => $successMessage,]);
+    }
 
 
     public function getCredit(Request $request)
@@ -722,14 +860,77 @@ public function orderUpdateItem(Request $request, $order_id)
     
     public function creditNote(Request $request)
     {
-         $validatedData = $request->validate([
-              'credit_note.credit_method' => 'required|string|in:credit,debit,cash,future purchase'
+
+        $user = auth()->user();
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+
+        $validateRequest = Validator::make($request->all(), [
+               'credit_note.order_id' => 'required|integer',
+                'credit_note.payment_id' => 'required|integer',
+                'credit_note.status' => 'required|string',
+                'credit_note.name' => 'required|string',
+                'credit_note.email' => 'required|email',
+                'credit_note.delivery_cost' => 'required|numeric',
+                'credit_note.code' => 'required|integer',
+                'credit_note.destination' => 'required|integer',
+                'credit_note.payment_status' => 'required|string',
+                'credit_note.credit_method' => 'required|string|in:credit,debit,cash,future purchase',
+                'return_items.*.item_id' => 'required|integer',
+                'return_items.*.name' => 'required|string',
+                'return_items.*.quantity' => 'required|integer',
+                'return_items.*.cost' => 'required|numeric',
+                'return_items.*.amount' => 'required|numeric',
+                'return_items.*.notes' => 'nullable|string',
         ]);
+
+
+        if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo crear la nota de crédito para el pedido. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage
+            ], 403);
+        }
+
         $creditNoteData = $request->input('credit_note');
+       
+        if($creditNoteData == null)
+        {
+            $errorMessage = 'No se pudo consultar los detalles del pedido. Intenta nuevamente más tarde..';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => $user->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'alert' => $errorMessage,
+            ], 405);
+        }
+
         $returnItemsData = $request->input('return_items');
         $admin_id = $request->input('admin_id');
        
-
         // Create the credit note
         $creditNote = CreditNot::create([
             'order_id' => $creditNoteData['order_id'],
@@ -744,7 +945,21 @@ public function orderUpdateItem(Request $request, $order_id)
              'credit_method' => $creditNoteData['credit_method'],
              'admin_id' => $admin_id
         ]);
+
         
+        
+        $successMessage = "La nota de crédito ha sido creada exitosamente para el pedido {$creditNote->order_id}.";
+        // Broadcast notification message
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+
+        // Save the notification to the database
+        Notification::create([
+            'user_id' => $user->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' => $user->role_id
+        ]);
 
         // Process return items (if you need to process them but not include in the response)
         $returnItems = [];
@@ -782,7 +997,8 @@ public function orderUpdateItem(Request $request, $order_id)
         return response()->json([
             'success' => true,
             'credit_note' => $creditNote,
-            'return_items' => $returnItems
+            'return_items' => $returnItems,
+            'notification' => $successMessage,
         ]);
     }
     
