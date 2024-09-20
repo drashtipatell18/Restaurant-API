@@ -13,6 +13,7 @@ class Notification extends Model
         'user_id',
         'notification_type',
         'notification',
-        'admin_id'
+        'admin_id',
+        'role_id'
     ];
 }

@@ -65,4 +65,10 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(GroupForChat::class, 'user_group_joins', 'user_id', 'group_id');
     }
+
+    public function family()
+    {
+        return $this->hasMany(Family::class);
+    }
+
 }

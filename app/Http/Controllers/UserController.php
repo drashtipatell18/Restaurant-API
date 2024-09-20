@@ -18,6 +18,9 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use App\Models\Payment;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
+
 
 class UserController extends Controller
 {
@@ -58,22 +61,21 @@ class UserController extends Controller
 
         // Handle validation errors
         if ($validator->fails()) {
-                $passwordMismatchMessage = "No se pudo completar el registro. Verifica la información ingresada e intenta nuevamente.";
-                broadcast(new NotificationMessage('notification', $passwordMismatchMessage))->toOthers();
-                Notification::create([
-                    'user_id' => $request->id,
-                    'notification_type' => 'alert',
-                  
-                    'notification' => $passwordMismatchMessage,
-                    'admin_id' => $request->admin_id
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Password mismatch',
-                    'error' => $validator->errors(),
-                    'alert' => $passwordMismatchMessage
-                ], 400);
+            $passwordMismatchMessage = "No se pudo completar el registro. Verifica la información ingresada e intenta nuevamente.";
+            broadcast(new NotificationMessage('notification', $passwordMismatchMessage))->toOthers();
+            Notification::create([
+                'user_id' => $request->id,
+                'notification_type' => 'alert',
+                'notification' => $passwordMismatchMessage,
+                'admin_id' => $request->admin_id
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'error' => $validator->errors(),
+                'alert' => $passwordMismatchMessage
+            ], 400);
         }
     
 
@@ -125,6 +127,15 @@ class UserController extends Controller
 
         // Check if 'invite' parameter is present in request
         if ($request->has('invite')) {
+
+            if (auth()->user()->role_id !== 1) {
+                // Return an error response if the user is not an admin
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error: Admin not found. Only admins can invite users.'
+                ], 403);
+            }
+
             // Generate a new remember token for the user
             $user->remember_token = Str::random(40);
             $user->save();
@@ -132,15 +143,24 @@ class UserController extends Controller
             // Send the registration confirmation email to the user
             Mail::to($user->email)->send(new RegistrationConfirmation($user, $request->password));
     
+            $successMessage = "La invitación para el usuario {$user->name} ha sido enviada exitosamente al correo {$user->email}.";
+                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                Notification::create([
+                    'user_id' => $user->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $user->id
+                ]);
+                
+
             // Return JSON response with success message and user data
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful. Email sent with login details.',
-                'user' => $user
+                'user' => $user,
+                'notification' => $successMessage,
             ], 200);
-        }
-    
-
+        
         $successMessage = "El usuario {$user->name} se ha registrado exitosamente en la aplicación..";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
         Notification::create([
@@ -157,6 +177,7 @@ class UserController extends Controller
             'notification' => $successMessage
         ], 200);
     }
+}
 
 
     public function updateUser(Request $request, $id)
