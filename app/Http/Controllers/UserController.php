@@ -142,14 +142,15 @@ class UserController extends Controller
 
             // Send the registration confirmation email to the user
             Mail::to($user->email)->send(new RegistrationConfirmation($user, $request->password));
-    
+            $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
             $successMessage = "La invitación para el usuario {$user->name} ha sido enviada exitosamente al correo {$user->email}.";
                 broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
                 Notification::create([
                     'user_id' => $user->id,
                     'notification_type' => 'notification',
                     'notification' => $successMessage,
-                    'admin_id' => $user->id
+                    'admin_id' => $user->id,
+                    'role_id' => $user->role_id
                 ]);
                 
 
@@ -186,8 +187,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
             'role_id' => 'nullable|exists:roles,id',
-            'password' => 'required|string|min:8|same:confirm_password',
-            'confirm_password' => 'required|string|min:8|same:password',
+            'password' => 'string|min:8|same:confirm_password',
+            'confirm_password' => 'string|min:8|same:password',
         ]);
 
         if ($validator->fails()) {
@@ -247,6 +248,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role_id' => $request->role_id,
             'password' => $encryption,
+            'activeStatus'=>$request->activeStatus ?? $users->activeStatus
 
         ]);
 
@@ -894,7 +896,7 @@ public function getBoxEntry(Request $request)
 public function cancelOrders(Request $request)
 {
     // Validate the input
-    $validateRequest = Validator::make($request->all(), [
+    $validator = Validator::make($request->all(), [
         // 'admin_id' => 'required|integer', // Ensure admin_id is present
         'duration' => 'in:day,week,month',
         'day' => 'date',
@@ -902,14 +904,13 @@ public function cancelOrders(Request $request)
     ]);
 
     // If validation fails, return an error response
-    if ($validateRequest->fails()) {
+   if ($validator->fails()) {
         return response()->json([
             'success' => false,
-            'message' => 'Validation fails',
-            'errors' => $validateRequest->errors()
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
         ], 403);
     }
-
     // Get the admin_id from the request
     $adminId = $request->input('admin_id');
     // Query to get cancelled orders for the specific admin_id
