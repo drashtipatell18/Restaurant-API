@@ -17,6 +17,7 @@ use App\Models\CreditNot;
 use App\Models\ReturnItem;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
+use App\Models\Table;
 
 class OrderController extends Controller
 {
@@ -89,7 +90,7 @@ class OrderController extends Controller
         'customer_name' => $request->order_master['customer_name'],
         'person' => $request->order_master['person'],
         'reason' => $request->order_master['reason'],
-        'admin_id' => $request->admin_id ?? Auth::user()->id
+        'admin_id' => $request->admin_id
     ];
 
     // Generate and add transaction code if requested
@@ -221,6 +222,33 @@ class OrderController extends Controller
         $log->save();
     }
 
+    if (isset($request->order_master['table_id'])) {
+        $tableId = $request->order_master['table_id'];
+        $table = Table::find($tableId);
+        if($table)
+        {
+            $sectorName = $table->sector->name ?? 'Unknown Sector'; // Get sector name or use 'Unknown Sector' if not found
+            $successMessage1 = "El pedido {$order->id} ha sido asignado exitosamente a la mesa {$table->id} en el sector {$sectorName}.";
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification1',
+                'notification' => $successMessage1,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+        }
+        else{
+            $errorMessage1 = 'No se pudo asignar el pedido a la mesa. Verifica la información e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage1))->toOthers();
+             Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage1,
+            ]);
+        }
+    }
+
+
     $customerName = $request->order_master['customer_name'];
     $successMessage = "El pedido {$order->id} ha sido creado exitosamente para el cliente {$customerName}.";
     broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
@@ -236,6 +264,7 @@ class OrderController extends Controller
         'message' => "Order placed successfully",
         'details' => $response,
         'notification' => $successMessage,
+        'notification1' => $successMessage1 ?? null
     ], 200);
 }
 
@@ -832,6 +861,22 @@ class OrderController extends Controller
         } else {
             // If no order details provided, fetch existing ones for the response
             $responseData['order_details'] = $order->orderDetails;
+        }
+
+        if ($role == "cashier") {
+            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+    
+            // $log->collected_amount += $totalAmount;
+             if(empty($log->order_master_id))
+                {
+                    $log->order_master_id = $order->id;
+                }
+                else
+                {
+                    $log->order_master_id .= "," . $order->id;
+                }
+            $log->save();
         }
 
         $successMessage = "El pedido {$order->id} ha sido actualizado exitosamente.";
