@@ -529,6 +529,7 @@ class OrderController extends Controller
 
     public function updateOrderStatus(Request $request)
     {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
         $validateRequest = Validator::make($request->all(), [
             'order_id' => 'required|exists:order_masters,id',
             'status' => 'required|in:received,prepared,delivered,finalized,cancelled'
@@ -548,7 +549,9 @@ class OrderController extends Controller
         $order = OrderMaster::find($request->input('order_id'));
 
         if ($order->status === 'finalized') {
-            if ($role != "admin" && $role != "cashier") {
+            $currentStatus = OrderMaster::find($order->id)->status; 
+            if( $currentStatus || $role != "admin" && $role != "cashier"){
+                if ($currentStatus === 'finalized' ) {
                     $errorMessage = 'No se pudo anular el pedido. Verifica si el pedido ya ha sido finalizado o si hay problemas de conexión e intenta nuevamente.';
                     broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
                     Notification::create([
@@ -569,6 +572,7 @@ class OrderController extends Controller
                         'success' => false,
                         'alert' => $errorMessage
                     ], 403);
+                }
             }
         }
             
@@ -577,18 +581,22 @@ class OrderController extends Controller
          if ($request->input('status') === 'delivered') {
             $order->finished_at = now(); // Update current date in finish_at column if status is delivered
         }
-        if ($request->input('status') === 'cancelled') {
-            $successMessage = "El pedido {$order->id} ha sido anulado exitosamente.";
-            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $successMessage,
-                'admin_id' => $request->admin_id,
-                'role_id' => $user->role_id
-            ]);
-        
+      
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+            if ($request->input('status') === 'cancelled') {
+                $successMessage = "El pedido {$order->id} ha sido anulado exitosamente.";
+                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $request->admin_id,
+                    'role_id' => $user->role_id
+                ]);
+            
+            }
         }
+    
 
         $order->save();
 
