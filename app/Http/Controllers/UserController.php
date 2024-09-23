@@ -181,16 +181,93 @@ class UserController extends Controller
 }
 
 
+    // public function updateUser(Request $request, $id)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|string|email|max:255|unique:users,email,' . $id,
+    //         'role_id' => 'nullable|exists:roles,id',
+    //         'password' => 'required|string|min:8|same:confirm_password',
+    //         'confirm_password' => 'required|string|min:8|same:password',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation fails',
+    //             'error' => $validator->errors()
+    //         ], 401);
+    //     }
+
+    //     $users = User::find($id);
+    //     if (is_null($users)) {
+    //         return response()->json(['message' => 'User not found'], 404);
+    //     }
+
+    //     if ($request->hasFile('image')) {
+    //         $image = $request->file('image');
+    //         $filename = time() . '.' . $image->getClientOriginalExtension();
+    //         $image->move(public_path('images'), $filename); // Ensure the 'images' directory exists and is writable
+    //         $users->image = $filename;
+    //     }
+
+    //     $simple_string = $request->password;
+
+    //     $ciphering = "AES-128-CTR";
+    //     $iv_length = openssl_cipher_iv_length($ciphering);
+    //     $options = 0;
+    //     $encryption_iv = '1234567891011121';
+    //     $encryption_key = "GeeksforGeeks";
+    //     $encryption = openssl_encrypt(
+    //         $simple_string,
+    //         $ciphering,
+    //         $encryption_key,
+    //         $options,
+    //         $encryption_iv
+    //     );
+
+
+    //     // Check if 'invite' parameter is present in request
+    //     if ($request->has('invite')) {
+    //         // Generate a new remember token for the user
+    //         $users->remember_token = Str::random(40);
+    //         $users->save();
+
+    //         // Send the registration confirmation email to the user
+    //         Mail::to($users->email)->send(new UpdateConfirmation($users, $request->password));
+
+    //         // Return JSON response with success message and user data
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Registration successful. Email sent with login details.',
+    //             'user' => $users,
+    //         ], 200);
+    //     }
+    //     $users->update([
+    //         'name' => $request->name,
+    //         'email' => $request->email,
+    //         'role_id' => $request->role_id,
+    //         'password' => $encryption,
+
+    //     ]);
+
+    //     return response()->json([
+    //         'message' => 'User updated successfully',
+    //         'user' => $users,
+    //     ], 200);
+    // }
+
     public function updateUser(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
             'role_id' => 'nullable|exists:roles,id',
-            'password' => 'string|min:8|same:confirm_password',
-            'confirm_password' => 'string|min:8|same:password',
-        ]);
 
+            'password' => 'nullable|string|min:8|same:confirm_password',
+            'confirm_password' => 'nullable|string|min:8|same:password',
+        ]);
+    
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -198,66 +275,68 @@ class UserController extends Controller
                 'error' => $validator->errors()
             ], 401);
         }
-
+    
         $users = User::find($id);
         if (is_null($users)) {
             return response()->json(['message' => 'User not found'], 404);
         }
-
+    
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $filename = time() . '.' . $image->getClientOriginalExtension();
-            $image->move(public_path('images'), $filename); // Ensure the 'images' directory exists and is writable
+            $image->move(public_path('images'), $filename);
             $users->image = $filename;
         }
-
-        $simple_string = $request->password;
-
-        $ciphering = "AES-128-CTR";
-        $iv_length = openssl_cipher_iv_length($ciphering);
-        $options = 0;
-        $encryption_iv = '1234567891011121';
-        $encryption_key = "GeeksforGeeks";
-        $encryption = openssl_encrypt(
-            $simple_string,
-            $ciphering,
-            $encryption_key,
-            $options,
-            $encryption_iv
-        );
-
-
-        // Check if 'invite' parameter is present in request
+    
+        $updateData = [
+            'name' => $request->name,
+            'email' => $request->email,
+        ];
+    
+        if ($request->filled('role_id')) {
+            $updateData['role_id'] = $request->role_id;
+        }
+    
+        if ($request->filled('password')) {
+            $simple_string = $request->password;
+            $ciphering = "AES-128-CTR";
+            $options = 0;
+            $encryption_iv = '1234567891011121';
+            $encryption_key = "GeeksforGeeks";
+            $encryption = openssl_encrypt(
+                $simple_string,
+                $ciphering,
+                $encryption_key,
+                $options,
+                $encryption_iv
+            );
+            $updateData['password'] = $encryption;
+        }
+    
         if ($request->has('invite')) {
-            // Generate a new remember token for the user
             $users->remember_token = Str::random(40);
             $users->save();
-
-            // Send the registration confirmation email to the user
+    
             Mail::to($users->email)->send(new UpdateConfirmation($users, $request->password));
-
-            // Return JSON response with success message and user data
+    
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful. Email sent with login details.',
                 'user' => $users,
             ], 200);
         }
-        $users->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'role_id' => $request->role_id,
-            'password' => $encryption,
-            'activeStatus'=>$request->activeStatus ?? $users->activeStatus
 
-        ]);
+    
+        $users->update($updateData);
+    
+
 
         return response()->json([
             'message' => 'User updated successfully',
             'user' => $users,
         ], 200);
     }
-
+    
     public function destroyUser($id)
     {
         $user = User::find($id);
