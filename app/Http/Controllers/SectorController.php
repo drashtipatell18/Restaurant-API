@@ -14,13 +14,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
 
 class SectorController extends Controller
 {
     public function createSector(Request $request)
     {
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if ($role != "admin") {
+        if ($role != "admin" && $role != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -33,10 +38,21 @@ class SectorController extends Controller
         ]);
 
         if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo crear el sector. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+             Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage
             ], 403);
         }
 
@@ -44,6 +60,7 @@ class SectorController extends Controller
             'name' => $request->input('name'),
             'admin_id' => $request->input('admin_id')
         ]);
+        
 
         $tables = [];
 
@@ -58,35 +75,81 @@ class SectorController extends Controller
             array_push($tables, $table);
         }
 
+        $successMessage = "El sector {$sector->name} ha sido creado exitosamente con {$request->noOfTables} mesas asignadas.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+             'admin_id' => $request->admin_id,
+             'role_id' => $user->role_id
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Sector and Tabled added successfully.',
             'sector' => $sector,
-            'tables' => $tables
+            'tables' => $tables,
+            'notification'=> $successMessage
         ], 200);
     }
 
-    public function deleteSector($id)
+    public function deleteSector(Request $request,$id)
     {
+
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+        
+
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if ($role != "admin") {
+        if ($role != "admin" && $role != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
             ], 405);
         }
-
-        $tables = Table::all()->where('sector_id', $id);
-        foreach ($tables as $table) {
-            $table->delete();
-        }
         $sector = Sector::find($id);
-        $sector->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Sector deleted successfully.'
-        ], 200);
+        if (!$sector) {
+            $errorMessage = 'No se pudo eliminar el sector. Verifica si el sector está asociado a otros registros e intenta nuevamente..';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+             Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $adminId,
+                'role_id' => $user->role_id
+            ]);
+            return response()->json([
+                'success' => false,
+                'alert' => $errorMessage
+
+            ], 404);
+        }
+
+    
+            $tables = Table::all()->where('sector_id', $id);
+            foreach ($tables as $table) {
+                $table->delete();
+            }
+           
+            $sector->delete();
+    
+            $successMessage = "El sector $sector->name ha sido eliminado del sistema.";
+            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            Notification::create([
+                'user_id' =>  $user->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $adminId,
+                 'role_id' => $user->role_id
+            ]);
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Sector deleted successfully.',
+                'notification' => $successMessage
+            ], 200);
     }
 
     public function getSector(Request $request)
@@ -186,7 +249,16 @@ class SectorController extends Controller
 
     public function updateTableStatus(Request $request)
     {
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
 
         $validateRequest = Validator::make($request->all(), [
             'table_id' => 'required|exists:restauranttables,id',
@@ -194,29 +266,74 @@ class SectorController extends Controller
         ]);
 
         if ($validateRequest->fails()) {
+
+            $errorMessage = 'Could not free the table. Check if the order is closed or if there are connection problems and try again.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+             Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage
             ], 403);
         }
 
         $table = Table::where('id', $request->table_id)
             ->where('admin_id', $request->admin_id) // Ensure admin_id matches
+            ->with('sector')
             ->first();
-        $table->status = $request->status;
-        $table->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Table updated to ' . $table->status
-        ], 200);
+        $previousStatus = $table->status;
+            
+
+        if($previousStatus  !== $request->status)
+        {
+            $table->status = $request->status;
+            $table->save();
+
+            $sectorName = $table->sector->name ?? 'Unknown Sector';
+
+            if($previousStatus === 'busy'){
+                $successMessage = "La mesa {$table->id} ha sido liberada y está disponible para nuevos pedidos." ;
+                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $request->admin_id,
+                    'role_id' => $user->role_id
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Table updated to ' . $table->status,
+                    'notification' => $successMessage
+                ], 200);
+            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Table updated to ' . $table->status,
+            ], 200);
+            
+        }
+       
+     
     }
 
     public function addTables(Request $request)
     {
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if ($role != "admin") {
+        if ($role != "admin" && $role != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -229,10 +346,22 @@ class SectorController extends Controller
         ]);
 
         if ($validateRequest->fails()) {
+
+            $errorMessage = 'No se pudo crear la mesa. Verifica la información ingresada e intenta nuevamente..';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+             Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage
             ], 403);
         }
 
@@ -254,10 +383,20 @@ class SectorController extends Controller
             array_push($tables, $table);
         }
 
+        $successMessage = "La mesa $request->noOfTables ha sido creada exitosamente en el sector $table->name." ;
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+             'admin_id' => $request->admin_id,
+             'role_id' => $user->role_id
+        ]);
         return response()->json([
             'success' => true,
             'message' => 'Tables added successfully',
-            'tables' => $tables
+            'tables' => $tables,
+            'notification' => $successMessage
         ], 200);
     }
 
@@ -389,8 +528,11 @@ class SectorController extends Controller
 
     public function updateSector(Request $request, $id)
     {
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if ($role != "admin") {
+        if ($role != "admin" && $role != "cashier") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -403,10 +545,20 @@ class SectorController extends Controller
         ]);
 
         if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo actualizar el sector. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+             Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage
             ], 403);
         }
 
@@ -432,11 +584,22 @@ class SectorController extends Controller
             array_push($tables, $table);
         }
 
+        $successMessage = "El sector $sector->name ha sido actualizado exitosamente.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+             'admin_id' => $request->admin_id,
+             'role_id' => $user->role_id
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Sector and Tables updated successfully.',
             'sector' => $sector,
-            'tables' => $tables
+            'tables' => $tables,
+            'notification' => $successMessage
         ], 200);
     }
     public function getTableSingle(Request $request, $id)
