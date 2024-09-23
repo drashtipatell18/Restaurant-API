@@ -84,7 +84,7 @@ class BoxController extends Controller
             ], 401);
         }
 
-        $checkBox = Boxs::where('user_id', $request->input('user_id'))->where('admin_id', auth()->user()->id)->count();
+        $checkBox = Boxs::where('user_id', $request->input('user_id'))->where('admin_id', $request->admin_id)->count();
 
 
         if ($checkBox != 0) {
@@ -100,7 +100,7 @@ class BoxController extends Controller
         $box = Boxs::create([
             'user_id' => $request->input('user_id'),
             'name' => $request->input('name'),
-            'admin_id' => auth()->user()->id
+            'admin_id' => $request->admin_id
         ]);
 
         $successMessage = "La caja {$box->name} ha sido creada exitosamente y asignada a {$user->name}.";

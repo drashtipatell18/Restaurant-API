@@ -32,6 +32,9 @@ class OrderController extends Controller
     
  public function placeOrder(Request $request)
 {
+    $user = auth()->user();
+    $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
     $role = Role::where('id', Auth()->user()->role_id)->first()->name;
     if ($role != "admin" && $role != "cashier" && $role != "waitress") {
         return response()->json([
@@ -55,8 +58,7 @@ class OrderController extends Controller
         'transaction_code' => 'boolean'
     ]);
 
-    $user = auth()->user();
-    $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+   
 
     if ($validateRequest->fails()) {
         $errorMessage = 'No se pudo crear el pedido. Verifica la información ingresada e intenta nuevamente.';
@@ -101,7 +103,6 @@ class OrderController extends Controller
 
    if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->first();
-          
             if (!$box) {
                 return response()->json([
                     'success' => false,
@@ -109,11 +110,8 @@ class OrderController extends Controller
                 ], 403);
             }
 
-          
             $log = BoxLogs::where('box_id', $box->id)->first();
            
-          
-
             // $log->collected_amount += $totalAmount;
             
              if ($log == null) {
