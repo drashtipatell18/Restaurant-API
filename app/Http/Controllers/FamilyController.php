@@ -21,7 +21,7 @@ class FamilyController extends Controller
     public function createFamily(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier") {
+        if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
             $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
             Notification::create([
@@ -43,20 +43,22 @@ class FamilyController extends Controller
         ]);
 
         if ($validateFamily->fails()) {
-            $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
+            if ($role != "admin" &&  $role != "cashier") {
+                $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
+                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validateFamily->errors(),
-                'notification' => $errorMessage,
-            ], 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validateFamily->errors(),
+                    'notification' => $errorMessage,
+                ], 403);
+            }
         }
 
         $admin_id = null;
@@ -133,7 +135,7 @@ class FamilyController extends Controller
     public function updateFamily(Request $request, $id)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier") {
+        if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
             $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
             Notification::create([
@@ -153,11 +155,22 @@ class FamilyController extends Controller
         ]);
 
         if ($validateFamily->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validateFamily->errors()
-            ], 403);
+            if ($role != "admin" &&  $role != "cashier") {
+                $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
+                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validateFamily->errors(),
+                    'notification' => $errorMessage,
+                ], 403);
+            }
         }
 
         $family = Family::where('id', $id)->first();
@@ -193,7 +206,7 @@ class FamilyController extends Controller
     public function createSubFamily(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier") {
+        if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -206,20 +219,22 @@ class FamilyController extends Controller
         ]);
 
         if ($validateSubFamily->fails()) {
-            $errorMessage = 'No se pudo crear la subfamilia. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
+            if ($role != "admin" &&  $role != "cashier") {
+                $errorMessage = 'No se pudo crear la subfamilia. Verifica la información ingresada e intenta nuevamente.';
+                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Fails.',
-                'errors' => $validateSubFamily->errors(),
-                'alert' => $errorMessage,
-            ], 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation Fails.',
+                    'errors' => $validateSubFamily->errors(),
+                    'alert' => $errorMessage,
+                ], 403);
+            }
         }
 
         $admin_id = null;
@@ -294,7 +309,7 @@ class FamilyController extends Controller
     public function updateSubFamily(Request $request, $id)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier") {
+        if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -307,11 +322,22 @@ class FamilyController extends Controller
         ]);
 
         if ($validateSubFamily->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Fails.',
-                'errors' => $validateSubFamily->errors()
-            ], 403);
+            if ($role != "admin" &&  $role != "cashier") {
+                $errorMessage = 'No se pudo crear la subfamilia. Verifica la información ingresada e intenta nuevamente.';
+                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation Fails.',
+                    'errors' => $validateSubFamily->errors(),
+                    'alert' => $errorMessage,
+                ], 403);
+            }
         }
 
         $subfamily = Subfamily::find($id);

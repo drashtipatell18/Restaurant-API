@@ -9,6 +9,8 @@ use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
 
 class ProductionCenterController extends Controller
 {
@@ -24,22 +26,41 @@ class ProductionCenterController extends Controller
     public function storeProductionCenter(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        // if ($role != "admin") {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Unauthorised'
-        //     ], 401);
-        // }
+        if ($role != "admin") {
+            $errorMessage = 'No se pudo crear el centro de producción. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised',
+                'notification' => $errorMessage
+            ], 401);
+        }
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'printer_code' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
+            $errorMessage = 'No se pudo crear el centro de producción. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
+
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
+                'notification' => $errorMessage,
             ], 403);
         }
     
@@ -49,10 +70,18 @@ class ProductionCenterController extends Controller
             'admin_id' => $request->admin_id
         ]);
 
+        $successMessage = "La familia {$productionCenter->name} ha sido creada exitosamente.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+        ]);
         return response()->json([
             'success' => true,
             'data' => $productionCenter,
-            'message' => 'Production Center created successfully.'
+            'message' => 'Production Center created successfully.',
+            'notification' => $successMessage
         ], 200);
     }
 
@@ -60,10 +89,20 @@ class ProductionCenterController extends Controller
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
         if ($role != "admin") {
+
+            $errorMessage = 'No se pudo agregar el artículo al centro de producción. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorised'
-            ], 405);
+                'message' => 'Unauthorised',
+                'notification' => $errorMessage
+            ], 401);
         }
 
         $validateRequest = Validator::make($request->all(), [
@@ -73,6 +112,13 @@ class ProductionCenterController extends Controller
         ]);
 
         if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo agregar el artículo al centro de producción. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -97,9 +143,18 @@ class ProductionCenterController extends Controller
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
         if ($role != "admin") {
+            $errorMessage = 'No se pudo crear el centro de producción. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorised'
+                'message' => 'Unauthorised',
+                'notification' => $errorMessage
             ], 401);
         }
         $validator = Validator::make($request->all(), [
@@ -108,19 +163,35 @@ class ProductionCenterController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $errorMessage = 'No se pudo crear el centro de producción. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
+                'notification' => $errorMessage,
             ], 403);
         }
 
-        $productionCenter = ProductionCenter::find($id);
-
+        $productionCenter = ProductionCenter::find($id);   
+        $errorMessage = 'No se pudo eliminar el centro de producción. Verifica si el centro está asociado a otros registros e intenta nuevamente.';
+        broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'alert',
+            'notification' => $errorMessage,
+        ]);
         if (!$productionCenter) {
             return response()->json([
                 'success' => false,
-                'message' => 'Production Center not found'
+                'message' => 'Production Center not found',
+                'notification' => $errorMessage,
             ], 404);
         }
 
@@ -128,30 +199,55 @@ class ProductionCenterController extends Controller
             'name' => $request->name,
             'printer_code' => $request->printer_code,
         ]);
+        $successMessage = "El centro de producción { $productionCenter->name } ha sido actualizado exitosamente";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+        ]);
 
         return response()->json([
             'success' => true,
             'data' => $productionCenter,
-            'message' => 'Production Center updated successfully.'
+            'message' => 'Production Center updated successfully.',
+            'notification' => $successMessage,
         ], 200);
     }
 
     public function destroyProductionCenter($id)
     {
         $productionCenter = ProductionCenter::find($id);
-
+        $errorMessage = 'No se pudo eliminar el centro de producción. Verifica si el centro está asociado a otros registros e intenta nuevamente.';
+        broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'alert',
+            'notification' => $errorMessage,
+        ]);
         if (!$productionCenter) {
             return response()->json([
                 'success' => false,
-                'message' => 'Production Center not found'
-            ], 401);
+                'message' => 'Production Center not found',
+                'notification' => $errorMessage,
+            ], 404);
         }
 
         $productionCenter->delete();
 
+        $successMessage = "El centro de producción { $productionCenter->name } ha sido eliminado del sistema.";
+
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+        ]);
+
         return response()->json([
             'success' => true,
-            'message' => 'Production Center deleted successfully.'
+            'message' => 'Production Center deleted successfully.',
+            'notification' => $successMessage,
         ], 200);
     }
     public function ProductionCentersearch(Request $request)
@@ -173,6 +269,7 @@ class ProductionCenterController extends Controller
         ]);
 
         if ($validator->fails()) {
+            
             return response()->json([
                 'success' => false,
                 'message' => "Validation error",
