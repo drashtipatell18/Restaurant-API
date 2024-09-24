@@ -264,7 +264,8 @@ class OrderController extends Controller
         'message' => "Order placed successfully",
         'details' => $response,
         'notification' => $successMessage,
-        'notification1' => $successMessage1 ?? null
+        'notification1' => $successMessage1 ?? null,
+
     ], 200);
 }
 
@@ -663,6 +664,14 @@ class OrderController extends Controller
 
     public function addTip(Request $request, $id)
     {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'   
+            ], 401);
+        }
+
         $order = OrderMaster::find($id);
 
         if($order == null)
@@ -687,9 +696,19 @@ class OrderController extends Controller
         $order->tip = $request->query('tip_amount');
         $order->save();
 
+        $successMessage = 'La propina ha sido agregada exitosamente al pedido.';
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => $user->id,
+            'notification_type' => 'alert',
+            'notification' => $successMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' => $user->role_id
+        ]);
         return response()->json([
             'success' => true,
-            'message' => "Tip added successfully"
+            'message' => "Tip added successfully",
+            'notification' => $successMessage,
         ], 200);
     }
 
