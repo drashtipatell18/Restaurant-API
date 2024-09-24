@@ -937,7 +937,8 @@ class OrderController extends Controller
         }
 
         $returnItemsData = $request->input('return_items');
-        $admin_id = $request->input('admin_id');
+        // $admin_id = $request->input('admin_id');
+        $admin_id =$creditNoteData['admin_id'] ;
        
         // Create the credit note
         $creditNote = CreditNot::create([
