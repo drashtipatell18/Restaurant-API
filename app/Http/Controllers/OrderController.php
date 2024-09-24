@@ -17,6 +17,7 @@ use App\Models\CreditNot;
 use App\Models\ReturnItem;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
+use App\Models\Table;
 
 class OrderController extends Controller
 {
@@ -32,6 +33,9 @@ class OrderController extends Controller
     
  public function placeOrder(Request $request)
 {
+    $user = auth()->user();
+    $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
     $role = Role::where('id', Auth()->user()->role_id)->first()->name;
     if ($role != "admin" && $role != "cashier" && $role != "waitress") {
         return response()->json([
@@ -55,8 +59,7 @@ class OrderController extends Controller
         'transaction_code' => 'boolean'
     ]);
 
-    $user = auth()->user();
-    $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+   
 
     if ($validateRequest->fails()) {
         $errorMessage = 'No se pudo crear el pedido. Verifica la información ingresada e intenta nuevamente.';
@@ -87,7 +90,7 @@ class OrderController extends Controller
         'customer_name' => $request->order_master['customer_name'],
         'person' => $request->order_master['person'],
         'reason' => $request->order_master['reason'],
-        'admin_id' => $request->admin_id ?? Auth::user()->id
+        'admin_id' => $request->admin_id
     ];
 
     // Generate and add transaction code if requested
@@ -101,7 +104,6 @@ class OrderController extends Controller
 
    if ($role == "cashier") {
             $box = Boxs::where('user_id', Auth::user()->id)->first();
-          
             if (!$box) {
                 return response()->json([
                     'success' => false,
@@ -109,11 +111,8 @@ class OrderController extends Controller
                 ], 403);
             }
 
-          
             $log = BoxLogs::where('box_id', $box->id)->first();
            
-          
-
             // $log->collected_amount += $totalAmount;
             
              if ($log == null) {
@@ -223,6 +222,33 @@ class OrderController extends Controller
         $log->save();
     }
 
+    if (isset($request->order_master['table_id'])) {
+        $tableId = $request->order_master['table_id'];
+        $table = Table::find($tableId);
+        if($table)
+        {
+            $sectorName = $table->sector->name ?? 'Unknown Sector'; // Get sector name or use 'Unknown Sector' if not found
+            $successMessage1 = "El pedido {$order->id} ha sido asignado exitosamente a la mesa {$table->id} en el sector {$sectorName}.";
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification1',
+                'notification' => $successMessage1,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+        }
+        else{
+            $errorMessage1 = 'No se pudo asignar el pedido a la mesa. Verifica la información e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage1))->toOthers();
+             Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage1,
+            ]);
+        }
+    }
+
+
     $customerName = $request->order_master['customer_name'];
     $successMessage = "El pedido {$order->id} ha sido creado exitosamente para el cliente {$customerName}.";
     broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
@@ -238,6 +264,7 @@ class OrderController extends Controller
         'message' => "Order placed successfully",
         'details' => $response,
         'notification' => $successMessage,
+        'notification1' => $successMessage1 ?? null
     ], 200);
 }
 
@@ -502,7 +529,7 @@ class OrderController extends Controller
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
        
-        if($role != "admin")
+        if($role != "admin" && $role !="cashier")
         {
             return response()->json([
                 'success' => false,
@@ -567,11 +594,6 @@ class OrderController extends Controller
                         'alert' => $errorMessage,
             
                     ], 403);
-
-                    return response()->json([
-                        'success' => false,
-                        'alert' => $errorMessage
-                    ], 403);
                 }
             }
         }
@@ -582,7 +604,7 @@ class OrderController extends Controller
             $order->finished_at = now(); // Update current date in finish_at column if status is delivered
         }
       
-        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+        if ($role === "admin" || $role === "cashier" || $role === "waitress") {
             if ($request->input('status') === 'cancelled') {
                 $successMessage = "El pedido {$order->id} ha sido anulado exitosamente.";
                 broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
@@ -593,8 +615,20 @@ class OrderController extends Controller
                     'admin_id' => $request->admin_id,
                     'role_id' => $user->role_id
                 ]);
+                $order->save();
+                return response()->json([
+                    'success' => true,
+                    'message' => "Status updated successfully",
+                    'notification' => $successMessage
+                ], 200);
             
             }
+        }
+        else{
+            return response()->json([
+                'success' => false,
+                'message' => 'Permission denied for this action'
+            ], 403);
         }
     
 
@@ -603,7 +637,7 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Status updated successfully",
-            'notification' => $successMessage ?? null
+         
         ], 200);
     }
 
@@ -662,6 +696,7 @@ class OrderController extends Controller
     public function addNote(Request $request, $id)
     {
         $orderMaster = OrderDetails::find($id);
+       
 
         if($orderMaster == null)
         {
@@ -677,7 +712,7 @@ class OrderController extends Controller
         }
         else
         {
-            $orderMaster->notes .= "," . $request->input('notes');
+            $orderMaster->notes = $request->input('notes');
         }
 
         $orderMaster->save();
@@ -836,6 +871,22 @@ class OrderController extends Controller
             $responseData['order_details'] = $order->orderDetails;
         }
 
+        if ($role == "cashier") {
+            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+    
+            // $log->collected_amount += $totalAmount;
+             if(empty($log->order_master_id))
+                {
+                    $log->order_master_id = $order->id;
+                }
+                else
+                {
+                    $log->order_master_id .= "," . $order->id;
+                }
+            $log->save();
+        }
+
         $successMessage = "El pedido {$order->id} ha sido actualizado exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
         Notification::create([
@@ -920,7 +971,7 @@ class OrderController extends Controller
        
         if($creditNoteData == null)
         {
-            $errorMessage = 'No se pudo consultar los detalles del pedido. Intenta nuevamente más tarde..';
+            $errorMessage = 'No se pudo crear la nota de crédito. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
             Notification::create([
                 'user_id' => $user->id,
@@ -937,9 +988,14 @@ class OrderController extends Controller
         }
 
         $returnItemsData = $request->input('return_items');
-        // $admin_id = $request->input('admin_id');
+   // $admin_id = $request->input('admin_id');
         $admin_id =$creditNoteData['admin_id'] ;
        
+
+
+        $order = OrderMaster::find($creditNoteData['order_id']);
+        $customerName = $order ? $order->customer_name : 'Unknown';
+
         // Create the credit note
         $creditNote = CreditNot::create([
             'order_id' => $creditNoteData['order_id'],
@@ -957,7 +1013,8 @@ class OrderController extends Controller
 
         
         
-        $successMessage = "La nota de crédito ha sido creada exitosamente para el pedido {$creditNote->order_id}.";
+        // $successMessage = "La nota de crédito ha sido creada exitosamente para el pedido {$creditNote->order_id}.";
+        $successMessage = "La nota de crédito para el pedido {$creditNote->order_id} del cliente {$customerName} ha sido creada exitosamente.";
         // Broadcast notification message
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
 
@@ -1013,6 +1070,9 @@ class OrderController extends Controller
     
     public function orderCreditUpdate(Request $request, $id)
     {
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
         $validatedData = $request->validate([
             'status' => 'required|string',
             'destination' => 'nullable',
@@ -1020,41 +1080,95 @@ class OrderController extends Controller
         $creditNote = CreditNot::find($id);
         // dd($creditNote);
         if (!$creditNote) {
+            $errorMessage = 'No se pudo aplicar la nota de crédito al pedido. Verifica la información e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => $user->id, 
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $adminId,
+                'role_id' => $user->role_id
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Credit Note not found'
-            ], 404);
+                'message' => 'Credit Note not found',
+                // 'errors' => $validatedData->errors(),
+                'alert' => $errorMessage,
+            ], 403);
         }
         $creditNote->status = $validatedData['status'];
         $creditNote->destination = $validatedData['destination'];
         $creditNote->save();
+
+        $successMessage = "La nota de crédito ha sido aplicada exitosamente al pedido  {$creditNote->order_id}.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+            'admin_id' => $adminId,
+            'role_id' => $user->role_id
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Credit Note status updated successfully',
-            'credit_note' => $creditNote
+            'credit_note' => $creditNote,
+            'notification' => $successMessage,
         ]);
     }
     
-    public function orderCreditDelete($id)
+    public function orderCreditDelete(Request $request,$id)
     {
+        $user = auth()->user();
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
         // Find the CreditNote by ID
         $creditNote = CreditNot::find($id);
+        
 
         // Check if the CreditNote exists
         if (!$creditNote) {
+            $errorMessage = 'No se pudo crear la nota de crédito. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => $user->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' => $user->role_id
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Credit Note not found'
-            ], 404);
+                'message' => 'Credit Note not found',
+                'alert' => $errorMessage,
+            ], 405);
         }
 
         // Delete the CreditNote
         $creditNote->delete();
 
+        $successMessage = "La nota de crédito para el pedido {$creditNote->order_id} del cliente {$creditNote->name} ha sido anulada exitosamente.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => $user->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' => $user->role_id
+        ]);
+
         // Return success response
         return response()->json([
             'success' => true,
-            'message' => 'Credit Note deleted successfully'
+            'message' => 'Credit Note deleted successfully',
+            'notification' => $successMessage
         ]);
     }
 

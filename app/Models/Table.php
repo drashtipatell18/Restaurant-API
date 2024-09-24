@@ -11,4 +11,9 @@ class Table extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'restauranttables';
     protected $fillable = ['user_id','sector_id','admin_id','name','status'];
+
+    public function sector()
+    {
+        return $this->belongsTo(Sector::class, 'sector_id');
+    }
 }

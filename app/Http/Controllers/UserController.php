@@ -128,6 +128,8 @@ class UserController extends Controller
             'password' => $encryption,
             'image' => $filename,
             'status' => 'Activa',
+            'activeStatus'=>$request->activeStatus
+
         ];
 
         if ($request->role_id != 1) {
@@ -161,7 +163,7 @@ class UserController extends Controller
                     'user_id' => $user->id,
                     'notification_type' => 'notification',
                     'notification' => $successMessage,
-                    'admin_id' => $user->id,
+                    'admin_id' => $adminId,
                     'role_id' => $user->role_id
                 ]);
                 
@@ -338,7 +340,7 @@ class UserController extends Controller
             ], 200);
         }
 
-    
+        $request->activeStatus ?? $users->activeStatus;
         $users->update($updateData);
     
 
