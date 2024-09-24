@@ -529,7 +529,7 @@ class OrderController extends Controller
     {
         $role = Role::where('id',Auth()->user()->role_id)->first()->name;
        
-        if($role != "admin")
+        if($role != "admin" && $role !="cashier")
         {
             return response()->json([
                 'success' => false,
