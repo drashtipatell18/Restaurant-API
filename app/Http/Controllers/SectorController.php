@@ -222,7 +222,7 @@ class SectorController extends Controller
                 // Check if table is busy and get the latest order ID and user_id
                 if ($table->status === 'busy') {
                     $order = OrderMaster::where('table_id', $table->id)
-                        ->where('admin_id', $table->admin_id)
+                        ->where('admin_id', $sector->admin_id)
                         ->latest()->first(['id', 'user_id']);
                     if ($order) {
                         $tableInfo['order_id'] = $order->id;

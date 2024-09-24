@@ -241,8 +241,9 @@ class ItemController extends Controller
                 'notification' => $errorMessage
             ], 405);
         }
-
+        
         $item = Item::find($id);
+        // dd($item);
         if ($item === null) {
             if ($role != "admin" &&  $role != "cashier") {
                 $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
@@ -261,7 +262,7 @@ class ItemController extends Controller
         }
 
         $item->delete();
-
+        
         $successMessage = "El artículo {$item->name} ha sido eliminado del sistema.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
         Notification::create([
@@ -390,19 +391,19 @@ class ItemController extends Controller
     public function addToMenu(Request $request)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier") {
+        if ($role != "admin" && $role != "cashier") {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorised'
+                'message' => 'Unauthorized'
             ], 405);
         }
-
+    
         $validateRequest = Validator::make($request->all(), [
             'item_ids' => 'required|array',
             'item_ids.*' => 'integer|exists:items,id',
             'menu_id' => 'required|exists:menus,id'
         ]);
-
+    
         if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
@@ -410,31 +411,73 @@ class ItemController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
-
+    
+        // Determine admin ID based on user role
         $admin_id = null;
         if ($role == 'admin') {
-            // If the user is an admin, store their own ID
             $admin_id = auth()->user()->id;
         } elseif ($role == 'cashier') {
             $admin_id = auth()->user()->admin_id;
         }
-
+    
         $menu = Menu::find($request->menu_id);
-        for ($i = 0; $i < count($request->item_ids); $i++) {
-            $item = Item::find($request->item_ids[$i]);
-
-            Item_Menu_Join::create([
-                'menu_id' => $menu->id,
-                'item_id' => $item->id,
-                'admin_id' => $admin_id
-            ]);
+        $notification = null; // Variable to hold the last success message
+        $errorOccurred = false; // Flag to track if any error occurs
+    
+        foreach ($request->item_ids as $item_id) {
+            $item = Item::find($item_id);
+    
+            try {
+                // Create the relationship entry
+                Item_Menu_Join::create([
+                    'menu_id' => $menu->id,
+                    'item_id' => $item->id,
+                    'admin_id' => $admin_id
+                ]);
+    
+                // Prepare the success message
+                $notification = "El artículo {$item->name} ha sido agregado exitosamente al menú {$menu->name}.";
+    
+                // Broadcast the notification message
+                broadcast(new NotificationMessage('notification', $notification))->toOthers();
+    
+                // Save the notification to the database
+                Notification::create([
+                    'user_id' => Auth::id(), // The user who performed the action
+                    'notification_type' => 'notification',
+                    'notification' => $notification,
+                    'admin_id' => $admin_id,
+                    'role_id' => Auth::user()->role_id
+                ]);
+            } catch (\Exception $e) {
+                // Log the error for debugging
+                \Log::error("Failed to add item {$item->name} to menu: " . $e->getMessage());
+    
+                // Set the error flag
+                $errorOccurred = true;
+                // Prepare the error response message
+                break; // Exit the loop on error
+            }
         }
-
+    
+        // If an error occurred during the process
+        if ($errorOccurred) {
+            return response()->json([
+                'success' => false,
+                'notification' => "No se pudo agregar el artículo al menú. Verifica la información ingresada e intenta nuevamente."
+            ], 500); // Using 500 for internal server error
+        }
+    
         return response()->json([
             'success' => true,
-            'message' => "Items added to menu successfully"
+            'message' => "Items added to menu successfully",
+            'notification' => $notification // Return the last notification message
         ], 200);
     }
+    
+
+
+    
 
     public function getSaleReport(Request $request, $id)
     {
@@ -527,3 +570,4 @@ class ItemController extends Controller
         return response()->json($responseData, 200);
     }
 }
+

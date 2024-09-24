@@ -1007,10 +1007,14 @@ class OrderController extends Controller
         }
 
         $returnItemsData = $request->input('return_items');
-        $admin_id = $request->input('admin_id');
+   // $admin_id = $request->input('admin_id');
+        $admin_id =$creditNoteData['admin_id'] ;
+       
+
 
         $order = OrderMaster::find($creditNoteData['order_id']);
         $customerName = $order ? $order->customer_name : 'Unknown';
+
         // Create the credit note
         $creditNote = CreditNot::create([
             'order_id' => $creditNoteData['order_id'],

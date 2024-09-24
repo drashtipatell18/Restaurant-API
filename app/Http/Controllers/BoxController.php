@@ -25,8 +25,10 @@ class BoxController extends Controller
             // If the user is an admin, retrieve all records
             $boxs = Boxs::all();
         } else {
-            // Otherwise, retrieve records where admin_id matches the authenticated user
-            $boxs = Boxs::where('admin_id', auth()->user()->id)->get();
+            // $boxs = Boxs::where('admin_id', auth()->user()->id)->get();
+            $userAdminId = auth()->user()->admin_id;
+            $boxs = Boxs::where('admin_id', $userAdminId)->get();
+            // dd( $boxs);
         }
 
         return response()->json($boxs, 200);
