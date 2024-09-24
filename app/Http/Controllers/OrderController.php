@@ -696,6 +696,7 @@ class OrderController extends Controller
     public function addNote(Request $request, $id)
     {
         $orderMaster = OrderDetails::find($id);
+       
 
         if($orderMaster == null)
         {
@@ -711,7 +712,7 @@ class OrderController extends Controller
         }
         else
         {
-            $orderMaster->notes .= "," . $request->input('notes');
+            $orderMaster->notes = $request->input('notes');
         }
 
         $orderMaster->save();
