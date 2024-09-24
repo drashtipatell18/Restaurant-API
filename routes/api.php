@@ -187,7 +187,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/payment/insert',[PaymentController::class, 'InsertPayment']);
     Route::post('/getsinglepaymentById/{id}', [PaymentController::class, 'getPaymentById']);
 
-
+    Route::post('/mark-as-read', [ChatAppController::class,'markAsRead']);
    
 });
 
@@ -219,4 +219,4 @@ Route::post('/remove-user-from-group', [ChatAppController::class, 'removeUserFro
 
 Route::post('/chat/login', [ChatAppController::class, 'chat'])->name('chat');
 
-Route::post('/mark-as-read', [ChatAppController::class,'markAsRead']);
+// Route::post('/mark-as-read', [ChatAppController::class,'markAsRead']);

@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Validator;
 use App\Models\BoxLogs;
+use App\Models\Role;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
+
 class PaymentController extends Controller
 {
 
@@ -46,12 +50,32 @@ class PaymentController extends Controller
             'type' => 'required|in:cash,transfer,debit,credit',
             'amount' => 'required'
         ]);
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
 
         if ($validateRequest->fails()) {
+            $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+            if ($role != "admin" && $role != "cashier") {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorised'   
+                ], 401);
+            }
+            $errorMessage = 'Ocurrió un error al procesar el pago. Por favor, verifica los detalles e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                 'role_id' => $user->role_id
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                'alert' => $errorMessage
             ], 403);
         }
 
@@ -92,6 +116,31 @@ class PaymentController extends Controller
             'message' => 'Box log not found for the given order_master_id.'
         ], 404);
     }
+
+    try{
+        $successMessage = "El recibo de pago para el pedido {$payment->order_master_id} ha sido generado e impreso correctamente.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => auth()->user()->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' => $user->role_id
+        ]);
+    }
+    catch(Exception $e)
+    {
+         $errorMessage = 'No se pudo generar el recibo de pago. Por favor, intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                 'role_id' => $user->role_id
+            ]);
+    }
+      
     
     
         // $log->save();
@@ -99,8 +148,15 @@ class PaymentController extends Controller
         return response()->json([
             'success' => true,
             'result' => $payment,
-            'message' => 'Payment added successfully.'
+            'message' => 'Payment added successfully.',
+            'notification' => $successMessage
         ], 200);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment Failed.',
+            'notification' => $errorMessage
+        ], 403);
     }
     public function getPaymentById(Request $request,$id)
     {

@@ -11,6 +11,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use App\Models\GroupForChat;
 use Illuminate\Support\Facades\DB;
+use App\Models\Notification;
+use App\Events\NotificationMessage;
 
 
 class ChatAppController extends Controller
@@ -86,11 +88,12 @@ class ChatAppController extends Controller
         $request->validate([
             'msg' => 'required',
         ]);
-
+       
         $sender = auth()->user();
         if (!$sender) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
+        $adminId = $sender->role_id == 1 ? $sender->id : $sender->admin_id;
 
         $chat = new Chats;
         $chat->admin_id = $request->admin_id;
@@ -99,22 +102,75 @@ class ChatAppController extends Controller
 
         // If it's a group message
         if ($request->group_id) {
+            $group = GroupForChat::find($request->group_id);
+           
             $chat->group_id = $request->group_id;
             $chat->save();
 
-            broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id,$request->admin_id));
+            try{
+                broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id,$request->admin_id));
 
-            return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat]);
+                $successMessage = "Has recibido un nuevo mensaje de {$group->name}: {$request->msg}";
+                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $request->admin_id,
+                    'role_id' => $sender->role_id
+                ]);
+    
+                return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat,'notification'=>$successMessage]);
+            }
+            catch (\Exception $e) {
+                // Reciver not Message Reciver
+                    $errorMessage = "No se pudo enviar el mensaje al grupo {$group->name}. Verifica la información e intenta nuevamente.";
+                    broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                    Notification::create([
+                        'user_id' => auth()->user()->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $request->admin_id,
+                        'role_id' => $sender->role_id
+                    ]);
+                    return response()->json(['status' => 'error', 'alert' => $errorMessage], 500);
+            }
         }
 
         // If it's a private message
         if ($request->receiver_id) {
+            $receiver = User::find($request->receiver_id);
+            // Reciver Message
             $chat->receiver_id = $request->receiver_id;
             $chat->save();
 
-            broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null,$request->admin_id));
-
-            return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat]);
+            try{
+                broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null,$request->admin_id));
+        // Reciver Message Reciver
+                $successMessage = "Has recibido un nuevo mensaje de {$sender->name}: {$request->msg}";
+                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $request->admin_id,
+                    'role_id' => $sender->role_id
+                ]);
+                return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat,'notification'=>$successMessage]);
+            }
+            catch (\Exception $e) {
+        // Reciver not Message Reciver
+                $errorMessage = "No se pudo enviar el mensaje a {$receiver->name}. Verifica la información e intenta nuevamente.";
+                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $request->admin_id,
+                    'role_id' => $sender->role_id
+                ]);
+                return response()->json(['status' => 'error', 'alert' => $errorMessage], 500);
+            }
         }
 
         return response()->json(['status' => 'error', 'message' => 'Failed to send message'], 400);
@@ -345,6 +401,9 @@ class ChatAppController extends Controller
     {
         $chatIds = $request->input('chat_id');
         $userId = auth()->id();
+
+        $sender = auth()->user();
+        $adminId = $sender->role_id == 1 ? $sender->id : $sender->admin_id;
     
         if (!is_array($chatIds)) {
             $chatIds = [$chatIds]; // Convert single ID to an array
@@ -352,7 +411,63 @@ class ChatAppController extends Controller
     
         foreach ($chatIds as $chatId) {
             $chat = Chats::find($chatId);
-    
+            if($chat->group_id)
+            {
+                $group = GroupForChat::find($chat->group_id);
+                $groupName = $group->name ?? 'the group';
+
+                $successMessage = "Has marcado el mensaje del grupo {$group->name} como leído.";
+                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                Notification::create([
+                    'user_id' => $userId,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $request->admin_id,
+                    'role_id' => $sender->role_id
+                    
+                ]);
+                $chat->read_by = json_encode("yes"); // Directly set the field to 'yes'
+                $chat->save();
+                return response()->json([   
+                    'status' => 'success', 
+                    'message' => 'Message sent successfully', 
+                    'data' => $chat,
+                    'notification' => $successMessage
+                ]);
+
+            }
+            if($chat->receiver_id)
+            {
+                // dd("mark as reciver");
+                try{
+                    $sender = $chat->sender;
+                    $successMessage = "Has marcado el mensaje de {$sender->name} como leído.";
+                    broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                    Notification::create([
+                        'user_id' => $userId,
+                        'notification_type' => 'notification',
+                        'notification' => $successMessage,
+                        'admin_id' => $request->admin_id,
+                        'role_id' => $sender->role_id
+                    ]);
+                    $chat->read_by = json_encode("yes"); // Directly set the field to 'yes'
+                    $chat->save();
+                    return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat,'notification'=>$successMessage]);
+                }
+                catch (\Exception $e) {
+                    $errorMessage = "No se pudo marcar el mensaje de {$sender->name} como leído. Intenta nuevamente.";
+                    broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                    Notification::create([
+                        'user_id' => $userId,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $request->admin_id,
+                        'role_id' => $sender->role_id
+                    ]);
+                    return response()->json(['status' => 'error', 'alert' => $errorMessage], 500);
+                }
+            
+            }
             if (!$chat) {
                 continue; // Skip if chat not found
             }
