@@ -17,6 +17,7 @@ use Str;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
 use App\Models\Item_Production_Join;
+// use App\Models\ProductionCenter;
 
 class ItemController extends Controller
 {
@@ -481,8 +482,126 @@ class ItemController extends Controller
         ], 200);
     }
     
-
-
+    public function addToProduction(Request $request)
+    {
+        // Check user role
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 405);
+        }
+    
+        // Determine admin ID based on user role
+        $admin_id = null;
+        if ($role == 'admin') {
+            $admin_id = auth()->user()->id;
+        } elseif ($role == 'cashier') {
+            $admin_id = auth()->user()->admin_id;
+        }
+    
+        // Find the production center and handle the case if it's not found
+        $ProductionCenter = ProductionCenter::find($request->production_id);
+        if (!$ProductionCenter) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Production center not found'
+            ], 404);
+        }
+    
+        $notification = null; // Variable to hold the last success message
+        $errorOccurred = false; // Flag to track if any error occurs
+        $errorMessage = ''; // Error message holder
+    
+        // Loop through item IDs and process each one
+        foreach ($request->item_ids as $item_id) {
+            $item = Item::find($item_id);
+            
+            if (!$item) {
+                $errorMessage = "Item with ID {$item_id} not found";
+                $errorOccurred = true;
+                break;
+            }
+            
+            try {
+                // Log the incoming request data
+                \Log::info('Request Data: ', $request->all());
+                
+                $ProductionCenter = ProductionCenter::find($request->production_id);
+            
+                if (!$ProductionCenter) {
+                    throw new \Exception("Production Center with id {$request->production_id} not found.");
+                }
+            
+                foreach ($request->item_ids as $item_id) {
+                    $item = Item::find($item_id);
+            
+                    if (!$item) {
+                        throw new \Exception("Item with id {$item_id} not found.");
+                    }
+            
+                    // Log the item and production center details before adding to the join table
+                    \Log::info("Adding item '{$item->name}' to Production Center '{$ProductionCenter->name}'");
+            
+                    // Create the relationship entry
+                    Item_Production_Join::create([
+                        'production_id' => $ProductionCenter->id,
+                        'item_id' => $item->id,
+                        'admin_id' => $admin_id
+                    ]);
+            
+                    // Prepare the success message
+                    $notification = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$ProductionCenter->name}.";
+            
+                    // Broadcast the notification message
+                    broadcast(new NotificationMessage('notification', $notification))->toOthers();
+            
+                    // Save the notification to the database
+                    Notification::create([
+                        'user_id' => Auth::id(),
+                        'notification_type' => 'notification',
+                        'notification' => $notification,
+                        'admin_id' => $admin_id,
+                        'role_id' => Auth::user()->role_id
+                    ]);
+                }
+            
+                return response()->json([
+                    'success' => true,
+                    'message' => "Items added to production center successfully",
+                    'notification' => $notification
+                ], 200);
+                
+            } catch (\Exception $e) {
+                // Log the full error message for better debugging
+                \Log::error($e->getMessage());
+            
+                return response()->json([
+                    'success' => false,
+                    'message' => "Error adding item {$item->name} to production center: " . $e->getMessage()
+                ], 500);
+            }
+            
+            
+        }
+    
+        // If an error occurred during the process
+        if ($errorOccurred) {
+            return response()->json([
+                'success' => false,
+                'message' => $errorMessage
+            ], 500); // Using 500 for internal server error
+        }
+    
+        return response()->json([
+            'success' => true,
+            'message' => "Items added to ProductionCenter successfully",
+            'notification' => $notification // Return the last notification message
+        ], 200);
+    }
+    
+    
     
 
     public function getSaleReport(Request $request, $id)

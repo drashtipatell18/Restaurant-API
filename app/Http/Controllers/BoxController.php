@@ -21,7 +21,7 @@ class BoxController extends Controller
     public function index()
     {
         // Check if the user is an admin
-        if (auth()->user()->role == 'admin') {
+        if (auth()->user()->role->name  == 'admin' || auth()->user()->role == 'admin') {
             // If the user is an admin, retrieve all records
             $boxs = Boxs::all();
         } else {
@@ -37,7 +37,7 @@ class BoxController extends Controller
     public function createBox(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-
+        dd($role);
         if ($role != "admin" &&  $role != "cashier") {
             $errorMessage = 'No se pudo crear la caja. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();

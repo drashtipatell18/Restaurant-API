@@ -142,6 +142,8 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/item/update/{id}', [ItemController::class, 'updateItem']);
     Route::delete('/item/delete/{id}', [ItemController::class, 'deleteItem']);
     Route::post("/item/addToMenu", [ItemController::class, 'addToMenu']);
+    Route::post("/item/addToProduction", [ItemController::class, 'addToProduction']);
+
     Route::get("/item/getSaleReport/{id}", [ItemController::class, 'getSaleReport']);
     Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
     Route::get('/item/getAll', [ItemController::class, 'getAll']);
