@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Validator;
 use Str;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
+use App\Models\Item_Production_Join;
 
 class ItemController extends Controller
 {
@@ -112,6 +113,11 @@ class ItemController extends Controller
             'user_id' => auth()->user()->id,
             'notification_type' => 'notification',
             'notification' => $successMessage,
+        ]);
+
+        Item_Production_Join::create([
+            'item_id' => $item->id,
+            'production_id' => $request->production_center_id,
         ]);
 
 
