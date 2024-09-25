@@ -80,7 +80,7 @@ class OrderController extends Controller
             'customer_name' => $request->order_master['customer_name'],
             'person' => $request->order_master['person'],
             'reason' => $request->order_master['reason'],
-            'admin_id' => $request->admin_id ?? Auth::user()->id,
+            'admin_id' =>$request->order_master['admin_id'],
             'table_id' => $request->order_master['table_id'] ?? null,
             'user_id' => $request->order_master['user_id'] ?? null,
             'box_id' => $request->order_master['box_id'] ?? null,

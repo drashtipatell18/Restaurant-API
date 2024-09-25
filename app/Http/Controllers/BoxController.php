@@ -456,57 +456,58 @@ class BoxController extends Controller
                 'notification' => $successMessage,
             ], 200);
         } else {
-            $hasKDSOrders = kds::where('status', 'delivered')->get();
+            // dd(Auth::user()->admin_id);
+            $hasKDSOrders = kds::where('status', 'delivered')->where('admin_id', Auth::user()->admin_id)->get();
             if ($hasKDSOrders->isNotEmpty()) { // Check if there are any KDS orders
                 $boxLog->close_time = Carbon::now(); // Set close time if KDS orders exist
                 foreach ($hasKDSOrders as $order) {
                     $order->delete(); // Delete each KDS order
                 }
             }
-                $validateLater = Validator::make($request->all(), [
-                    'close_amount' => 'required|numeric|min:0',
-                    'cash_amount' => 'required|numeric|min:0'
-                ]);
+            $validateLater = Validator::make($request->all(), [
+                'close_amount' => 'required|numeric|min:0',
+                'cash_amount' => 'required|numeric|min:0'
+            ]);
 
-                if ($validateLater->fails()) {
-                    $errorMessage = 'No se pudo cerrar la caja. Verifica la información ingresada e intenta nuevamente.';
-                    $errorMessage = 'No se pudo realizar la consulta de la caja. Intenta nuevamente más tarde.';
-                    broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                    Notification::create([
-                        'user_id' => auth()->user()->id,
-                        'notification_type' => 'alert',
-                        'notification' => $errorMessage,
-                    ]);
-
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Validation fails',
-                        'errors' => $validateLater->errors(),
-                        'alert' => $errorMessage
-                    ], 403);
-                }
-                $box = Boxs::find($request->box_id);
-
-                $boxLog->close_amount = $request->input('close_amount');
-                $boxLog->close_by = Auth::user()->id;
-                $boxLog->close_time = Carbon::now();
-
-                $boxLog->save();
-
-                $successMessage = "La caja {$box->name} ha sido cerrada exitosamente con un monto final de {$request->close_amount}.";
-                $successMessage = "La consulta de la caja {$box->name} se ha realizado exitosamente.";
-                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            if ($validateLater->fails()) {
+                $errorMessage = 'No se pudo cerrar la caja. Verifica la información ingresada e intenta nuevamente.';
+                $errorMessage = 'No se pudo realizar la consulta de la caja. Intenta nuevamente más tarde.';
+                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
                 Notification::create([
                     'user_id' => auth()->user()->id,
-                    'notification_type' => 'notification',
-                    'notification' => $successMessage,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
                 ]);
 
                 return response()->json([
-                    'success' => true,
-                    'box' => $boxLog,
-                    'notification' => $successMessage
-                ], 200);
+                    'success' => false,
+                    'message' => 'Validation fails',
+                    'errors' => $validateLater->errors(),
+                    'alert' => $errorMessage
+                ], 403);
+            }
+            $box = Boxs::find($request->box_id);
+
+            $boxLog->close_amount = $request->input('close_amount');
+            $boxLog->close_by = Auth::user()->id;
+            $boxLog->close_time = Carbon::now();
+
+            $boxLog->save();
+
+            $successMessage = "La caja {$box->name} ha sido cerrada exitosamente con un monto final de {$request->close_amount}.";
+            $successMessage = "La consulta de la caja {$box->name} se ha realizado exitosamente.";
+            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'box' => $boxLog,
+                'notification' => $successMessage
+            ], 200);
         }
     }
     public function BoxReportMonthWise(Request $request, $id)
