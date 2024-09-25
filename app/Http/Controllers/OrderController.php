@@ -711,7 +711,7 @@ class OrderController extends Controller
         $order = OrderMaster::find($order_id);
 
         // Find the KDS record
-        $kds = Kds::where('order_id', $request->input('order_id'))->first();
+        $kds = Kds::where('order_id', $order_id)->first();
         if (!$kds) {
             return response()->json([
                 'success' => false,
