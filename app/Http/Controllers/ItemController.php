@@ -249,7 +249,7 @@ class ItemController extends Controller
                 'notification' => $errorMessage
             ], 405);
         }
-        
+
         $item = Item::find($id);
         // dd($item);
         if ($item === null) {
@@ -270,7 +270,7 @@ class ItemController extends Controller
         }
 
         $item->delete();
-        
+
         $successMessage = "El artículo {$item->name} ha sido eliminado del sistema.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
         Notification::create([
@@ -405,13 +405,13 @@ class ItemController extends Controller
                 'message' => 'Unauthorized'
             ], 405);
         }
-    
+
         $validateRequest = Validator::make($request->all(), [
             'item_ids' => 'required|array',
             'item_ids.*' => 'integer|exists:items,id',
             'menu_id' => 'required|exists:menus,id'
         ]);
-    
+
         if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
@@ -419,7 +419,7 @@ class ItemController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
-    
+
         // Determine admin ID based on user role
         $admin_id = null;
         if ($role == 'admin') {
@@ -427,14 +427,14 @@ class ItemController extends Controller
         } elseif ($role == 'cashier') {
             $admin_id = auth()->user()->admin_id;
         }
-    
+
         $menu = Menu::find($request->menu_id);
         $notification = null; // Variable to hold the last success message
         $errorOccurred = false; // Flag to track if any error occurs
-    
+
         foreach ($request->item_ids as $item_id) {
             $item = Item::find($item_id);
-    
+
             try {
                 // Create the relationship entry
                 Item_Menu_Join::create([
@@ -442,13 +442,13 @@ class ItemController extends Controller
                     'item_id' => $item->id,
                     'admin_id' => $admin_id
                 ]);
-    
+
                 // Prepare the success message
                 $notification = "El artículo {$item->name} ha sido agregado exitosamente al menú {$menu->name}.";
-    
+
                 // Broadcast the notification message
                 broadcast(new NotificationMessage('notification', $notification))->toOthers();
-    
+
                 // Save the notification to the database
                 Notification::create([
                     'user_id' => Auth::id(), // The user who performed the action
@@ -460,14 +460,14 @@ class ItemController extends Controller
             } catch (\Exception $e) {
                 // Log the error for debugging
                 \Log::error("Failed to add item {$item->name} to menu: " . $e->getMessage());
-    
+
                 // Set the error flag
                 $errorOccurred = true;
                 // Prepare the error response message
                 break; // Exit the loop on error
             }
         }
-    
+
         // If an error occurred during the process
         if ($errorOccurred) {
             return response()->json([
@@ -475,14 +475,14 @@ class ItemController extends Controller
                 'notification' => "No se pudo agregar el artículo al menú. Verifica la información ingresada e intenta nuevamente."
             ], 500); // Using 500 for internal server error
         }
-    
+
         return response()->json([
             'success' => true,
             'message' => "Items added to menu successfully",
             'notification' => $notification // Return the last notification message
         ], 200);
     }
-    
+
     public function addToProduction(Request $request)
     {
         // Check user role
@@ -493,15 +493,6 @@ class ItemController extends Controller
                 'message' => 'Unauthorized'
             ], 405);
         }
-    
-        // Determine admin ID based on user role
-        $admin_id = null;
-        if ($role == 'admin') {
-            $admin_id = auth()->user()->id;
-        } elseif ($role == 'cashier') {
-            $admin_id = auth()->user()->admin_id;
-        }
-    
         // Find the production center and handle the case if it's not found
         $ProductionCenter = ProductionCenter::find($request->production_id);
         if (!$ProductionCenter) {
@@ -510,83 +501,79 @@ class ItemController extends Controller
                 'message' => 'Production center not found'
             ], 404);
         }
-    
+
         $notification = null; // Variable to hold the last success message
         $errorOccurred = false; // Flag to track if any error occurs
         $errorMessage = ''; // Error message holder
-    
+
         // Loop through item IDs and process each one
         foreach ($request->item_ids as $item_id) {
             $item = Item::find($item_id);
-            
+
             if (!$item) {
                 $errorMessage = "Item with ID {$item_id} not found";
                 $errorOccurred = true;
                 break;
             }
-            
+
             try {
                 // Log the incoming request data
                 \Log::info('Request Data: ', $request->all());
-                
+
                 $ProductionCenter = ProductionCenter::find($request->production_id);
-            
+
                 if (!$ProductionCenter) {
                     throw new \Exception("Production Center with id {$request->production_id} not found.");
                 }
-            
+
                 foreach ($request->item_ids as $item_id) {
                     $item = Item::find($item_id);
-            
+
                     if (!$item) {
                         throw new \Exception("Item with id {$item_id} not found.");
                     }
-            
+
                     // Log the item and production center details before adding to the join table
                     \Log::info("Adding item '{$item->name}' to Production Center '{$ProductionCenter->name}'");
-            
                     // Create the relationship entry
                     Item_Production_Join::create([
                         'production_id' => $ProductionCenter->id,
                         'item_id' => $item->id,
-                        'admin_id' => $admin_id
+                        'admin_id' => $request->admin_id
                     ]);
-            
+
                     // Prepare the success message
                     $notification = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$ProductionCenter->name}.";
-            
+
                     // Broadcast the notification message
                     broadcast(new NotificationMessage('notification', $notification))->toOthers();
-            
+
                     // Save the notification to the database
                     Notification::create([
                         'user_id' => Auth::id(),
                         'notification_type' => 'notification',
                         'notification' => $notification,
-                        'admin_id' => $admin_id,
+                        'admin_id' => $request->admin_id,
                         'role_id' => Auth::user()->role_id
                     ]);
                 }
-            
+
                 return response()->json([
                     'success' => true,
                     'message' => "Items added to production center successfully",
                     'notification' => $notification
                 ], 200);
-                
             } catch (\Exception $e) {
                 // Log the full error message for better debugging
                 \Log::error($e->getMessage());
-            
+
                 return response()->json([
                     'success' => false,
                     'message' => "Error adding item {$item->name} to production center: " . $e->getMessage()
                 ], 500);
             }
-            
-            
         }
-    
+
         // If an error occurred during the process
         if ($errorOccurred) {
             return response()->json([
@@ -594,14 +581,106 @@ class ItemController extends Controller
                 'message' => $errorMessage
             ], 500); // Using 500 for internal server error
         }
-    
+
         return response()->json([
             'success' => true,
             'message' => "Items added to ProductionCenter successfully",
             'notification' => $notification // Return the last notification message
         ], 200);
     }
-    
+
+    public function updateProduction(Request $request, $id)
+    {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 405);
+        }
+
+        // Find the production center and handle the case if it's not found
+        $ProductionCenter = ProductionCenter::find($request->production_id);
+        if (!$ProductionCenter) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Production center not found'
+            ], 404);
+        }
+
+        $notification = null; // Variable to hold the last success message
+        $errorOccurred = false; // Flag to track if any error occurs
+        $errorMessage = ''; // Error message holder
+
+        // Loop through item IDs and process each one
+        foreach ($request->item_ids as $item_id) {
+            $item = Item::find($item_id);
+
+            if (!$item) {
+                $errorMessage = "Item with ID {$item_id} not found";
+                $errorOccurred = true;
+                break;
+            }
+
+            try {
+                // Log the incoming request data
+                \Log::info('Request Data: ', $request->all());
+
+                $ProductionCenter = ProductionCenter::find($request->production_id);
+
+                if (!$ProductionCenter) {
+                    throw new \Exception("Production Center with id {$request->production_id} not found.");
+                }
+
+                foreach ($request->item_ids as $item_id) {
+                    $item = Item::find($item_id);
+
+                    if (!$item) {
+                        throw new \Exception("Item with id {$item_id} not found.");
+                    }
+
+                    // Log the item and production center details before adding to the join table
+                    \Log::info("Adding item '{$item->name}' to Production Center '{$ProductionCenter->name}'");
+                    $item_production_join = Item_Production_Join::find($id);
+                    // Create the relationship entry
+                    $item_production_join->update([
+                        'production_id' => $ProductionCenter->id,
+                        'item_id' => $item->id,
+                        'admin_id' => $request->admin_id
+                    ]);
+
+                    // Prepare the success message
+                    $notification = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$ProductionCenter->name}.";
+
+                    // Broadcast the notification message
+                    broadcast(new NotificationMessage('notification', $notification))->toOthers();
+
+                    // Save the notification to the database
+                    Notification::create([
+                        'user_id' => Auth::id(),
+                        'notification_type' => 'notification',
+                        'notification' => $notification,
+                        'admin_id' => $request->admin_id,
+                        'role_id' => Auth::user()->role_id
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Items added to production center successfully",
+                    'notification' => $notification
+                ], 200);
+            } catch (\Exception $e) {
+                // Log the full error message for better debugging
+                \Log::error($e->getMessage());
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "Error adding item {$item->name} to production center: " . $e->getMessage()
+                ], 500);
+            }
+        }
+    }
     public function getProducationdata(Request $request)
     {
         // Validate the request
@@ -609,7 +688,7 @@ class ItemController extends Controller
             'producation_ids' => 'array',
             'producation_ids.*' => 'integer|exists:production_centers,id' // Ensure each menu ID is an integer and exists in the menus table
         ]);
-    
+
         if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
@@ -617,15 +696,15 @@ class ItemController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
-    
+
         // $adminId = Auth::user()->admin_id;
 
         $admin_id = $request->admin_id;
         // dd($admin_id);
-    
+
         // Initialize menus
         $returnData = [];
-    
+
         if (isset($request->production_ids) && is_array($request->production_ids)) {
             // Prepare the query to get menus based on menu_ids and admin_id
             $production_centers = DB::table('item__production__joins')
@@ -641,7 +720,7 @@ class ItemController extends Controller
                 ->where('admin_id', $admin_id)  // Filter by the authenticated admin's ID
                 ->get();
         }
-    
+
         // Process each menu to get associated items
         foreach ($production_centers as $production_center) {
             $items = DB::table('item__production__joins')
@@ -649,21 +728,21 @@ class ItemController extends Controller
                 ->select('items.*')
                 ->where('item__production__joins.production_id', $production_center->id)
                 ->get();
-            
-                
+
+
             $returnData[] = [
                 'id' => $production_center->id,
                 'name' => $production_center->name,
                 'items' => $items
             ];
         }
-    
+
         return response()->json([
             'success' => true,
             'menus' => $returnData
         ], 200);
     }
-    
+
 
     public function getSaleReport(Request $request, $id)
     {
@@ -756,4 +835,3 @@ class ItemController extends Controller
         return response()->json($responseData, 200);
     }
 }
-
