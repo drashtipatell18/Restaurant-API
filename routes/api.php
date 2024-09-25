@@ -129,7 +129,11 @@ Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatu
     Route::post('/sector/update/{id}', [SectorController::class, 'updateSector']);
     Route::delete('/sector/delete/{id}', [SectorController::class, 'deleteSector']);
     Route::post('/sector/addTables', [SectorController::class, 'addTables']);
+
     Route::post('/table/updateStatus', [SectorController::class, 'updateTableStatus']);
+    Route::post('/table/updateTableName', [SectorController::class, 'updateTableName']);
+    Route::delete('/table/delete/{id}', [SectorController::class, 'deleteTable']);
+
     Route::post('/table/getStats/{id}', [SectorController::class, 'getTableStats']);
     Route::get('/kds/{table_id}', [SectorController::class, 'getKds']);
 Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //new

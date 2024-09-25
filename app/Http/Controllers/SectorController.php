@@ -247,6 +247,39 @@ class SectorController extends Controller
         return response()->json(["success" => true, "data" => $data], 200);
     }
 
+    public function updateTableName(Request $request)
+    {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
+       
+        $validateRequest = Validator::make($request->all(), [
+            'table_id' => 'required|exists:restauranttables,id',
+            'name' => 'required'
+        ]);
+
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+
+        $table = Table::find($request->table_id);
+        $table->name = $request->name;
+        $table->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Table updated to ' . $table->name
+        ], 200);
+    }
+
     public function updateTableStatus(Request $request)
     {
         $user = auth()->user();
@@ -325,6 +358,25 @@ class SectorController extends Controller
         }
        
      
+    }
+
+    public function deleteTable(Request $request,$id)
+    {
+        $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 405);
+        }
+
+        $table = Table::find($id);
+        $table->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Table deleted successfully.'
+        ], 200);
     }
 
     public function addTables(Request $request)
