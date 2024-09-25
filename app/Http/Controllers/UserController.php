@@ -26,16 +26,17 @@ class UserController extends Controller
 {
     public function index()
     {
-        if (auth()->user()->role == 'admin') {
-            $users = User::all();
-            // dd($users);
-        } else {
-            $userAdminId = auth()->user()->admin_id;
-            $userId = auth()->user()->id;
-            $users = User::where('admin_id', $userAdminId)
-                        ->orWhere('id', $userId)
-                        ->get();
-        }
+        // if (auth()->user()->role == 'admin') {
+        //     $users = User::all();
+        //     // dd($users);
+        // } else {
+        //     $userAdminId = auth()->user()->admin_id;
+        //     $userId = auth()->user()->id;
+        //     $users = User::where('admin_id', $userAdminId)
+        //                 ->orWhere('id', $userId)
+        //                 ->get();
+        // }
+           $users = User::where('admin_id',auth()->user()->id)->get();
 
         // Decrypt passwords for non-admin users (for demonstration purposes only; not secure in production)
         foreach ($users as $user) {
