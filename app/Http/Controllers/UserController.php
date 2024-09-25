@@ -889,12 +889,13 @@ public function getPopularProducts(Request $request)
     $orderDetailsQuery = OrderDetails::select(
         'items.name', 
         'items.image', 
-        DB::raw('SUM(order_details.amount) as total_amount'), // Sum the amounts for each product
+        'order_details.amount', // Include the amount from order_details
+        // DB::raw('SUM(order_details.amount) as total_amount'), // Sum the amounts for each product
         DB::raw('COUNT(order_details.item_id) as order_count')
     )
     ->join('items', 'order_details.item_id', '=', 'items.id')
     ->where('order_details.admin_id', $adminId) // Filter by admin_id
-    ->groupBy('order_details.item_id', 'items.name', 'items.image')
+    ->groupBy('order_details.item_id', 'items.name', 'items.image','order_details.amount')
     ->orderBy('order_count', 'desc');
 
     // Apply the filter based on the duration
