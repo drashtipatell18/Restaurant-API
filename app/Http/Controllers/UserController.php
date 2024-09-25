@@ -26,16 +26,17 @@ class UserController extends Controller
 {
     public function index()
     {
-        if (auth()->user()->role == 'admin') {
-            $users = User::all();
-            // dd($users);
-        } else {
-            $userAdminId = auth()->user()->admin_id;
-            $userId = auth()->user()->id;
-            $users = User::where('admin_id', $userAdminId)
-                        ->orWhere('id', $userId)
-                        ->get();
-        }
+        // if (auth()->user()->role == 'admin') {
+        //     $users = User::all();
+        //     // dd($users);
+        // } else {
+        //     $userAdminId = auth()->user()->admin_id;
+        //     $userId = auth()->user()->id;
+        //     $users = User::where('admin_id', $userAdminId)
+        //                 ->orWhere('id', $userId)
+        //                 ->get();
+        // }
+           $users = User::where('admin_id',auth()->user()->id)->get();
 
         // Decrypt passwords for non-admin users (for demonstration purposes only; not secure in production)
         foreach ($users as $user) {
@@ -889,12 +890,13 @@ public function getPopularProducts(Request $request)
     $orderDetailsQuery = OrderDetails::select(
         'items.name', 
         'items.image', 
-        DB::raw('SUM(order_details.amount) as total_amount'), // Sum the amounts for each product
+        'order_details.amount', // Include the amount from order_details
+        // DB::raw('SUM(order_details.amount) as total_amount'), // Sum the amounts for each product
         DB::raw('COUNT(order_details.item_id) as order_count')
     )
     ->join('items', 'order_details.item_id', '=', 'items.id')
     ->where('order_details.admin_id', $adminId) // Filter by admin_id
-    ->groupBy('order_details.item_id', 'items.name', 'items.image')
+    ->groupBy('order_details.item_id', 'items.name', 'items.image','order_details.amount')
     ->orderBy('order_count', 'desc');
 
     // Apply the filter based on the duration
