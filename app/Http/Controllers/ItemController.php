@@ -17,7 +17,8 @@ use Str;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
 use App\Models\Item_Production_Join;
-// use App\Models\ProductionCenter;
+use App\Models\ProductionCenter;
+use Illuminate\Support\Facades\DB;
 
 class ItemController extends Controller
 {
@@ -601,7 +602,67 @@ class ItemController extends Controller
         ], 200);
     }
     
+    public function getProducationdata(Request $request)
+    {
+        // Validate the request
+        $validateRequest = Validator::make($request->all(), [
+            'producation_ids' => 'array',
+            'producation_ids.*' => 'integer|exists:production_centers,id' // Ensure each menu ID is an integer and exists in the menus table
+        ]);
     
+        if ($validateRequest->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateRequest->errors()
+            ], 403);
+        }
+    
+        // $adminId = Auth::user()->admin_id;
+
+        $admin_id = $request->admin_id;
+        // dd($admin_id);
+    
+        // Initialize menus
+        $returnData = [];
+    
+        if (isset($request->production_ids) && is_array($request->production_ids)) {
+            // Prepare the query to get menus based on menu_ids and admin_id
+            $production_centers = DB::table('item__production__joins')
+                ->leftJoin('production_centers', 'item__production__joins.production_id', '=', 'production_centers.id')
+                ->select('production_centers.*')
+                ->whereIn('item__production__joins.production_id', $request->production_ids)  // Filter by menu_ids
+                ->where('production_centers.admin_id', $admin_id)  // Filter by the authenticated admin's ID
+                ->distinct()  // Ensure unique menu records
+                ->get();
+        } else {
+            // Prepare the query for fetching all menus for the admin
+            $production_centers = DB::table(table: 'production_centers')
+                ->where('admin_id', $admin_id)  // Filter by the authenticated admin's ID
+                ->get();
+        }
+    
+        // Process each menu to get associated items
+        foreach ($production_centers as $production_center) {
+            $items = DB::table('item__production__joins')
+                ->leftJoin('items', 'item__production__joins.item_id', '=', 'items.id')
+                ->select('items.*')
+                ->where('item__production__joins.production_id', $production_center->id)
+                ->get();
+            
+                
+            $returnData[] = [
+                'id' => $production_center->id,
+                'name' => $production_center->name,
+                'items' => $items
+            ];
+        }
+    
+        return response()->json([
+            'success' => true,
+            'menus' => $returnData
+        ], 200);
+    }
     
 
     public function getSaleReport(Request $request, $id)
