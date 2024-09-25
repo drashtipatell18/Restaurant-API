@@ -527,9 +527,6 @@ class OrderController extends Controller
 
         if ($request->input('status') === 'delivered') {
             $order->finished_at = now(); // Update current date in finish_at column if status is delivered
-            if ($kds) {
-                $kds->delete(); // Remove the KDS record
-            }
         }
 
         if ($role != "admin" && $role != "cashier" && $role != "waitress") {
