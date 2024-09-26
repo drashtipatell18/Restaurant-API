@@ -32,42 +32,34 @@ class OrderController extends Controller
 
     public function placeOrder(Request $request)
     {
-        // Role check
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if (!in_array($role, ['admin', 'cashier', 'waitress'])) {
-            return response()->json(['success' => false, 'message' => 'Unauthorised'], 401);
+        if ($role != "admin" && $role != "cashier" && $role != "waitress") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
         }
 
-        // Validation check
         if (!$request->has('order_master')) {
-            return response()->json(['success' => false, 'message' => "Validation fails"], 403);
+            return response()->json([
+                'success' => false,
+                'message' => "Validation fails"
+            ], 403);
         }
-
         $validateRequest = Validator::make($request->order_master, [
             'order_type' => 'required|in:delivery,local,withdraw',
             'payment_type' => 'required|in:cash,debit,credit,transfer',
             'status' => 'required|in:received,prepared,delivered,finalized',
             'discount' => 'required|min:0',
             'delivery_cost' => 'required|min:0',
-            'transaction_code' => 'boolean',
+            'transaction_code' => 'boolean'
         ]);
 
         if ($validateRequest->fails()) {
-            $errorMessage = 'No se pudo crear el pedido. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->id(),
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => $request->admin_id,
-                'role_id' => Auth::user()->role_id,
-            ]);
-
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails",
-                'errors' => $validateRequest->errors(),
-                'alert' => $errorMessage,
+                'errors' => $validateRequest->errors()
             ], 403);
         }
 
@@ -80,17 +72,12 @@ class OrderController extends Controller
             'customer_name' => $request->order_master['customer_name'],
             'person' => $request->order_master['person'],
             'reason' => $request->order_master['reason'],
-            'admin_id' =>$request->order_master['admin_id'],
-            'table_id' => $request->order_master['table_id'] ?? null,
-            'user_id' => $request->order_master['user_id'] ?? null,
-            'box_id' => $request->order_master['box_id'] ?? null,
-            'transaction_code' => $request->order_master['transaction_code'] ?? null,
-            'notes' => $request->order_master['notes'] ?? null,
+            'admin_id' => $request->admin_id
         ];
 
-
-        // Generate transaction code if requested
-        if (!empty($request->order_master['transaction_code'])) {
+        // dd($request->admin_id);
+        // Generate and add transaction code if requested
+        if (isset($request->order_master['transaction_code']) && $request->order_master['transaction_code'] === true) {
             do {
                 $code = str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
             } while (OrderMaster::where('transaction_code', $code)->exists());
@@ -98,28 +85,122 @@ class OrderController extends Controller
             $orderMaster['transaction_code'] = $code;
         }
 
-        // Additional role checks and box handling
-        // ...
+        if ($role == "cashier") {
+            $box = Boxs::where('user_id', Auth::user()->id)->first();
 
-        // Create the order
+            if (!$box) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Box not found'
+                ], 403);
+            }
+
+
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+
+
+            // $log->collected_amount += $totalAmount;
+
+            if ($log == null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Box not opened'
+                ], 403);
+            } else if ($log->close_time != null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Box not opened'
+                ], 403);
+            }
+
+            // if(empty($log->order_master_id))
+            // {
+            //     $log->order_master_id = $order->id;
+            // }
+            // else
+            // {
+            //     $log->order_master_id .= "," . $order->id;
+            // }
+
+            // if(empty($log->payment_id))
+            // {
+            //     $log->payment_id = $order->payment_id;
+            // }
+            // else
+            // {
+            //     $log->payment_id .= "," . $order->payment_id;
+            // }
+
+            // $log->save();
+        }
+
+        if ($role == "admin") {
+            $orderMaster['admin_id'] = Auth::user()->id;
+        }
+
+        if (isset($request->order_master['table_id'])) {
+            $orderMaster['table_id'] = $request->order_master['table_id'];
+        }
+        if (isset($request->order_master['user_id'])) {
+            $orderMaster['user_id'] = $request->order_master['user_id'];
+        }
+        if ($role != "cashier" && isset($request->order_master['box_id'])) {
+            $orderMaster['box_id'] = $request->order_master['box_id'];
+        }
+        if (isset($request->order_master['tip'])) {
+            $orderMaster['tip'] = $request->order_master['tip'];
+        }
+        if (isset($request->order_master['customer_name'])) {
+            $orderMaster['customer_name'] = $request->order_master['customer_name'];
+        }
+        if (isset($request->order_master['person'])) {
+            $orderMaster['person'] = $request->order_master['person'];
+        }
+
+        if ($role == "cashier") {
+            $orderMaster['box_id'] = Boxs::where('user_id', Auth::user()->id)->get()->first()->id;
+        }
+
         $order = OrderMaster::create($orderMaster);
         $response = ["order_master" => $order, "order_details" => []];
         $totalAmount = 0;
-
         foreach ($request->order_details as $order_detail) {
             $item = Item::find($order_detail['item_id']);
             $orderDetail = OrderDetails::create([
                 'order_master_id' => $order->id,
                 'item_id' => $order_detail['item_id'],
-                'quantity' => $order_detail['quantity'],
+                'amount' => $item->sale_price,
+                'cost' => $item->cost_price,
+                // 'notes' => $order_detail['notes'],
+                'quantity' => $order_detail['quantity']
             ]);
-
-            $totalAmount += $item->sale_price * $order_detail['quantity'];
-            $totalAmount += $item->sale_price * $order_detail['quantity'];
 
             $totalAmount += $item->sale_price * $order_detail['quantity'];
 
             array_push($response['order_details'], $orderDetail);
+        }
+        if ($role == "cashier") {
+            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+
+            $log->collected_amount += $totalAmount;
+            if (empty($log->order_master_id)) {
+                $log->order_master_id = $order->id;
+            } else {
+                $log->order_master_id .= "," . $order->id;
+            }
+
+            // if(empty($log->payment_id))
+            // {
+            //     $log->payment_id .= "," . $order->payment_type;
+            // }
+            // else
+            // {
+            //     $log->payment_id .= "," . $order->payment_id;
+            // }
+
+
+            $log->save();
         }
 
         kds::create([
@@ -142,22 +223,13 @@ class OrderController extends Controller
             'notes' => $order->notes,
             'table_id' => $order->table_id
         ]);
-        // Box logging and notification handling
-        // ...
 
-        $successMessage = "El pedido {$order->id} ha sido creado exitosamente para el cliente {$request->order_master['customer_name']}.";
-        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->id(),
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-            'admin_id' => $request->admin_id,
-            'role_id' => Auth::user()->role_id,
-        ]);
-
-        return response()->json(['success' => true, 'message' => "Order placed successfully", 'details' => $response, 'notification' => $successMessage], 200);
+        return response()->json([
+            'success' => true,
+            'message' => "Order placed successfully",
+            'details' => $response
+        ], 200);
     }
-
 
     public function addItem(Request $request)
     {
@@ -199,6 +271,8 @@ class OrderController extends Controller
 
             array_push($responseData['order_details'], $detail);
         }
+
+
 
         return response()->json($responseData, 200);
     }
@@ -495,7 +569,7 @@ class OrderController extends Controller
             $kds->status = $order->status; // Update KDS status
             $kds->save(); // Save the updated KDS record
         }
-        
+
         if ($order->status === 'finalized') {
             $currentStatus = OrderMaster::find($order->id)->status;
             if ($currentStatus || $role != "admin" && $role != "cashier") {
@@ -676,9 +750,6 @@ class OrderController extends Controller
             ], 401);
         }
 
-        $user = auth()->user();
-        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
-
         // Validate the request data
         $validateRequest = Validator::make($request->all(), [
             'order_details' => 'nullable|array',
@@ -690,26 +761,15 @@ class OrderController extends Controller
         ]);
 
         if ($validateRequest->fails()) {
-            $errorMessage = 'No se pudo actualizar el pedido. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => $user->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => $adminId,
-                'role_id' => $user->role_id
-            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
-                'errors' => $validateRequest->errors(),
-                'alert' => $errorMessage,
+                'errors' => $validateRequest->errors()
             ], 403);
         }
 
         // Find the order using the order_id from the URL
         $order = OrderMaster::find($order_id);
-
         // Find the KDS record
         $kds = Kds::where('order_id', $order_id)->first();
         if (!$kds) {
@@ -718,7 +778,6 @@ class OrderController extends Controller
                 'message' => 'KDS record not found.',
             ], 404);
         }
-        // dd($request->all());
         // Update KDS record
         $kds->update([
             'order_id' => $order->order_id,
@@ -805,19 +864,32 @@ class OrderController extends Controller
             // If no order details provided, fetch existing ones for the response
             $responseData['order_details'] = $order->orderDetails;
         }
+        if ($role == "cashier") {
+            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
 
-        $successMessage = "El pedido {$order->id} ha sido actualizado exitosamente.";
-        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-            'admin_id' => $adminId,
-            'role_id' => $user->role_id
-        ]);
+            // $log->collected_amount += $totalAmount;
+            if (empty($log->order_master_id)) {
+                $log->order_master_id = $order->id;
+            } else {
+                $log->order_master_id .= "," . $order->id;
+            }
+
+            // if(empty($log->payment_id))
+            // {
+            //     $log->payment_id .= "," . $order->payment_type;
+            // }
+            // else
+            // {
+            //     $log->payment_id .= "," . $order->payment_id;
+            // }
+
+
+            $log->save();
+        }
 
         // Return the response
-        return response()->json([$responseData, 200,  'notification' => $successMessage,]);
+        return response()->json($responseData, 200);
     }
 
 
