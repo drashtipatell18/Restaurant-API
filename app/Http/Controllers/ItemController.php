@@ -539,7 +539,7 @@ class ItemController extends Controller
                     Item_Production_Join::create([
                         'production_id' => $ProductionCenter->id,
                         'item_id' => $item->id,
-                        'admin_id' => $request->admin_id
+                        'admin_id' => $request->input('admin_id')
                     ]);
 
                     // Prepare the success message
@@ -646,7 +646,7 @@ class ItemController extends Controller
                     $item_production_join->update([
                         'production_id' => $ProductionCenter->id,
                         'item_id' => $item->id,
-                        'admin_id' => $request->admin_id
+                        'admin_id' => $request->input('admin_id')
                     ]);
 
                     // Prepare the success message
