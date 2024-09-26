@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoxLogs;
+use App\Models\Boxs;
 use App\Models\kds;
 use App\Models\Item;
 use App\Models\OrderDetails;
@@ -280,7 +281,7 @@ class OrderController extends Controller
     public function UpdateOrderReason(Request $request, $id)
     {
         $order = OrderMaster::find($id);
-        $kds = Kds::where('order_id', $id)->first();
+        $kds = kds::where('order_id', $id)->first();
 
         if ($order) {
             $order->update([
@@ -328,7 +329,7 @@ class OrderController extends Controller
         }
 
         $order = OrderMaster::find($request->input('order_id'));
-        $kds = Kds::where('order_id', $request->input('order_id'))->first();
+        $kds = kds::where('order_id', $request->input('order_id'))->first();
         if (!$kds) {
             return response()->json([
                 'success' => false,
@@ -448,7 +449,58 @@ class OrderController extends Controller
 
         return response()->json($orders, 200);
     }
+    public function getAllKds(Request $request)
+    {
+        // $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        // if($role != "admin")
+        // {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Unauthorised'
+        //     ], 401);
+        // }
 
+        $admin = $request->admin_id;
+
+        $orders = kds::where('admin_id', $admin)->get();
+
+
+
+        $filter = [];
+        $flag = false;
+        if ($request->has('received') && $request->query('received') == "yes") {
+            $filter[] = "received";
+            $flag = true;
+        }
+        if ($request->has('prepared') && $request->query('prepared') == "yes") {
+            $filter[] = "prepared";
+            $flag = true;
+        }
+        if ($request->has('delivered') && $request->query('delivered') == "yes") {
+            $filter[] = "delivered";
+            $flag = true;
+        }
+        if ($request->has('finalized') && $request->query('finalized') == "yes") {
+            $filter[] = "finalized";
+            $flag = true;
+        }
+
+        if ($flag) {
+            $orders = $orders->whereIn('status', $filter)->all();
+        }
+        foreach ($orders as $order) {
+            $order['total'] = OrderDetails::where('order_master_id', $order->id)->sum('amount');
+            $order['order_details'] = DB::table('order_details')
+                ->leftJoin('items', 'order_details.item_id', '=', 'items.id')
+                ->where('order_master_id', $order->order_id)
+                ->whereNull('order_details.deleted_at')
+                ->select(['order_details.*', 'items.name', DB::raw('order_details.amount * order_details.quantity AS total')])
+                ->get();
+        }
+
+
+        return response()->json($orders, 200);
+    }
     public function getSingle(Request $request, $id)
     {
         $user = auth()->user();
@@ -526,7 +578,7 @@ class OrderController extends Controller
         }
 
         $order = OrderMaster::find($id);
-        $kds = Kds::find($id);
+        $kds = kds::find($id);
 
         $orderDetails = OrderDetails::where('order_master_id', $id)->get();
 
@@ -564,7 +616,7 @@ class OrderController extends Controller
         $order = OrderMaster::find($request->input('order_id'));
         $order->status = $request->input('status');
 
-        $kds = Kds::where('order_id', $order->id)->first();
+        $kds = kds::where('order_id', $order->id)->first();
         if ($kds) {
             $kds->status = $order->status; // Update KDS status
             $kds->save(); // Save the updated KDS record
@@ -601,6 +653,7 @@ class OrderController extends Controller
 
         if ($request->input('status') === 'delivered') {
             $order->finished_at = now(); // Update current date in finish_at column if status is delivered
+            $kds->finished_at = now(); // Update current date in finish_at column if status is delivered
         }
 
         if ($role != "admin" && $role != "cashier" && $role != "waitress") {
@@ -619,7 +672,7 @@ class OrderController extends Controller
 
 
         $order->save();
-
+        $kds->save();
         return response()->json([
             'success' => true,
             'message' => "Status updated successfully",
@@ -649,7 +702,7 @@ class OrderController extends Controller
     public function addTip(Request $request, $id)
     {
         $order = OrderMaster::find($id);
-        $kds = Kds::where('order_id', $id)->first();
+        $kds = kds::where('order_id', $id)->first();
         if ($order == null) {
             return response()->json([
                 'success' => false,
@@ -771,7 +824,10 @@ class OrderController extends Controller
         // Find the order using the order_id from the URL
         $order = OrderMaster::find($order_id);
         // Find the KDS record
-        $kds = Kds::where('order_id', $order_id)->first();
+        // dd($order_id);
+        $all = kds::all();
+        // dd($all);
+        $kds = kds::where('order_id', $order_id)->first();
         if (!$kds) {
             return response()->json([
                 'success' => false,
@@ -779,8 +835,9 @@ class OrderController extends Controller
             ], 404);
         }
         // Update KDS record
+        // dd($order);
         $kds->update([
-            'order_id' => $order->order_id,
+            'order_id' => $order->id,
             'box_id' => $order->box_id,
             'user_id' => $order->user_id,
             'admin_id' => $order->admin_id,
