@@ -24,19 +24,56 @@ use App\Events\NotificationMessage;
 
 class UserController extends Controller
 {
-    public function index()
+    // public function index()
+    // {
+    //     // if (auth()->user()->role == 'admin') {
+    //     //     $users = User::all();
+    //     //     // dd($users);
+    //     // } else {
+    //     //     $userAdminId = auth()->user()->admin_id;
+    //     //     $userId = auth()->user()->id;
+    //     //     $users = User::where('admin_id', $userAdminId)
+    //     //                 ->orWhere('id', $userId)
+    //     //                 ->get();
+    //     // }
+    //        $users = User::where('admin_id',auth()->user()->id)->get();
+
+    //     // Decrypt passwords for non-admin users (for demonstration purposes only; not secure in production)
+    //     foreach ($users as $user) {
+    //         $encryptedPassword = $user->password;
+    //         $decryption_iv = '1234567891011121';
+    //         $decryption_key = "GeeksforGeeks";
+    //         $ciphering = "AES-128-CTR";
+    //         $options = 0;
+
+    //         // Decrypt the password
+    //         $decryptedPassword = openssl_decrypt($encryptedPassword, $ciphering, $decryption_key, $options, $decryption_iv);
+
+    //         // If decryption is successful, update the password field (for demonstration purposes)
+    //         if ($decryptedPassword !== false) {
+    //             $user->password = mb_convert_encoding($decryptedPassword, 'UTF-8', 'UTF-8');
+    //         }
+    //     }
+
+    //     // Return the users as a JSON response
+    //     return response()->json($users, 200, [], JSON_UNESCAPED_UNICODE);
+    // }
+     public function index()
     {
-        // if (auth()->user()->role == 'admin') {
-        //     $users = User::all();
-        //     // dd($users);
-        // } else {
-        //     $userAdminId = auth()->user()->admin_id;
-        //     $userId = auth()->user()->id;
-        //     $users = User::where('admin_id', $userAdminId)
-        //                 ->orWhere('id', $userId)
-        //                 ->get();
-        // }
-           $users = User::where('admin_id',auth()->user()->id)->get();
+        if ( auth()->user()->role->name == 'admin') {
+            $userAdminId = auth()->user()->id;
+            $users = User::where('admin_id', $userAdminId)
+            ->orWhere('id', $userAdminId)
+            ->get();
+            // dd($users);
+        } else {
+            $userAdminId = auth()->user()->admin_id;
+            $userId = auth()->user()->id;
+            $users = User::where('admin_id', $userAdminId)
+                        ->orWhere('id', $userId)
+                        ->get();
+        }
+        // $users = User::where('admin_id',auth()->user()->id)->get();
 
         // Decrypt passwords for non-admin users (for demonstration purposes only; not secure in production)
         foreach ($users as $user) {
@@ -58,6 +95,7 @@ class UserController extends Controller
         // Return the users as a JSON response
         return response()->json($users, 200, [], JSON_UNESCAPED_UNICODE);
     }
+
 
 
     public function storeUser(Request $request)
