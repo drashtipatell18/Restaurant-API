@@ -172,7 +172,7 @@ Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //n
     Route::post('/order/updateorderreason/{id}', [OrderController::class,'UpdateOrderReason']);
     Route::post('/orders/last', [OrderController::class, 'getLastOrder']);
     Route::post('/order/orderUpdateItem/{order_id}', [OrderController::class, 'orderUpdateItem']); //new
-    
+    Route::post('/order/getAllKds', [OrderController::class, 'getAllKds']);
     // Group
     Route::post('/group/create', [GroupController::class,'create']);
     Route::post('/group/update/{id}', [GroupController::class,'update']);
