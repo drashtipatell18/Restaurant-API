@@ -589,7 +589,7 @@ class ItemController extends Controller
         ], 200);
     }
 
-    public function updateProduction(Request $request, $id)
+    public function updateProduction(Request $request)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
         if ($role != "admin" && $role != "cashier") {
@@ -599,87 +599,74 @@ class ItemController extends Controller
             ], 405);
         }
 
-        // Find the production center and handle the case if it's not found
-        $ProductionCenter = ProductionCenter::find($request->production_id);
-        if (!$ProductionCenter) {
+        // Find the production center
+        $productionCenter = ProductionCenter::find($request->production_id);
+        if (!$productionCenter) {
             return response()->json([
                 'success' => false,
                 'message' => 'Production center not found'
             ], 404);
         }
 
-        $notification = null; // Variable to hold the last success message
+        $notifications = []; // Array to hold notifications
         $errorOccurred = false; // Flag to track if any error occurs
-        $errorMessage = ''; // Error message holder
 
-        // Loop through item IDs and process each one
+        // Get existing item IDs in the production center
+        $existingItems = Item_Production_Join::where('production_id', $productionCenter->id)
+            ->pluck('item_id')
+            ->toArray();
+
+        // Loop through item IDs to process each one
         foreach ($request->item_ids as $item_id) {
             $item = Item::find($item_id);
-
             if (!$item) {
-                $errorMessage = "Item with ID {$item_id} not found";
                 $errorOccurred = true;
-                break;
+                $notifications[] = "Item with ID {$item_id} not found.";
+                continue; // Skip to the next item
             }
 
             try {
-                // Log the incoming request data
-                \Log::info('Request Data: ', $request->all());
-
-                $ProductionCenter = ProductionCenter::find($request->production_id);
-
-                if (!$ProductionCenter) {
-                    throw new \Exception("Production Center with id {$request->production_id} not found.");
-                }
-
-                foreach ($request->item_ids as $item_id) {
-                    $item = Item::find($item_id);
-
-                    if (!$item) {
-                        throw new \Exception("Item with id {$item_id} not found.");
-                    }
-
-                    // Log the item and production center details before adding to the join table
-                    \Log::info("Adding item '{$item->name}' to Production Center '{$ProductionCenter->name}'");
-                    $item_production_join = Item_Production_Join::find($id);
-                    // Create the relationship entry
-                    $item_production_join->update([
-                        'production_id' => $ProductionCenter->id,
+                // Check if the item is already associated with the production center
+                if (in_array($item->id, $existingItems)) {
+                    // Update the existing relationship entry
+                    $itemProductionJoin = Item_Production_Join::where('production_id', $productionCenter->id)
+                        ->where('item_id', $item->id)
+                        ->first();
+                    $itemProductionJoin->update([
+                        'admin_id' => $request->input('admin_id') // Update admin_id or any other fields as needed
+                    ]);
+                    $notifications[] = "El artículo {$item->name} ha sido actualizado exitosamente en el centro de producción {$productionCenter->name}.";
+                } else {
+                    // Create a new relationship entry if it does not exist
+                    Item_Production_Join::create([
+                        'production_id' => $productionCenter->id,
                         'item_id' => $item->id,
-                        'admin_id' => $request->input('admin_id')
+                        'admin_id' => $request->input('admin_id') // Set admin_id or any other fields as needed
                     ]);
-
-                    // Prepare the success message
-                    $notification = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$ProductionCenter->name}.";
-
-                    // Broadcast the notification message
-                    broadcast(new NotificationMessage('notification', $notification))->toOthers();
-
-                    // Save the notification to the database
-                    Notification::create([
-                        'user_id' => Auth::id(),
-                        'notification_type' => 'notification',
-                        'notification' => $notification,
-                        'admin_id' => $request->admin_id,
-                        'role_id' => Auth::user()->role_id
-                    ]);
+                    $notifications[] = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$productionCenter->name}.";
                 }
-
-                return response()->json([
-                    'success' => true,
-                    'message' => "Items added to production center successfully",
-                    'notification' => $notification
-                ], 200);
             } catch (\Exception $e) {
-                // Log the full error message for better debugging
-                \Log::error($e->getMessage());
-
-                return response()->json([
-                    'success' => false,
-                    'message' => "Error adding item {$item->name} to production center: " . $e->getMessage()
-                ], 500);
+                $errorOccurred = true;
+                $notifications[] = "Error processing item {$item->name}: " . $e->getMessage();
             }
         }
+
+        // Handle deletion of items that are no longer in the request
+        foreach ($existingItems as $existingItemId) {
+            if (!in_array($existingItemId, $request->item_ids)) {
+                // Delete the item from the production center
+                Item_Production_Join::where('production_id', $productionCenter->id)
+                    ->where('item_id', $existingItemId)
+                    ->delete();
+                $notifications[] = "El artículo con ID {$existingItemId} ha sido eliminado del centro de producción {$productionCenter->name}.";
+            }
+        }
+
+        // Return response
+        return response()->json([
+            'success' => !$errorOccurred,
+            'messages' => $notifications
+        ], $errorOccurred ? 500 : 200);
     }
     public function getProducationdata(Request $request)
     {
