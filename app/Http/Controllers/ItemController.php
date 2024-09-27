@@ -698,7 +698,8 @@ class ItemController extends Controller
                 ->leftJoin('production_centers', 'item__production__joins.production_id', '=', 'production_centers.id')
                 ->select('production_centers.*')
                 ->whereIn('item__production__joins.production_id', $request->production_ids)  // Filter by menu_ids
-                ->where('production_centers.admin_id', $admin_id)  // Filter by the authenticated admin's ID
+                ->where('production_centers.admin_id', $admin_id)  ,// Filter by the authenticated admin's ID
+                  ->whereNull('item__production__joins.deleted_at')  // Exclude soft-deleted records
                 ->distinct()  // Ensure unique menu records
                 ->get();
         } else {
@@ -713,7 +714,9 @@ class ItemController extends Controller
             $items = DB::table('item__production__joins')
                 ->leftJoin('items', 'item__production__joins.item_id', '=', 'items.id')
                 ->select('items.*')
-                ->where('item__production__joins.production_id', $production_center->id)
+                ->where('item__production__joins.production_id', $production_center->id),
+                   ->whereNull('item__production__joins.deleted_at')  // Exclude soft-deleted records
+
                 ->get();
 
 
