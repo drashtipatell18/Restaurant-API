@@ -394,7 +394,8 @@ class BoxController extends Controller
                 'open_amount' => $request->input('open_amount'),
                 'open_by' => Auth::user()->id,
                 'open_time' => Carbon::now(),
-                'collected_amount' => 0
+                'collected_amount' => 0,
+               'admin_id'=>$request->admin_id
             ]);
             $successMessage = "La caja {$box->name} ha sido abierta exitosamente con un monto inicial de {$request->open_amount}.";
             broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
