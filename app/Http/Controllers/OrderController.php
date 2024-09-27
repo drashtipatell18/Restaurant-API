@@ -105,12 +105,12 @@ class OrderController extends Controller
             if ($log == null) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Box not opened'
+                    'message' => 'caja no abierta'
                 ], 403);
             } else if ($log->close_time != null) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Box not opened'
+                    'message' => 'caja no abierta'
                 ], 403);
             }
 
