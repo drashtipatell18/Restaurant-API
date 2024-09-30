@@ -39,7 +39,126 @@ class PaymentController extends Controller
             ], 404);
         }
     }
-    public function InsertPayment(Request $request){
+    // public function InsertPayment(Request $request){
+    //     $adminId = $request->admin_id;
+    //     $validateRequest = Validator::make($request->all(), [
+    //         'order_master_id' => 'required|exists:order_masters,id',
+    //         'rut' => 'required',
+    //         'lastname' => 'required',
+    //         'tour' => 'required',
+    //         'address' => 'required',
+    //         'type' => 'required|in:cash,transfer,debit,credit',
+    //         'amount' => 'required'
+    //     ]);
+    //     $user = auth()->user();
+    //     $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+
+    //     if ($validateRequest->fails()) {
+    //         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+    //         if ($role != "admin" && $role != "cashier") {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Unauthorised'   
+    //             ], 401);
+    //         }
+    //         $errorMessage = 'Ocurrió un error al procesar el pago. Por favor, verifica los detalles e intenta nuevamente.';
+    //         broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+    //         Notification::create([
+    //             'user_id' => auth()->user()->id,
+    //             'notification_type' => 'notification',
+    //             'notification' => $errorMessage,
+    //             'admin_id' => $request->admin_id,
+    //              'role_id' => $user->role_id
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation fails',
+    //             'errors' => $validateRequest->errors(),
+    //             'alert' => $errorMessage
+    //         ], 403);
+    //     }
+
+    //     $payment = Payment::create([
+    //         'order_master_id' => $request->input('order_master_id'),
+    //         'admin_id' => $request->admin_id,
+    //         'rut' => $request->input('rut'),
+    //         'firstname' => $request->input('firstname'),
+    //         'lastname' => $request->input('lastname'),
+    //         'business_name' => $request->input('business_name'),
+    //         'ltda' => $request->input('ltda'),
+    //         'tour' => $request->input('tour'),
+    //         'address' => $request->input('address'),
+    //         'email' => $request->input('email'),
+    //         'phone' => $request->input('phone'),
+    //         'type' => $request->input('type'),
+    //         'amount' => $request->input('amount'),
+    //         'return' => $request->input('return'),
+    //         'tax' => $request->input('tax'),
+    //     ]);
+        
+    //     $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
+        
+    //    if ($log) {
+    //     // If payment_id is null or empty, set it to the new payment ID
+    //     if (empty($log->payment_id)) {
+    //         $log->payment_id = $payment->id;
+    //     } else {
+    //         // Append the new payment ID
+    //         $log->payment_id .= "," . $payment->id;
+    //     }
+    //     $log->save();
+    // } else {
+    //     // Handle case where no log is found, if necessary
+    //     // Optionally create a new BoxLogs entry or handle the error
+    //     return response()->json([
+    //         'success' => false,
+    //         'message' => 'Box log not found for the given order_master_id.'
+    //     ], 404);
+    // }
+
+    // try{
+    //     $successMessage = "El recibo de pago para el pedido {$payment->order_master_id} ha sido generado e impreso correctamente.";
+    //     broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+    //     Notification::create([
+    //         'user_id' => auth()->user()->id,
+    //         'notification_type' => 'notification',
+    //         'notification' => $successMessage,
+    //         'admin_id' => $request->admin_id,
+    //         'role_id' => $user->role_id
+    //     ]);
+    // }
+    // catch(Exception $e)
+    // {
+    //      $errorMessage = 'No se pudo generar el recibo de pago. Por favor, intenta nuevamente.';
+    //         broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+    //         Notification::create([
+    //             'user_id' => auth()->user()->id,
+    //             'notification_type' => 'notification',
+    //             'notification' => $errorMessage,
+    //             'admin_id' => $request->admin_id,
+    //              'role_id' => $user->role_id
+    //         ]);
+    // }
+      
+    
+    
+    //     // $log->save();
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'result' => $payment,
+    //         'message' => 'Payment added successfully.',
+    //         'notification' => $successMessage
+    //     ], 200);
+
+    //     return response()->json([
+    //         'success' => false,
+    //         'message' => 'Payment Failed.',
+    //         'notification' => $errorMessage
+    //     ], 403);
+    // }
+     public function InsertPayment(Request $request){
         $adminId = $request->admin_id;
         $validateRequest = Validator::make($request->all(), [
             'order_master_id' => 'required|exists:order_masters,id',
@@ -47,7 +166,8 @@ class PaymentController extends Controller
             'lastname' => 'required',
             'tour' => 'required',
             'address' => 'required',
-            'type' => 'required|in:cash,transfer,debit,credit',
+            'type' => 'required|array',
+            'type.*' => 'in:cash,transfer,debit,credit',
             'amount' => 'required'
         ]);
         $user = auth()->user();
@@ -78,24 +198,22 @@ class PaymentController extends Controller
                 'alert' => $errorMessage
             ], 403);
         }
-
-        $payment = Payment::create([
-            'order_master_id' => $request->input('order_master_id'),
+        // Convert the type array to a comma-separated string
+        $typeString = implode(',', $request->type);
+   $payment = Payment::create(array_merge(
+        $request->only([
+            'order_master_id', 'rut', 'firstname', 
+            'lastname', 'business_name', 'ltda', 
+            'tour', 'address', 'email', 'phone', 
+            'amount', 'return', 'tax',
+        ]),
+        [
             'admin_id' => $request->admin_id,
-            'rut' => $request->input('rut'),
-            'firstname' => $request->input('firstname'),
-            'lastname' => $request->input('lastname'),
-            'business_name' => $request->input('business_name'),
-            'ltda' => $request->input('ltda'),
-            'tour' => $request->input('tour'),
-            'address' => $request->input('address'),
-            'email' => $request->input('email'),
-            'phone' => $request->input('phone'),
-            'type' => $request->input('type'),
-            'amount' => $request->input('amount'),
-            'return' => $request->input('return'),
-            'tax' => $request->input('tax'),
-        ]);
+            'type' => $request->input('type')
+        ]
+    ));
+
+        
         
         $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
         
