@@ -1037,14 +1037,14 @@ class OrderController extends Controller
 
         $returnItemsData = $request->input('return_items');
         $admin_id = $request->input('admin_id');
-
+        $email = filter_var($creditNoteData['email'], FILTER_VALIDATE_EMAIL) ? $creditNoteData['email'] : '';
         // Create the credit note
         $creditNote = CreditNot::create([
             'order_id' => $creditNoteData['order_id'],
             'payment_id' => $creditNoteData['payment_id'],
             'status' => $creditNoteData['status'],
             'name' => $creditNoteData['name'],
-            'email' => $creditNoteData['email'],
+            'email' => $email,
             'code' => $creditNoteData['code'],
             'destination' => $creditNoteData['destination'],
             'delivery_cost' => $creditNoteData['delivery_cost'],
