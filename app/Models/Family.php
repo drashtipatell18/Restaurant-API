@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Family extends Model
 {
+    use HasFactory,SoftDeletes;
     protected $table = 'families';
     protected $fillable = ['name','admin_id'];
 
@@ -15,10 +16,9 @@ class Family extends Model
     {
         return $this->hasMany(Subfamily::class);
     }
-
-    public function user()
+     public function items()
     {
-        return $this->belongsTo(User::class);
+        return $this->hasMany(Item::class);
     }
 }
 

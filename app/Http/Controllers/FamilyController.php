@@ -12,12 +12,13 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
 use App\Models\User;
+use App\Models\Item;
 
 use function Laravel\Prompts\select;
 
 class FamilyController extends Controller
 {
-    // Family
+
     public function createFamily(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
@@ -41,16 +42,38 @@ class FamilyController extends Controller
         $validateFamily = Validator::make($request->all(), [
             'name' => 'required|string|max:255'
         ]);
+      
+
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        // dd($users);
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
 
         if ($validateFamily->fails()) {
             if ($role != "admin" &&  $role != "cashier") {
                 $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
+                // Notification::create([
+                //     'user_id' => $admin_id,  // Send notification to admin
+                //     'notification_type' => 'alert',
+                //     'notification' => $errorMessage,
+                //     'admin_id' => $admin_id,
+                //     'role_id' => auth()->user()->role_id
+                // ]);
+
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=>'/articles'
+                    ]);
+                }
 
                 return response()->json([
                     'success' => false,
@@ -61,38 +84,32 @@ class FamilyController extends Controller
             }
         }
 
-        $admin_id = null;
-        if ($role == 'admin') {
-            // If the user is an admin, store their own ID
-            $admin_id = auth()->user()->id;
-        } elseif ($role == 'cashier') {
-            // If the user is a cashier, find their admin's ID
-            $admin = User::where('id', auth()->user()->id)->first();  // Assuming there's a relation between cashier and admin
-
-            // You may need to adjust this logic to fit how the cashier-admin relationship is stored in your system
-            if ($admin && $admin->admin_id) {
-                $admin_id = $admin->admin_id;
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Admin not found for the cashier'
-                ], 404);
-            }
-        }
-
-
+        // $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
         $family = Family::create([
             'name' => $request->input('name'),
             'admin_id' => $admin_id
         ]);
-
+        // $users = User::where('admin_id', $admin_id)->get();
+        
         $successMessage = "La familia {$family->name} ha sido creada exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+            // Notification::create([
+            //     'user_id' => $admin_id,  // Send notification to admin
+            //     'notification_type' => 'notification',
+            //     'notification' => $successMessage,
+            //     'admin_id' => $admin_id,
+            //     'role_id' => auth()->user()->role_id
+            // ]);
+        foreach ($users as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=>'/articles'
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -100,77 +117,143 @@ class FamilyController extends Controller
             'notification' => $successMessage
         ], 200);
     }
+    
+    // Family
+    public function createFamily1(Request $request)
+    {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin" &&  $role != "cashier" )
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+      
+
+        $validateFamily = Validator::make($request->all(), [
+            'name' => 'required|string|max:255'
+        ]);
+
+        $admin_id = null;
+    if ($role == 'admin') {
+        // If the user is an admin, store their own ID
+        $admin_id = auth()->user()->id;
+    } elseif ($role == 'cashier') {
+        // If the user is a cashier, find their admin's ID
+        $admin = User::find(auth()->user()->id);  // Assuming there's a relation between cashier and admin
+
+        if ($admin && $admin->admin_id) {
+            $admin_id = $admin->admin_id;
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Admin not found for the cashier'
+            ], 404);
+        }
+    }
+        $user = Auth::user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+        if ($validateFamily->fails()) {
+            $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
+                'notification' => $errorMessage,
+                'admin_id' => $admin_id,
+                'role_id' => Auth::user()->role_id
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateFamily->errors(),
+                'notification' => $errorMessage,
+            ], 403);
+        }
+   
+
+        $family = Family::create([
+            'name' => $request->input('name'),
+             'admin_id' => $admin_id,
+        ]);
+
+       
+        $successMessage = "La familia {$family->name} ha sido creada exitosamente.";
+        //  if($role != "admin" &&  $role != "cashier" &&  $role != "waitress" && $role != "kitchen" )
+        // {
+            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                Notification::create([
+                    'user_id' => auth()->user()->id, 
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => Auth::user()->role_id
+                ]);
+        // }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Family added successfully.',
+                    'notification' => $successMessage
+                ], 200);
+      
+    }
 
     public function getFamily()
     {
         $authUser = auth()->user();
         $user_id = $authUser->id;
         $role = $authUser->role_id;
-
+    
         if ($role == 1) { // Admin
             $families = Family::select('id', 'name', 'admin_id')
-                ->where('admin_id', $authUser->id)
-                ->get();
+                              ->where('admin_id', $authUser->id)
+                              ->get();
         } else if ($role == 2 || $role == 3 || $role == 4) { // Cashier, Role 3, Role 4
             $userRecord = User::find($user_id);
-
+            
             if (!$userRecord) {
                 return response()->json(['message' => 'User not found'], 404);
             }
-
+            
             $admin_id = $userRecord->admin_id;
-
+            
             $families = Family::select('id', 'name', 'admin_id')
-                ->where('admin_id', $admin_id)
-                ->get();
+                              ->where('admin_id', $admin_id)
+                              ->get();
         } else {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-
+    
         return response()->json($families, 200);
     }
-
-
+    
+    
 
     public function updateFamily(Request $request, $id)
     {
-        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
-            $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
-
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin" &&  $role != "cashier")
+        {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorised',
-                'notification' => $errorMessage
+                'message' => 'Unauthorised'
             ], 401);
         }
         $validateFamily = Validator::make($request->all(), [
             'name' => 'required|string|max:255'
         ]);
 
-        if ($validateFamily->fails()) {
-            if ($role != "admin" &&  $role != "cashier") {
-                $errorMessage = 'No se pudo crear la familia. Verifica la información ingresada e intenta nuevamente.';
-                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation error',
-                    'errors' => $validateFamily->errors(),
-                    'notification' => $errorMessage,
-                ], 403);
-            }
+        if($validateFamily->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validateFamily->errors()
+            ], 403);
         }
 
         $family = Family::where('id', $id)->first();
@@ -179,15 +262,36 @@ class FamilyController extends Controller
         $family->save();
 
         return response()->json([
-            'success' => true,
+            'success' => true, 
             'family' => $family
         ], 200);
     }
 
+    // public function deleteFamily($id)
+    // {
+    //     $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+    //     if($role != "admin" &&  $role != "cashier")
+    //     {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Unauthorised'
+    //         ], 401);
+    //     }
+
+    //     $family = Family::where('id', $id)->first();
+    //     $family->delete();
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => "Family Deleted Successfully."
+    //     ], 200);
+    // }
+    
     public function deleteFamily($id)
     {
-        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier") {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+       
+        if($role != "admin" &&  $role != "cashier")
+        {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -195,6 +299,9 @@ class FamilyController extends Controller
         }
 
         $family = Family::where('id', $id)->first();
+        $family->subfamily()->delete();
+        $family->items()->delete();
+        
         $family->delete();
         return response()->json([
             'success' => true,
@@ -203,6 +310,77 @@ class FamilyController extends Controller
     }
 
     // Sub Family 
+    // public function createSubFamily(Request $request)
+    // {
+    //     $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+    //     if($role != "admin" &&  $role != "cashier")
+    //     {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Unauthorised'
+    //         ], 401);
+    //     }
+
+    //     $validateSubFamily = Validator::make($request->all(), [
+    //         'name' => 'required|string|max:255',
+    //         'family_id' => 'required|integer|exists:families,id'
+    //     ]);
+
+    //     if($validateSubFamily->fails())
+    //     {
+    //         $errorMessage = 'No se pudo crear la subfamilia. Verifica la información ingresada e intenta nuevamente.';
+    //         broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+    //         Notification::create([
+    //             'user_id' => auth()->user()->id,
+    //             'notification_type' => 'alert',
+    //             'notification' => $errorMessage,
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation Fails.',
+    //             'errors' => $validateSubFamily->errors(),
+    //             'alert' => $errorMessage,
+    //         ], 403);
+    //     }
+
+    //     $admin_id = null;
+    //     if ($role == 'admin') {
+    //         $admin_id = auth()->user()->id;
+    //     } elseif ($role == 'cashier') {
+    //         $admin = User::where('id', auth()->user()->id)->first();  
+            
+    //         if ($admin && $admin->admin_id) {
+    //             $admin_id = $admin->admin_id;
+    //         } else {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Admin not found for the cashier'
+    //             ], 404);
+    //         }
+    //     }
+
+    //     $subfamily = Subfamily::create([
+    //         'name' => $request->input('name'),
+    //         'family_id' => $request->input('family_id'),
+    //         'admin_id' => $admin_id
+    //     ]);
+
+    //     $successMessage = "La subfamilia {$subfamily->name} ha sido creada exitosamente.";
+    //     broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+    //     Notification::create([
+    //         'user_id' => auth()->user()->id, 
+    //         'notification_type' => 'notification',
+    //         'notification' => $successMessage,
+    //     ]);
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Sub Family Added Successfully.',
+    //         'notification' => $successMessage,
+    //     ], 200);
+    // }
+
     public function createSubFamily(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
@@ -218,15 +396,35 @@ class FamilyController extends Controller
             'family_id' => 'required|integer|exists:families,id'
         ]);
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         if ($validateSubFamily->fails()) {
             if ($role != "admin" &&  $role != "cashier") {
                 $errorMessage = 'No se pudo crear la subfamilia. Verifica la información ingresada e intenta nuevamente.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
+                // Notification::create([
+                //     'user_id' => $admin_id,
+                //     'notification_type' => 'alert',
+                //     'notification' => $errorMessage,
+                //     'admin_id' => $admin_id,
+                //     'role_id' => auth()->user()->role_id
+                // ]);
+
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'notification',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=>'/articles'
+                    ]);
+                }
 
                 return response()->json([
                     'success' => false,
@@ -234,22 +432,6 @@ class FamilyController extends Controller
                     'errors' => $validateSubFamily->errors(),
                     'alert' => $errorMessage,
                 ], 403);
-            }
-        }
-
-        $admin_id = null;
-        if ($role == 'admin') {
-            $admin_id = auth()->user()->id;
-        } elseif ($role == 'cashier') {
-            $admin = User::where('id', auth()->user()->id)->first();
-
-            if ($admin && $admin->admin_id) {
-                $admin_id = $admin->admin_id;
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Admin not found for the cashier'
-                ], 404);
             }
         }
 
@@ -261,11 +443,24 @@ class FamilyController extends Controller
 
         $successMessage = "La subfamilia {$subfamily->name} ha sido creada exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+        // Notification::create([
+        //     'user_id' => $admin_id,  // Send notification to admin
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        //     'admin_id' => $admin_id,
+        //      'role_id' => auth()->user()->role_id
+        // ]);
+
+        foreach ($users as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=>'/articles'
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -273,6 +468,8 @@ class FamilyController extends Controller
             'notification' => $successMessage,
         ], 200);
     }
+
+
 
 
 
@@ -308,8 +505,9 @@ class FamilyController extends Controller
 
     public function updateSubFamily(Request $request, $id)
     {
-        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin" &&  $role != "cashier")
+        {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -321,29 +519,19 @@ class FamilyController extends Controller
             'family_id' => 'required|integer|exists:families,id'
         ]);
 
-        if ($validateSubFamily->fails()) {
-            if ($role != "admin" &&  $role != "cashier") {
-                $errorMessage = 'No se pudo crear la subfamilia. Verifica la información ingresada e intenta nuevamente.';
-                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation Fails.',
-                    'errors' => $validateSubFamily->errors(),
-                    'alert' => $errorMessage,
-                ], 403);
-            }
+        if($validateSubFamily->fails())
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Fails.',
+                'errors' => $validateSubFamily->errors()
+            ], 403);
         }
 
         $subfamily = Subfamily::find($id);
         $subfamily->name = $request->input('name');
         $subfamily->family_id = $request->input('family_id');
-
+        
         $subfamily->save();
 
         return response()->json([
@@ -353,8 +541,9 @@ class FamilyController extends Controller
     }
     public function deleteSubFamily($id)
     {
-        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" &&  $role != "cashier") {
+        $role = Role::where('id',Auth()->user()->role_id)->first()->name;
+        if($role != "admin" &&  $role != "cashier")
+        {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised'
@@ -403,11 +592,12 @@ class FamilyController extends Controller
                     $query->where('admin_id', $adminId);
                 }])
                 ->get(['id', 'name']);
+
         } else {
             $families = Family::with(['subfamily' => function ($query) use ($adminId) {
                 $query->where('admin_id', $adminId);
             }])
-                ->get(['id', 'name']);
+            ->get(['id', 'name']);
         }
 
         foreach ($families as $family) {

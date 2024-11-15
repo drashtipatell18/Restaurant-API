@@ -9,6 +9,7 @@ use App\Models\BoxLogs;
 use App\Models\Role;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
+use App\Models\User;
 
 class PaymentController extends Controller
 {
@@ -158,39 +159,55 @@ class PaymentController extends Controller
     //         'notification' => $errorMessage
     //     ], 403);
     // }
-     public function InsertPayment(Request $request){
-        $adminId = $request->admin_id;
+
+    public function InsertPayment(Request $request)
+    {
+        // Validate the incoming request
         $validateRequest = Validator::make($request->all(), [
             'order_master_id' => 'required|exists:order_masters,id',
-            'rut' => 'required',
-            'lastname' => 'required',
-            'tour' => 'required',
-            'address' => 'required',
+            // 'rut' => 'required',
+            // 'lastname' => 'required',
+            // 'tour' => 'required',
+            // 'address' => 'required',
             'type' => 'required|array',
             'type.*' => 'in:cash,transfer,debit,credit',
             'amount' => 'required'
         ]);
-        $user = auth()->user();
-        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
-
+    
+        // If validation fails, handle the error
         if ($validateRequest->fails()) {
             $role = Role::where('id', Auth()->user()->role_id)->first()->name;
             if ($role != "admin" && $role != "cashier") {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorised'   
+                    'message' => 'Unauthorized'
                 ], 401);
             }
-            $errorMessage = 'Ocurrió un error al procesar el pago. Por favor, verifica los detalles e intenta nuevamente.';
+    
+            // Notify about validation failure
+            $errorMessage = 'Ocurri�� un error al procesar el pago. Por favor, verifica los detalles e intenta nuevamente.';
+            $user = auth()->user();
+            $admin_id = ($role == 'admin') ? $user->id : $user->admin_id;
+    
+            // Broadcast notification
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $errorMessage,
-                'admin_id' => $request->admin_id,
-                 'role_id' => $user->role_id
-            ]);
-
+    
+            // Notify relevant users
+            $usersRoles = User::where('admin_id', $admin_id)
+                ->whereIn('role_id', [1, 2])
+                ->orWhere('id', $admin_id)
+                ->get();
+    
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id
+                ]);
+            }
+    
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
@@ -198,85 +215,91 @@ class PaymentController extends Controller
                 'alert' => $errorMessage
             ], 403);
         }
-        // Convert the type array to a comma-separated string
-        $typeString = implode(',', $request->type);
-   $payment = Payment::create(array_merge(
-        $request->only([
-            'order_master_id', 'rut', 'firstname', 
-            'lastname', 'business_name', 'ltda', 
-            'tour', 'address', 'email', 'phone', 
-            'amount', 'return', 'tax',
-        ]),
-        [
-            'admin_id' => $request->admin_id,
-            'type' => $request->input('type')
-        ]
-    ));
-
-        
-        
-        $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
-        
-       if ($log) {
-        // If payment_id is null or empty, set it to the new payment ID
-        if (empty($log->payment_id)) {
-            $log->payment_id = $payment->id;
-        } else {
-            // Append the new payment ID
-            $log->payment_id .= "," . $payment->id;
-        }
-        $log->save();
-    } else {
-        // Handle case where no log is found, if necessary
-        // Optionally create a new BoxLogs entry or handle the error
-        return response()->json([
-            'success' => false,
-            'message' => 'Box log not found for the given order_master_id.'
-        ], 404);
-    }
-
-    try{
-        $successMessage = "El recibo de pago para el pedido {$payment->order_master_id} ha sido generado e impreso correctamente.";
-        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-            'admin_id' => $request->admin_id,
-            'role_id' => $user->role_id
-        ]);
-    }
-    catch(Exception $e)
-    {
-         $errorMessage = 'No se pudo generar el recibo de pago. Por favor, intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $errorMessage,
+    
+        // Gather user info and set admin ID
+        $user = auth()->user();
+        $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
+    
+        // Create the payment record
+        $payment = Payment::create(array_merge(
+            $request->only([
+                'order_master_id', 'rut', 'firstname',
+                'lastname', 'business_name', 'ltda',
+                'tour', 'address', 'email', 'phone',
+                'amount', 'return', 'tax',
+            ]),
+            [
                 'admin_id' => $request->admin_id,
-                 'role_id' => $user->role_id
-            ]);
-    }
-      
+                'type' => implode(',', $request->type) // Convert array to string
+            ]
+        ));
     
+        // Log payment details
+        $log = BoxLogs::where('order_master_id', 'like', '%' . $request->input('order_master_id') . '%')->first();
+        // dd(BoxLogs::where('order_master_id', $request->input('order_master_id')));
+        // dd($log);
+        if ($log) {
+            // Update payment ID in the log
+            $log->payment_id = $log->payment_id ? $log->payment_id . "," . $payment->id : $payment->id;
+            $log->save();
+        } 
     
-        // $log->save();
-
-        return response()->json([
-            'success' => true,
-            'result' => $payment,
-            'message' => 'Payment added successfully.',
-            'notification' => $successMessage
-        ], 200);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Payment Failed.',
-            'notification' => $errorMessage
-        ], 403);
+        // Broadcast success notification
+        try {
+            $successMessage = "El recibo de pago para el pedido {$payment->order_master_id} ha sido generado e impreso correctamente.";
+            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+    
+            // Notify relevant users about the success
+            $usersRoles = User::where('admin_id', $adminId)
+                ->whereIn('role_id', [1, 2])
+                ->orWhere('id', $adminId)
+                ->get();
+    
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $request->admin_id,
+                    'role_id' => $recipient->role_id
+                ]);
+            }
+    
+            return response()->json([
+                'success' => true,
+                'result' => $payment,
+                'message' => 'Payment added successfully.',
+                'notification' => $successMessage
+            ], 200);
+        } catch (Exception $e) {
+            // Handle notification failure
+            $errorMessage = 'No se pudo generar el recibo de pago. Por favor, intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+    
+            // Notify relevant users about the failure
+            $usersRoles = User::where('admin_id', $adminId)
+                ->whereIn('role_id', [1, 2])
+                ->orWhere('id', $adminId)
+                ->get();
+    
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $errorMessage,
+                    'admin_id' => $adminId,
+                    'role_id' => $recipient->role_id
+                ]);
+            }
+    
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment Failed.',
+                'notification' => $errorMessage
+            ], 403);
+        }
     }
-    public function getPaymentById(Request $request,$id)
+        public function getPaymentById(Request $request,$id)
     {
         // Retrieve the payment record by ID
         $adminId = $request->input('admin_id');

@@ -26,13 +26,7 @@ class ItemController extends Controller
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
         if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
-            $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $errorMessage,
-            ]);
+          
 
             return response()->json([
                 'success' => false,
@@ -49,18 +43,31 @@ class ItemController extends Controller
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
-            'image' => 'file|required|between:1,2048|mimes:jpg,png,jpeg,webp'
+            // 'image' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         if ($validateRequest->fails()) {
-            if ($role != "admin" &&  $role != "cashier") {
+            if ( $role != "cashier") {
                 $errorMessage = 'No se pudo crear el artículo. Verifica la información ingresada e intenta nuevamente.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=>'/articles'
+                    ]);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
@@ -70,29 +77,32 @@ class ItemController extends Controller
             }
         }
 
-        $admin_id = null;
-        if ($role == 'admin') {
-            // If the user is an admin, store their own ID
-            $admin_id = auth()->user()->id;
-        } elseif ($role == 'cashier') {
-            $admin_id = auth()->user()->admin_id;
-        }
+        // $admin_id = null;
+        // if ($role == 'admin') {
+        //     // If the user is an admin, store their own ID
+        //     $admin_id = auth()->user()->id;
+        // } elseif ($role == 'cashier') {
+        //     $admin_id = auth()->user()->admin_id;
+        // }
 
         $filename = '';
-        if (!$request->hasFile('image')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation fails',
-                'errors' => [
-                    'image' => [
-                        'image is required as file'
-                    ]
-                ]
-            ], 403);
-        }
+        // if (!$request->hasFile('image')) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Validation fails',
+        //         'errors' => [
+        //             'image' => [
+        //                 'image is required as file'
+        //             ]
+        //         ]
+        //     ], 403);
+        // }
         $image = $request->file('image');
+        if($image){
+            
         $filename = time() . '.' . $image->getClientOriginalExtension();
         $image->move(public_path('images'), $filename);
+        }
 
         $code = $this->generateUniqueCode();
 
@@ -111,12 +121,16 @@ class ItemController extends Controller
 
         $successMessage = "El artículo {$item->name} ha sido creado exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
-
+        foreach ($users as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=>'/articles'
+            ]);
+        }
         Item_Production_Join::create([
             'item_id' => $item->id,
             'production_id' => $request->production_center_id,
@@ -150,7 +164,7 @@ class ItemController extends Controller
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
             Notification::create([
                 'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
+                'notification_type' => 'alert',
                 'notification' => $errorMessage,
             ]);
 
@@ -168,18 +182,31 @@ class ItemController extends Controller
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
-            'image' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
+            // 'image' => 'file|between:1,2048|mimes:jpg,png,jpeg,webp'
         ]);
+
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
 
         if ($validateRequest->fails()) {
             if ($role != "admin" &&  $role != "cashier") {
                 $errorMessage = 'No se pudo actualizar el artículo. Verifica la información ingresada e intenta nuevamente.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'notification',
-                    'notification' => $errorMessage,
-                ]);
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=>'/articles'
+                    ]);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
@@ -210,19 +237,27 @@ class ItemController extends Controller
             $image->move(public_path('images'), $filename);
 
             $item->image = $filename;
+        }else if ($request->image === null) {
+            $item->image = null;
         }
         if ($request->has('description')) {
             $item->description = $request->description;
         }
+        // dd($item);
         $item->save();
 
         $successMessage = "El artículo {$item->name} ha sido actualizado exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+        foreach ($users as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=>'/articles'
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -235,14 +270,26 @@ class ItemController extends Controller
     public function deleteItem($id)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         if ($role != "admin" &&  $role != "cashier" && $role != "waitress" && $role != "kitchen") {
             $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $errorMessage,
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=>'/articles'
+                ]);
+            }
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised',
@@ -256,11 +303,17 @@ class ItemController extends Controller
             if ($role != "admin" &&  $role != "cashier") {
                 $errorMessage = 'No se pudo eliminar el artículo. Verifica si el artículo está asociado a otros registros e intenta nuevamente.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'notification',
-                    'notification' => $errorMessage,
-                ]);
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=>'/articles'
+                    ]);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => "Provided id is not found",
@@ -273,17 +326,58 @@ class ItemController extends Controller
 
         $successMessage = "El artículo {$item->name} ha sido eliminado del sistema.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+        foreach ($users as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=>'/articles'
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Item deleted successfully.',
             'notification' => $successMessage
         ], 200);
     }
+    
+   public function getAllDeletedAt()
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => "User not authenticated"
+            ], 401);
+        }
+
+        $admin_id = $user->admin_id;
+        if ($admin_id) {
+            // Include soft-deleted items
+            $items = Item::withTrashed()->where('admin_id', $admin_id)->get();
+        } else {
+            $items = Item::withTrashed()->where('admin_id', $user->id)->get();
+        }
+
+        if ($items == null) {
+            return response()->json([
+                'success' => false,
+                'message' => "Item not found or you don't have permission"
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'items' => $items
+        ], 200);
+    }
+
+
+
 
     public function getSingleItem($id)
     {
@@ -297,10 +391,12 @@ class ItemController extends Controller
         }
 
         $admin_id = $user->admin_id;
+        //  dd($user);
         if ($admin_id) {
             $item = Item::where('id', $id)->where('admin_id', $admin_id)->get();
         } else {
-            $item = Item::where('admin_id', auth()->user()->id)->get();
+            $item = Item::where('id', $id)->where('admin_id', auth()->user()->id)->get();
+           
         }
 
         if ($item == null) {
@@ -420,6 +516,13 @@ class ItemController extends Controller
             ], 403);
         }
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         // Determine admin ID based on user role
         $admin_id = null;
         if ($role == 'admin') {
@@ -444,19 +547,24 @@ class ItemController extends Controller
                 ]);
 
                 // Prepare the success message
-                $notification = "El artículo {$item->name} ha sido agregado exitosamente al menú {$menu->name}.";
+                $notification = "El artículo {$item->name} ha sido agregado exitosamente al menú {$menu->name}";
 
                 // Broadcast the notification message
                 broadcast(new NotificationMessage('notification', $notification))->toOthers();
 
                 // Save the notification to the database
-                Notification::create([
-                    'user_id' => Auth::id(), // The user who performed the action
-                    'notification_type' => 'notification',
-                    'notification' => $notification,
-                    'admin_id' => $admin_id,
-                    'role_id' => Auth::user()->role_id
-                ]);
+           
+                foreach ($users as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'notification',
+                        'notification' => $notification,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                         'path'=> '/digitalmenu'
+                    ]);
+                }
+
             } catch (\Exception $e) {
                 // Log the error for debugging
                 \Log::error("Failed to add item {$item->name} to menu: " . $e->getMessage());
@@ -542,6 +650,13 @@ class ItemController extends Controller
                         'admin_id' => $request->input('admin_id')
                     ]);
 
+                    $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+                    $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+                    $usersRoles = User::where('admin_id', $admin_id)
+                    ->whereIn('role_id', [1, 2])
+                    ->orWhere('id', $admin_id)
+                    ->get();
+
                     // Prepare the success message
                     $notification = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$ProductionCenter->name}.";
 
@@ -549,13 +664,17 @@ class ItemController extends Controller
                     broadcast(new NotificationMessage('notification', $notification))->toOthers();
 
                     // Save the notification to the database
-                    Notification::create([
-                        'user_id' => Auth::id(),
-                        'notification_type' => 'notification',
-                        'notification' => $notification,
-                        'admin_id' => $request->admin_id,
-                        'role_id' => Auth::user()->role_id
-                    ]);
+                    foreach ($users as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'notification',
+                            'notification' => $notification,
+                            'admin_id' => $admin_id,
+                            'role_id' => $recipient->role_id,
+                             'path'=>'/productioncenter'
+                        ]);
+                    }
+            
                 }
 
                 return response()->json([
@@ -588,8 +707,7 @@ class ItemController extends Controller
             'notification' => $notification // Return the last notification message
         ], 200);
     }
-
-    public function updateProduction(Request $request)
+public function updateProduction(Request $request)
     {
         $role = Role::where('id', Auth::user()->role_id)->first()->name;
         if ($role != "admin" && $role != "cashier") {
@@ -610,7 +728,8 @@ class ItemController extends Controller
 
         $notifications = []; // Array to hold notifications
         $errorOccurred = false; // Flag to track if any error occurs
-
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
         // Get existing item IDs in the production center
         $existingItems = Item_Production_Join::where('production_id', $productionCenter->id)
             ->pluck('item_id')
@@ -643,13 +762,29 @@ class ItemController extends Controller
                         'item_id' => $item->id,
                         'admin_id' => $request->input('admin_id') // Set admin_id or any other fields as needed
                     ]);
-                    $notifications[] = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$productionCenter->name}.";
+                    $notification = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$productionCenter->name}.";
+                    $notifications[] = $notification;
+                    broadcast(new NotificationMessage('notification', $notification))->toOthers();
+
+                    // Save the notification to the database
+                    foreach ($users as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'notification',
+                            'notification' => $notification,
+                            'admin_id' => $admin_id,
+                            'role_id' => $recipient->role_id,
+                            'path' => '/productioncenter'
+                        ]);
+                    }
                 }
             } catch (\Exception $e) {
                 $errorOccurred = true;
                 $notifications[] = "Error processing item {$item->name}: " . $e->getMessage();
+                
             }
         }
+        // dd($existingItems);
 
         // Handle deletion of items that are no longer in the request
         foreach ($existingItems as $existingItemId) {
@@ -658,7 +793,32 @@ class ItemController extends Controller
                 Item_Production_Join::where('production_id', $productionCenter->id)
                     ->where('item_id', $existingItemId)
                     ->delete();
-                $notifications[] = "El artículo con ID {$existingItemId} ha sido eliminado del centro de producción {$productionCenter->name}.";
+                    
+                    $item = Item::find($existingItemId);// Retrieve the item by ID
+                    if ($item) {
+                        // If the item exists, proceed with the notification
+                         $notification = "El artículo {$item->name} ha sido eliminado del centro de producción {$productionCenter->name}";
+                    } else {
+                        // Handle the case where the item does not exist
+                        $notification = "El artículo no existe o ya ha sido eliminado del centro de producción {$productionCenter->name}";
+                    }
+                                   
+                // $notification = "El artículo {$item->name} ha sido eliminado del centro de producción {$productionCenter->name}"; // Include item name
+                // $notification = "El artículo con ID {$existingItemId} ha sido eliminado del centro de producción {$productionCenter->name}";
+                $notifications[] = $notification;
+                 broadcast(new NotificationMessage('notification', $notification))->toOthers();
+
+                    // Save the notification to the database
+                    foreach ($users as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'notification',
+                            'notification' => $notification,
+                            'admin_id' => $admin_id,
+                            'role_id' => $recipient->role_id,
+                            'path' => '/productioncenter'
+                        ]);
+                    }
             }
         }
 
@@ -668,14 +828,160 @@ class ItemController extends Controller
             'messages' => $notifications
         ], $errorOccurred ? 500 : 200);
     }
-    public function getProducationdata(Request $request)
+    // public function updateProduction(Request $request)
+    // {
+    //     $role = Role::where('id', Auth::user()->role_id)->first()->name;
+    //     if ($role != "admin" && $role != "cashier") {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Unauthorized'
+    //         ], 405);
+    //     }
+
+    //     // Find the production center
+    //     $productionCenter = ProductionCenter::find($request->production_id);
+    //     if (!$productionCenter) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Production center not found'
+    //         ], 404);
+    //     }
+
+    //     $notifications = []; // Array to hold notifications
+    //     $errorOccurred = false; // Flag to track if any error occurs
+
+    //     // Get existing item IDs in the production center
+    //     $existingItems = Item_Production_Join::where('production_id', $productionCenter->id)
+    //         ->pluck('item_id')
+    //         ->toArray();
+
+    //     // Loop through item IDs to process each one
+    //     foreach ($request->item_ids as $item_id) {
+    //         $item = Item::find($item_id);
+    //         if (!$item) {
+    //             $errorOccurred = true;
+    //             $notifications[] = "Item with ID {$item_id} not found.";
+    //             continue; // Skip to the next item
+    //         }
+
+    //         try {
+    //             // Check if the item is already associated with the production center
+    //             if (in_array($item->id, $existingItems)) {
+    //                 // Update the existing relationship entry
+    //                 $itemProductionJoin = Item_Production_Join::where('production_id', $productionCenter->id)
+    //                     ->where('item_id', $item->id)
+    //                     ->first();
+    //                 $itemProductionJoin->update([
+    //                     'admin_id' => $request->input('admin_id') // Update admin_id or any other fields as needed
+    //                 ]);
+    //                 $notifications[] = "El artículo {$item->name} ha sido actualizado exitosamente en el centro de producción {$productionCenter->name}.";
+    //             } else {
+    //                 // Create a new relationship entry if it does not exist
+    //                 Item_Production_Join::create([
+    //                     'production_id' => $productionCenter->id,
+    //                     'item_id' => $item->id,
+    //                     'admin_id' => $request->input('admin_id') // Set admin_id or any other fields as needed
+    //                 ]);
+    //                 $notifications[] = "El artículo {$item->name} ha sido agregado exitosamente al centro de producción {$productionCenter->name}.";
+    //             }
+    //         } catch (\Exception $e) {
+    //             $errorOccurred = true;
+    //             $notifications[] = "Error processing item {$item->name}: " . $e->getMessage();
+    //         }
+    //     }
+
+    //     // Handle deletion of items that are no longer in the request
+    //     foreach ($existingItems as $existingItemId) {
+    //         if (!in_array($existingItemId, $request->item_ids)) {
+    //             // Delete the item from the production center
+    //             Item_Production_Join::where('production_id', $productionCenter->id)
+    //                 ->where('item_id', $existingItemId)
+    //                 ->delete();
+    //             $notifications[] = "El artículo con ID {$existingItemId} ha sido eliminado del centro de producción {$productionCenter->name}.";
+    //         }
+    //     }
+
+    //     // Return response
+    //     return response()->json([
+    //         'success' => !$errorOccurred,
+    //         'messages' => $notifications
+    //     ], $errorOccurred ? 500 : 200);
+    // }
+    // public function getProducationdata(Request $request)
+    // {
+    //     // Validate the request
+    //     $validateRequest = Validator::make($request->all(), [
+    //         'producation_ids' => 'array',
+    //         'producation_ids.*' => 'integer|exists:production_centers,id' // Ensure each menu ID is an integer and exists in the menus table
+    //     ]);
+
+    //     if ($validateRequest->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation error',
+    //             'errors' => $validateRequest->errors()
+    //         ], 403);
+    //     }
+
+    //     // $adminId = Auth::user()->admin_id;
+
+    //     $admin_id = $request->admin_id;
+    //     // dd($admin_id);
+
+    //     // Initialize menus
+    //     $returnData = [];
+
+    //     if (isset($request->production_ids) && is_array($request->production_ids)) {
+    //         // Prepare the query to get menus based on menu_ids and admin_id
+    //         $production_centers = DB::table('item__production__joins')
+    //             ->leftJoin('production_centers', 'item__production__joins.production_id', '=', 'production_centers.id')
+    //             ->select('production_centers.*')
+    //             ->whereIn('item__production__joins.production_id', $request->production_ids)  // Filter by menu_ids
+    //             ->where('production_centers.admin_id', $admin_id)// Filter by the authenticated admin's ID
+    //               ->whereNull('item__production__joins.deleted_at')  // Exclude soft-deleted records
+                
+    //             ->distinct()  // Ensure unique menu records
+    //             ->get();
+    //     } else {
+    //         // Prepare the query for fetching all menus for the admin
+    //         $production_centers = DB::table(table: 'production_centers')
+    //             ->where('admin_id', $admin_id)  // Filter by the authenticated admin's ID
+    //             ->get();
+    //     }
+
+    //     // Process each menu to get associated items
+    //     foreach ($production_centers as $production_center) {
+    //         $items = DB::table('item__production__joins')
+    //             ->leftJoin('items', 'item__production__joins.item_id', '=', 'items.id')
+    //             ->select('items.*')
+    //             ->where('item__production__joins.production_id', $production_center->id)
+    //               ->whereNull('item__production__joins.deleted_at')  // Exclude soft-deleted records
+
+    //             ->get();
+
+
+    //         $returnData[] = [
+    //             'id' => $production_center->id,
+    //             'name' => $production_center->name,
+    //             'items' => $items
+    //         ];
+    //     }
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'menus' => $returnData
+    //     ], 200);
+    // }
+    
+    
+      public function getProducationdata(Request $request)
     {
         // Validate the request
         $validateRequest = Validator::make($request->all(), [
-            'producation_ids' => 'array',
-            'producation_ids.*' => 'integer|exists:production_centers,id' // Ensure each menu ID is an integer and exists in the menus table
+            'production_ids' => 'array',
+            'production_ids.*' => 'integer|exists:production_centers,id' // Ensure each production ID is an integer and exists in the production_centers table
         ]);
-
+    
         if ($validateRequest->fails()) {
             return response()->json([
                 'success' => false,
@@ -683,55 +989,52 @@ class ItemController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
-
-        // $adminId = Auth::user()->admin_id;
-
+    
         $admin_id = $request->admin_id;
-        // dd($admin_id);
-
-        // Initialize menus
+    
+        // Initialize return data
         $returnData = [];
-
+    
         if (isset($request->production_ids) && is_array($request->production_ids)) {
-            // Prepare the query to get menus based on menu_ids and admin_id
+            // Query to get production centers based on production_ids and admin_id
             $production_centers = DB::table('item__production__joins')
                 ->leftJoin('production_centers', 'item__production__joins.production_id', '=', 'production_centers.id')
                 ->select('production_centers.*')
-                ->whereIn('item__production__joins.production_id', $request->production_ids)  // Filter by menu_ids
-                ->where('production_centers.admin_id', $admin_id)  ,// Filter by the authenticated admin's ID
-                  ->whereNull('item__production__joins.deleted_at')  // Exclude soft-deleted records
-                ->distinct()  // Ensure unique menu records
+                ->whereIn('item__production__joins.production_id', $request->production_ids)  // Filter by production_ids
+                ->where('production_centers.admin_id', $admin_id) // Filter by the authenticated admin's ID
+                ->whereNull('production_centers.deleted_at')  // Exclude soft-deleted production centers
+                ->distinct()  // Ensure unique production center records
                 ->get();
         } else {
-            // Prepare the query for fetching all menus for the admin
-            $production_centers = DB::table(table: 'production_centers')
+            // Query for fetching all production centers for the admin
+            $production_centers = DB::table('production_centers')
                 ->where('admin_id', $admin_id)  // Filter by the authenticated admin's ID
+                ->whereNull('deleted_at')  // Exclude soft-deleted production centers
                 ->get();
         }
-
-        // Process each menu to get associated items
+    
+        // Process each production center to get associated items
         foreach ($production_centers as $production_center) {
             $items = DB::table('item__production__joins')
                 ->leftJoin('items', 'item__production__joins.item_id', '=', 'items.id')
                 ->select('items.*')
-                ->where('item__production__joins.production_id', $production_center->id),
-                   ->whereNull('item__production__joins.deleted_at')  // Exclude soft-deleted records
-
+                ->where('item__production__joins.production_id', $production_center->id)
+                ->whereNull('item__production__joins.deleted_at')  // Exclude soft-deleted items
                 ->get();
-
-
+    
             $returnData[] = [
                 'id' => $production_center->id,
                 'name' => $production_center->name,
                 'items' => $items
             ];
         }
-
+    
         return response()->json([
             'success' => true,
             'menus' => $returnData
         ], 200);
     }
+    
 
 
     public function getSaleReport(Request $request, $id)

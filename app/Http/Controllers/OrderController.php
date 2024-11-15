@@ -18,6 +18,7 @@ use App\Models\CreditNot;
 use App\Models\ReturnItem;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
+use App\Models\User;
 
 class OrderController extends Controller
 {
@@ -56,11 +57,30 @@ class OrderController extends Controller
             'transaction_code' => 'boolean'
         ]);
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2, 3])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo crear el pedido. Verifica la información ingresada e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id
+                ]);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => "Validation fails",
-                'errors' => $validateRequest->errors()
+                'errors' => $validateRequest->errors(),
+                'notification' => $errorMessage
             ], 403);
         }
 
@@ -87,7 +107,8 @@ class OrderController extends Controller
         }
 
         if ($role == "cashier") {
-            $box = Boxs::where('user_id', Auth::user()->id)->first();
+            $box = Boxs::where('user_id', Auth::user()->id)->latest()->first();
+            // dd($box);
 
             if (!$box) {
                 return response()->json([
@@ -96,8 +117,8 @@ class OrderController extends Controller
                 ], 403);
             }
 
-
             $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+          
 
 
             // $log->collected_amount += $totalAmount;
@@ -172,7 +193,7 @@ class OrderController extends Controller
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
-                'notes' => $order_detail['notes'],
+                // 'notes' => $order_detail['notes'],
                 'quantity' => $order_detail['quantity'],
                 'admin_id' => $request->admin_id
                                                 
@@ -183,9 +204,10 @@ class OrderController extends Controller
             array_push($response['order_details'], $orderDetail);
         }
         if ($role == "cashier") {
-            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
+            $box = Boxs::where('user_id', Auth::user()->id)->latest()->first();
+            // dd($box);
             $log = BoxLogs::where('box_id', $box->id)->latest()->first();
-
+            // dd($box->id);
             $log->collected_amount += $totalAmount;
             if (empty($log->order_master_id)) {
                 $log->order_master_id = $order->id;
@@ -206,7 +228,7 @@ class OrderController extends Controller
             $log->save();
         }
 
-        kds::create([
+        $kdsOrder = kds::create([
             'order_id' => $order->id,
             'box_id' => $order->box_id,
             'user_id' => $order->user_id,
@@ -227,10 +249,81 @@ class OrderController extends Controller
             'table_id' => $order->table_id
         ]);
 
+        // $results = \DB::table('kds')
+        // ->join('order_details', 'kds.order_id', '=', 'order_details.order_master_id')
+        // ->join('items', 'order_details.item_id', '=', 'items.id')
+        // ->join('production_centers', 'items.production_center_id', '=', 'production_centers.id')
+        // ->select('kds.order_id', 'order_details.item_id', 'items.production_center_id', 'production_centers.name')
+        // ->get();
+
+        $results =  DB::table('kds')
+        ->select('kds.order_id', 'order_details.item_id', 'items.production_center_id', 'production_centers.name')
+        ->join('order_details', 'kds.order_id', '=', 'order_details.order_master_id')
+        ->join('items', 'order_details.item_id', '=', 'items.id')
+        ->join('production_centers', 'items.production_center_id', '=', 'production_centers.id')
+        ->where('kds.order_id', $order->id)
+        ->groupBy('kds.order_id', 'order_details.item_id', 'items.production_center_id', 'production_centers.name') // Added missing columns
+        ->get();
+
+        if($kdsOrder)
+        {
+            foreach ($results as $result) {
+                $successMessage = "El pedido {$order->id} ha sido asignado exitosamente al KDS del centro de producción {$result->name} ";
+                broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'notification',
+                        'notification' => $successMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=> '/kds'
+                    ]);
+                }
+            }
+            return response()->json([
+                'success' => true,
+                'message' => $successMessage,
+                'kdsOrder' => $kdsOrder
+            ], 200);
+        } else {
+            $errorMessage = "No se pudo asignar el pedido {$order->id} al KDS. Verifica la información e intenta nuevamente..";
+            broadcast(new NotificationMessage('error', $errorMessage))->toOthers();
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'error',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/kds'
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'message' => $errorMessage,
+                'kdsOrder' => $kdsOrder
+            ], 200);
+        }
+
+        $successMessage = "El pedido {$order->id} ha sido creado exitosamente para el cliente {$request->order_master['customer_name']}.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        foreach ($usersRoles as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=> '/home_Pedidos'
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => "Order placed successfully",
-            'details' => $response
+            'details' => $response,
+            'notification' => $successMessage
         ], 200);
     }
 
@@ -329,6 +422,7 @@ class OrderController extends Controller
                 'errors' => $validateRequest->errors()
             ], 403);
         }
+        
 
         $order = OrderMaster::find($request->input('order_id'));
         $kds = kds::where('order_id', $request->input('order_id'))->first();
@@ -374,6 +468,7 @@ class OrderController extends Controller
             foreach ($request->order_details as $order_detail) {
                 $item = Item::find($order_detail['item_id']);
                 $detail = OrderDetails::find($id); // Ensure this is the correct ID for the order detail
+                // dd($detail);
 
                 if ($detail) { // Check if detail is found
                     $detail->update([
@@ -520,17 +615,27 @@ class OrderController extends Controller
         $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
         $order = OrderMaster::where('id', $id)->where('admin_id', $adminId)->first();
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $usersCancelOrder = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
+
 
         if ($order == null) {
-            $errorMessage = 'No se pudo consultar los detalles del pedido. Intenta nuevamente más tarde..';
+            $errorMessage = 'No se pudo consultar los detalles del pedido. Intenta nuevamente más tarde';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => $user->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => $request->admin_id,
-                'role_id' => $user->role_id
-            ]);
+            foreach ($usersCancelOrder as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=>'/home/usa'
+                ]);
+            }
 
             return response()->json([
                 'success' => false,
@@ -555,13 +660,17 @@ class OrderController extends Controller
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
 
         // Save the notification to the database
-        Notification::create([
-            'user_id' => $user->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-            'admin_id' => $request->admin_id,
-            'role_id' => $user->role_id
-        ]);
+foreach ($usersCancelOrder as $recipient) {
+    Notification::create([
+        'user_id' => $recipient->id,
+        'notification_type' => 'notification',
+        'notification' => $successMessage,
+        'admin_id' => $admin_id,
+        'role_id' => $recipient->role_id,
+        'path' => "/home/usa/information/" . $order->id
+    ]);
+}
+
 
 
 
@@ -580,16 +689,22 @@ class OrderController extends Controller
         }
 
         $order = OrderMaster::find($id);
-        $kds = kds::find($id);
-
+        // $kds = kds::find($id);
+        $kdsRecords= kds::where('order_id', $id)->get();
+// dd($kds); 
         $orderDetails = OrderDetails::where('order_master_id', $id)->get();
 
         foreach ($orderDetails as $orderDetail) {
             $orderDetail->delete();
         }
 
-        $order->delete();
+        if($order){
+            $order->delete();
+        }
+        foreach ($kdsRecords as $kds) {
         $kds->delete();
+    }
+
 
         return response()->json([
             'success' => true,
@@ -617,26 +732,227 @@ class OrderController extends Controller
 
         $order = OrderMaster::find($request->input('order_id'));
         $order->status = $request->input('status');
-
+    $order->save();
         $kds = kds::where('order_id', $order->id)->first();
+        
+        if ($request->input('status') == 'delivered') {
+            $order->finished_at = now(); // Update current date in finish_at column if status is delivered
+            $kds->finished_at = now(); // Update current date in finish_at column if status is delivered
+        }
+        // dd(now());
+
         if ($kds) {
             $kds->status = $order->status; // Update KDS status
             $kds->save(); // Save the updated KDS record
+
+            $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+            $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+            $usersRoles = User::where('admin_id', $admin_id)
+            ->whereIn('role_id', [1, 2, 3, 4])
+            ->orWhere('id', $admin_id)
+            ->get();
+
+            // $results = DB::table('kds')
+            // ->join('order_details', 'kds.order_id', '=', 'order_details.order_master_id')
+            // ->join('items', 'order_details.item_id', '=', 'items.id')
+            // ->join('production_centers', 'items.production_center_id', '=', 'production_centers.id')
+            // ->select('kds.order_id', 'order_details.item_id', 'items.production_center_id', 'production_centers.name')
+            // ->get();
+            $results =  DB::table('kds')
+            ->select('kds.order_id', 'order_details.item_id', 'items.production_center_id', 'production_centers.name')
+            ->join('order_details', 'kds.order_id', '=', 'order_details.order_master_id')
+            ->join('items', 'order_details.item_id', '=', 'items.id')
+            ->join('production_centers', 'items.production_center_id', '=', 'production_centers.id')
+            ->where('kds.order_id', $order->id)
+            ->groupBy('kds.order_id', 'order_details.item_id', 'items.production_center_id', 'production_centers.name') // Added missing columns
+            ->get();
+           
+            // dd($kds->status);
+     
+            if($kds->status === 'prepared')
+            {
+                foreach ($results as $result) {
+                    $successMessage = "El pedido {$order->id} ha sido marcado como 'En Proceso' en el KDS del centro de producción {$result->name}";
+                    broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                    foreach ($users as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'notification',
+                            'notification' => $successMessage,
+                            'admin_id' => $admin_id,
+                            'role_id' => $recipient->role_id,
+                             'path'=>'/kds/Preparado'
+                        ]); 
+                    }
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'KDS updated successfully.',
+                    'notification' => $successMessage
+                ], 200);
+            } 
+            // Corrected condition for finalized status
+            elseif($kds->status === 'finalized')
+            {
+                foreach ($results as $result) {
+                    $successMessage = "El pedido {$order->id} ha sido completado exitosamente en el KDS del centro de producción {$result->name}";
+                    broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                    foreach ($users as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'notification',
+                            'notification' => $successMessage,
+                            'admin_id' => $admin_id,
+                            'role_id' => $recipient->role_id,
+                            'path'=>'/kds'
+                        ]);
+                    }
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'KDS updated successfully.',
+                    'notification' => $successMessage
+                ], 200);
+            }
+            else if($kds->status === 'delivered')
+            {
+
+                foreach ($results as $result) {
+                    $successMessage = "El pedido {$order->id} ha sido entregado en el KDS del centro de producción {$result->name}";
+                    // $successMessage = "dele";
+                    broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                    foreach ($users as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'notification',
+                            'notification' => $successMessage,
+                            'admin_id' => $admin_id,
+                            'role_id' => $recipient->role_id,
+                            'path'=>'/kds'
+                        ]);
+                    }
+                }
+        
+                return response()->json([
+                    'success' => true,
+                    'message' => 'KDS added successfully.',
+                    'notification' => $successMessage
+                ], 200);
+            }
+            else if($kds->status === 'cancelled')
+            {
+                foreach ($results as $result) {
+                    $successMessage = "El pedido {$order->id} ha sido cancelado en el KDS del centro de producción {$result->name}";
+                    // $successMessage = "cancel";
+                    broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+                    foreach ($users as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'notification',
+                            'notification' => $successMessage,
+                            'admin_id' => $admin_id,
+                            'role_id' => $recipient->role_id,
+                            'path'=>'/kds'
+                        ]);
+                    }
+                }
+        
+                return response()->json([
+                    'success' => true,
+                    'message' => 'KDS added successfully.',
+                    'notification' => $successMessage
+                ], 200);
+            }
+        
+            else {
+                // Handle other statuses
+                $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+                $usersRoles = User::where('admin_id', $admin_id)
+                ->whereIn('role_id', [1, 4])
+                ->orWhere('id', $admin_id)
+                ->get();
+                
+                $errorMessage = "No se pudo marcar el pedido {$order->id} como '{$kds->status}'. Verifica la información e intenta nuevamente";
+                broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=>'/kds'
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'KDS update failed.',
+                    'notification' => $errorMessage
+                ], 200);
+            }
+
+           
+            // else{
+
+            //     $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+            //     $usersRoles = User::where('admin_id', $admin_id)
+            //     ->whereIn('role_id', [1, 4])
+            //     ->orWhere('id', $admin_id)
+            //     ->get();
+            
+            //     $errorMessage = "No se pudo cancelar el pedido {$order->id} en el KDS. Verifica la información e intenta nuevamente..";
+            //     broadcast(new NotificationMessage('notification', $errorMessage ))->toOthers();
+            //     foreach ($usersRoles as $recipient) {
+            //         Notification::create([
+            //             'user_id' => $recipient->id,
+            //             'notification_type' => 'alert',
+            //             'notification' => $errorMessage,
+            //             'admin_id' => $admin_id,
+            //             'role_id' => $recipient->role_id
+            //         ]);
+            //     }
+        
+            //     return response()->json([
+            //         'success' => true,
+            //         'message' => 'KDS Failed successfully.',
+            //         'notification' => $errorMessage
+            //     ], 200);
+            // }
+   
+   
+
         }
+
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2, 3])
+        ->orWhere('id', $admin_id)
+        ->get();
+
+        $usersCancelRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
 
         if ($order->status === 'finalized') {
             $currentStatus = OrderMaster::find($order->id)->status;
             if ($currentStatus || $role != "admin" && $role != "cashier") {
                 if ($currentStatus === 'finalized') {
-                    $errorMessage = 'No se pudo anular el pedido. Verifica si el pedido ya ha sido finalizado o si hay problemas de conexión e intenta nuevamente.';
+                    $errorMessage = 'No se pudo anular el pedido. Verifica si el pedido ya ha sido finalizado o si hay problemas de conexión e intenta nuevamente';
                     broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                    Notification::create([
-                        'user_id' => $user->id,
-                        'notification_type' => 'alert',
-                        'notification' => $errorMessage,
-                        'admin_id' => $request->admin_id,
-                        'role_id' => $user->role_id
-                    ]);
+                    foreach ($usersCancelRoles as $recipient) {
+                        Notification::create([
+                            'user_id' => $recipient->id,
+                            'notification_type' => 'alert',
+                            'notification' => $errorMessage,
+                            'admin_id' => $request->admin_id,
+                            'role_id' => $recipient->role_id,
+                            'path'=>'/kds'
+                        ]);
+                    }
 
                     return response()->json([
                         'success' => false,
@@ -644,34 +960,29 @@ class OrderController extends Controller
 
                     ], 403);
 
-                    return response()->json([
-                        'success' => false,
-                        'alert' => $errorMessage
-                    ], 403);
+                  
                 }
             }
         }
 
 
-        if ($request->input('status') === 'delivered') {
-            $order->finished_at = now(); // Update current date in finish_at column if status is delivered
-            $kds->finished_at = now(); // Update current date in finish_at column if status is delivered
-        }
+        
 
         if ($role != "admin" && $role != "cashier" && $role != "waitress") {
             if ($request->input('status') === 'cancelled') {
                 $successMessage = "El pedido {$order->id} ha sido anulado exitosamente.";
                 broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'notification',
-                    'notification' => $successMessage,
-                    'admin_id' => $request->admin_id,
-                    'role_id' => $user->role_id
-                ]);
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'notification',
+                        'notification' => $successMessage,
+                        'admin_id' => $request->admin_id,
+                        'role_id' => $recipient->role_id
+                    ]);
+                }
             }
         }
-
 
         $order->save();
         $kds->save();
@@ -747,7 +1058,7 @@ class OrderController extends Controller
         if ($orderMaster->notes == null || $orderMaster->notes == "") {
             $orderMaster->notes = $request->input('notes');
         } else {
-            $orderMaster->notes .= "," . $request->input('notes');
+            $orderMaster->notes = $request->input('notes');
         }
 
         $orderMaster->save();
@@ -805,6 +1116,12 @@ class OrderController extends Controller
             ], 401);
         }
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2, 3])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         // Validate the request data
         $validateRequest = Validator::make($request->all(), [
             'order_details' => 'nullable|array',
@@ -816,11 +1133,25 @@ class OrderController extends Controller
         ]);
 
         if ($validateRequest->fails()) {
+            $errorMessage = 'No se pudo actualizar el pedido. Verifica la información ingresada e intenta nuevamente';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id
+                ]);
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'Validation fails',
-                'errors' => $validateRequest->errors()
+                'message' => "Validation fails",
+                'errors' => $validateRequest->errors(),
+                'notification' => $errorMessage
             ], 403);
+           
         }
 
         // Find the order using the order_id from the URL
@@ -830,15 +1161,8 @@ class OrderController extends Controller
         $all = kds::all();
         // dd($all);
         $kds = kds::where('order_id', $order_id)->first();
-        if (!$kds) {
-            return response()->json([
-                'success' => false,
-                'message' => 'KDS record not found.',
-            ], 404);
-        }
-        // Update KDS record
-        // dd($order);
-        $kds->update([
+        if ($kds) {
+            $kds->update([
             'order_id' => $order->id,
             'box_id' => $order->box_id,
             'user_id' => $order->user_id,
@@ -857,6 +1181,10 @@ class OrderController extends Controller
             'notes' => $order->notes,
             'table_id' => $order->table_id,
         ]);
+        }
+        // Update KDS record
+        // dd($order);
+        
         // Check if the order exists
         if (!$order) {
             return response()->json([
@@ -876,6 +1204,10 @@ class OrderController extends Controller
         if ($request->has('box_id')) {
             $orderUpdateData['box_id'] = $request->input('box_id');
         }
+        if ($request->has('customer_name')) {
+            $orderUpdateData['customer_name'] = $request->input('customer_name');
+        }
+        // dd($orderUpdateData);
 
         // Generate and update transaction code if requested
         if ($request->input('transaction_code') === true) {
@@ -943,12 +1275,25 @@ class OrderController extends Controller
             //     $log->payment_id .= "," . $order->payment_id;
             // }
 
+            $successMessage = "El pedido {$order->id} ha sido actualizado exitosamente";
+            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id
+                ]);
+            }
+            
 
             $log->save();
+            
         }
-
+$successMessage = "skjdgqgwe";
         // Return the response
-        return response()->json($responseData, 200);
+        return response()->json([$responseData, 200,'notification' => $successMessage]);
     }
 
 
@@ -978,15 +1323,41 @@ class OrderController extends Controller
             ], 401);
         }
 
-        $validateRequest = Validator::make($request->all(), [
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
+        // $validateRequest = Validator::make($request->all(), [
+        //     'credit_note.order_id' => 'required|integer',
+        //     'credit_note.payment_id' => 'required|integer',
+        //     'credit_note.status' => 'required|string',
+        //     'credit_note.name' => 'required|string',
+        //     'credit_note.email' => 'required|email',
+        //     'credit_note.delivery_cost' => 'required|numeric',
+        //     'credit_note.code' => 'required|integer',
+        //     // 'credit_note.destination' => 'required|integer',
+        //     'credit_note.payment_status' => 'required|string',
+        //     'credit_note.credit_method' => 'required|string|in:credit,debit,cash,future purchase',
+        //     'return_items.*.item_id' => 'required|integer',
+        //     'return_items.*.name' => 'required|string',
+        //     'return_items.*.quantity' => 'required|integer',
+        //     'return_items.*.cost' => 'required|numeric',
+        //     'return_items.*.amount' => 'required|numeric',
+        //     'return_items.*.notes' => 'nullable|string',
+        // ]);
+        
+        
+             $validateRequest = Validator::make($request->all(), [
             'credit_note.order_id' => 'required|integer',
             'credit_note.payment_id' => 'required|integer',
             'credit_note.status' => 'required|string',
             'credit_note.name' => 'required|string',
-            'credit_note.email' => 'required|email',
-            'credit_note.delivery_cost' => 'required|numeric',
+            // 'credit_note.email' => 'email',
+            'credit_note.delivery_cost' => 'numeric',
             'credit_note.code' => 'required|integer',
-            'credit_note.destination' => 'required|integer',
+            // 'credit_note.destination' => 'required|integer',
             'credit_note.payment_status' => 'required|string',
             'credit_note.credit_method' => 'required|string|in:credit,debit,cash,future purchase',
             'return_items.*.item_id' => 'required|integer',
@@ -999,15 +1370,19 @@ class OrderController extends Controller
 
 
         if ($validateRequest->fails()) {
-            $errorMessage = 'No se pudo crear la nota de crédito para el pedido. Verifica la información ingresada e intenta nuevamente.';
+            $errorMessage = 'No se pudo crear la nota de crédito para el pedido. Verifica la información ingresada e intenta nuevamente';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $errorMessage,
-                'admin_id' => $request->admin_id,
-                'role_id' => $user->role_id
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=>'/home/client'
+                ]);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation fails',
@@ -1019,15 +1394,17 @@ class OrderController extends Controller
         $creditNoteData = $request->input('credit_note');
 
         if ($creditNoteData == null) {
-            $errorMessage = 'No se pudo consultar los detalles del pedido. Intenta nuevamente más tarde..';
+            $errorMessage = 'No se pudo consultar los detalles del pedido. Intenta nuevamente más tarde';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => $user->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => $request->admin_id,
-                'role_id' => $user->role_id
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id
+                ]);
+            }
 
             return response()->json([
                 'success' => false,
@@ -1059,14 +1436,15 @@ class OrderController extends Controller
         // Broadcast notification message
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
 
-        // Save the notification to the database
-        Notification::create([
-            'user_id' => $user->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-            'admin_id' => $request->admin_id,
-            'role_id' => $user->role_id
-        ]);
+        foreach ($usersRoles as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id
+            ]);
+        }
 
         // Process return items (if you need to process them but not include in the response)
         $returnItems = [];

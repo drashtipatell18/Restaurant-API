@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('group_for_chats', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('photo')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
+        Schema::table('order_masters', function (Blueprint $table) {
+            $table->timestamp('finish_at')->nullable();
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('group_for_chats');
+        Schema::table('order_masters', function (Blueprint $table) {
+            $table->dropColumn('finish_at');
+        });
     }
 };

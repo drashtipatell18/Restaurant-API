@@ -24,8 +24,9 @@ class User extends Authenticatable
         'password',
         'role_id',
         'image',
-        'status',
-        'admin_id'
+        'activeStatus',
+        'admin_id',
+        'status'
     ];
 
     /**
@@ -65,10 +66,4 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(GroupForChat::class, 'user_group_joins', 'user_id', 'group_id');
     }
-
-    public function family()
-    {
-        return $this->hasMany(Family::class);
-    }
-
 }

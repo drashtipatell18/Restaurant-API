@@ -23,8 +23,10 @@ class BoxController extends Controller
     {
         // Check if the user is an admin
         if (auth()->user()->role->name  == 'admin' || auth()->user()->role == 'admin') {
+            $userAdminId = auth()->user()->id;
             // If the user is an admin, retrieve all records
-            $boxs = Boxs::all();
+            // dd(1);
+            $boxs = Boxs::where('admin_id', $userAdminId)->get();
         } else {
             // $boxs = Boxs::where('admin_id', auth()->user()->id)->get();
             $userAdminId = auth()->user()->admin_id;
@@ -38,19 +40,10 @@ class BoxController extends Controller
     public function createBox(Request $request)
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        dd($role);
         if ($role != "admin" &&  $role != "cashier") {
-            $errorMessage = 'No se pudo crear la caja. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised',
-                'notification' => $errorMessage,
             ], 401);
         }
         $validateFamily = Validator::make($request->all(), [
@@ -58,14 +51,29 @@ class BoxController extends Controller
             'name' => 'required|string|max:255'
         ]);
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+      
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
+       
+
         if ($validateFamily->fails()) {
             $errorMessage = 'No se pudo crear la caja. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
+          
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/caja'
+                ]);
+            }
 
             return response()->json([
                 'success' => false,
@@ -108,11 +116,17 @@ class BoxController extends Controller
 
         $successMessage = "La caja {$box->name} ha sido creada exitosamente y asignada a {$user->name}.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+
+        foreach ($usersRoles as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=> '/caja'
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -132,18 +146,10 @@ class BoxController extends Controller
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
         if ($role != "admin" &&  $role != "cashier") {
-            $errorMessage = 'No se pudo actualizar la caja. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
-
+           
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised',
-                'alert' => $errorMessage,
             ], 401);
         }
         $validateFamily = Validator::make($request->all(), [
@@ -151,14 +157,26 @@ class BoxController extends Controller
             'name' => 'required|string|max:255'
         ]);
 
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+         
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         if ($validateFamily->fails()) {
             $errorMessage = 'No se pudo actualizar la caja. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/caja'
+                ]);
+            }
 
             return response()->json([
                 'success' => false,
@@ -184,16 +202,21 @@ class BoxController extends Controller
         $box->update([
             'user_id' => $request->input('user_id'),
             'name' => $request->input('name'),
-            'admin_id' => auth()->user()->id
+            'admin_id' => $admin_id
         ]);
 
         $successMessage = "La caja {$box->name} ha sido actualizada exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+        foreach ($usersRoles as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=> '/caja'
+            ]);
+        }
 
 
         return response()->json([
@@ -206,26 +229,45 @@ class BoxController extends Controller
 
     public function deleteBox($id)
     {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+      
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         $boxs = Boxs::find($id);
         if (is_null($boxs)) {
             $errorMessage = 'No se pudo eliminar la caja. Verifica si la caja está asociada a otros registros e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/caja'
+                ]);
+            }
+
             return response()->json(['message' => 'Box not found', 'alert' => $errorMessage], 404);
         }
         $boxs->delete();
 
         $successMessage = "La caja {$boxs->name} ha sido eliminada del sistema.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+        foreach ($usersRoles as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=> '/caja'
+            ]);
+        }
 
         return response()->json(['message' => 'Box deleted successfully', 'notification' => $successMessage], 200);
     }
@@ -311,7 +353,7 @@ class BoxController extends Controller
             $boxLog->customer = $customer ? $customer->name : null;
 
             $orderDetails = OrderDetails::where('order_master_id', $order->id)->get();
-            $boxLog->items = $orderDetails;
+            $boxLog->item = $orderDetails;
 
             $total = 0;
             foreach ($orderDetails as $detail) {
@@ -338,22 +380,21 @@ class BoxController extends Controller
     {
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
         if ($role != "admin" && $role != "cashier") {
-            $errorMessage = 'No se pudo abrir la caja. Verifica la información ingresada e intenta nuevamente.';
-            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorised',
-                'alert' => $errorMessage,
             ], 401);
         }
         $validateInitial = Validator::make($request->all(), [
             'box_id' => 'required|exists:boxs,id'
         ]);
+
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+      
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
 
         if ($validateInitial->fails()) {
             return response()->json([
@@ -373,11 +414,16 @@ class BoxController extends Controller
             if ($validateLater->fails()) {
                 $errorMessage = 'No se pudo abrir la caja. Verifica la información ingresada e intenta nuevamente.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=> '/caja'
+                    ]);
+                }
 
                 return response()->json([
                     'success' => false,
@@ -399,12 +445,16 @@ class BoxController extends Controller
             ]);
             $successMessage = "La caja {$box->name} ha sido abierta exitosamente con un monto inicial de {$request->open_amount}.";
             broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $successMessage,
-            ]);
-
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/caja'
+                ]);
+            }
             return response()->json([
                 'success' => true,
                 'box' => $log,
@@ -418,11 +468,16 @@ class BoxController extends Controller
             if ($validateLater->fails()) {
                 $errorMessage = 'No se pudo abrir la caja. Verifica la información ingresada e intenta nuevamente.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=> '/caja'
+                    ]);
+                }
 
                 return response()->json([
                     'success' => false,
@@ -445,11 +500,16 @@ class BoxController extends Controller
 
             $successMessage = "La caja {$box->name} ha sido abierta exitosamente con un monto inicial de {$request->open_amount}.";
             broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $successMessage,
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/caja'
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -458,7 +518,9 @@ class BoxController extends Controller
             ], 200);
         } else {
             // dd(Auth::user()->admin_id);
-            $hasKDSOrders = kds::where('status', 'delivered')->where('admin_id', Auth::user()->admin_id)->get();
+            // dd(1);
+            $hasKDSOrders = kds::where('admin_id', $admin_id)->get();
+            // dd($hasKDSOrders);
             if ($hasKDSOrders->isNotEmpty()) { // Check if there are any KDS orders
                 $boxLog->close_time = Carbon::now(); // Set close time if KDS orders exist
                 foreach ($hasKDSOrders as $order) {
@@ -474,12 +536,16 @@ class BoxController extends Controller
                 $errorMessage = 'No se pudo cerrar la caja. Verifica la información ingresada e intenta nuevamente.';
                 $errorMessage = 'No se pudo realizar la consulta de la caja. Intenta nuevamente más tarde.';
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-                Notification::create([
-                    'user_id' => auth()->user()->id,
-                    'notification_type' => 'alert',
-                    'notification' => $errorMessage,
-                ]);
-
+                foreach ($usersRoles as $recipient) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'notification_type' => 'alert',
+                        'notification' => $errorMessage,
+                        'admin_id' => $admin_id,
+                        'role_id' => $recipient->role_id,
+                        'path'=> '/caja'
+                    ]);
+                }
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation fails',
@@ -491,6 +557,7 @@ class BoxController extends Controller
 
             $boxLog->close_amount = $request->input('close_amount');
             $boxLog->close_by = Auth::user()->id;
+            $boxLog->cash_amount = $request->input('cash_amount');
             $boxLog->close_time = Carbon::now();
 
             $boxLog->save();
@@ -498,11 +565,16 @@ class BoxController extends Controller
             $successMessage = "La caja {$box->name} ha sido cerrada exitosamente con un monto final de {$request->close_amount}.";
             $successMessage = "La consulta de la caja {$box->name} se ha realizado exitosamente.";
             broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $successMessage,
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/caja'
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -513,6 +585,14 @@ class BoxController extends Controller
     }
     public function BoxReportMonthWise(Request $request, $id)
     {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+      
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
         if (Boxs::find($id) == null) {
             return response()->json([
                 'success' => false,
@@ -531,6 +611,8 @@ class BoxController extends Controller
         }
 
         $orders = $ordersQuery->get();
+
+        
 
         foreach ($orders as $order) {
             $customer = User::find($order->user_id);
@@ -554,11 +636,16 @@ class BoxController extends Controller
         $box = Boxs::find($id);
         $successMessage = "La consulta de la caja {$box->name} se ha realizado exitosamente.";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-        ]);
+        foreach ($usersRoles as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=> '/caja'
+            ]);
+        }
 
         return response()->json([$orders, 200]);
     }

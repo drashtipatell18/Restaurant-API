@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Role;
-
+use App\Models\Invite;
 use App\Models\User;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
@@ -18,21 +18,24 @@ use App\Events\NotificationMessage;
 
 class AuthController extends Controller
 {
-     public function login(Request $request)
+    public function login(Request $request)
     {
+    //     $user = User::where('email',$request->email)->first();
+    //   $role_id = $user->role_id;
+    //     if($role_id=="5"){
+    //       return response()->json([
+    //           'success'=>false,
+    //           'message'=>'No permitir que el superadministrador inicie sesión',
+               
+    //           ],401);
+    //     }
         $validateUser = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required'
         ]);
     
-        if ($validateUser->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'error' => $validateUser->errors()
-            ], 401);
-        }
-    
+       
+       
         // Find user by email
         $user = User::where('email', $request->input('email'))->first();
 
@@ -111,14 +114,33 @@ class AuthController extends Controller
         ]);
     }
 
-   
+
+
+    private function sendNotificationToCashiers($message, $adminId)
+    {
+        // Assuming role_id = 2 for Cashiers
+        $cashiers = User::where('role_id', 2)->orWhere('admin_id', $adminId)->get(); // Fetch all Cashiers
+        foreach ($cashiers as $cashier) {
+            // Create notification for each cashier
+            Notification::create([
+                'user_id' => $cashier->id,
+                'notification_type' => 'notification',
+                'notification' => $message,
+                'admin_id' => $adminId,
+                'role_id' => $cashier->role_id // Storing cashier role_id in Notification table
+            ]);
+
+            // Broadcast the notification to Cashiers
+            broadcast(new NotificationMessage('notification', $message))->toOthers();
+        }
+    }
     
     public function invite(Request $request)
     {
         $validateUser = Validator::make($request->all(), [
             'role_id' => 'required|exists:roles,id',
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            // 'email' => 'required|string|email|max:255|unique:users',
         ]);
 
         if ($validateUser->fails()) {
@@ -151,13 +173,27 @@ class AuthController extends Controller
         $user->remember_token = Hash::make($token);
         $user->save();
 
-        Mail::to($user->email)->send(new FirstLoginMail($user, $token));
+        // $mail = Mail::to($user->email)->send(new FirstLoginMail($user, $token));
+        
     
+ $mail = Mail::to($user->email)->later(now()->addSeconds(2), new FirstLoginMail($user, $token));
+
+        // dd($mail);
+        $successMessage = "La invitación para el usuario {$user->name} ha sido enviada exitosamente al correo {$user->email}.";
+        broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+        Notification::create([
+            'user_id' => $user->id,
+            'notification_type' => 'notification',
+            'notification' => $successMessage,
+            'admin_id' => $user->id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'User invited successfully. Email sent with login instructions.',
             'user' => $user,
             'admin_id' => $user->id,
+            'notificaation' => $successMessage
         ], 201);
     }
 
@@ -165,7 +201,7 @@ class AuthController extends Controller
     {
         $invite = User::findOrFail($id);
 
-
+// dd($invite);
         if ($invite->password_reset || now()->greaterThan($invite->password_reset_expires_at)) {
             return response()->json([
                 'success' => false,
@@ -198,8 +234,10 @@ class AuthController extends Controller
 
         // Set the password and mark the invite as used
         $invite->password = $encryption;
+        $invite->status = 'Activa';
         $invite->password_reset = true;
         $invite->password_reset_expires_at = null;
+        
         $invite->save();
 
         return response()->json([

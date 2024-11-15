@@ -8,7 +8,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductionCenter extends Model
 {
-    use HasFactory,SoftDeletes;
+    use HasFactory, SoftDeletes;
     protected $table = 'production_centers';
     protected $fillable = ['name','printer_code','admin_id'];
+    
+     public function itemProductions()
+    {
+        return $this->hasMany(Item_Production_Join::class);
+    }
 }

@@ -11,14 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('item__production__joins', function (Blueprint $table) {
+        Schema::create('production_centers', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('production_id')->nullable();
-            $table->unsignedBigInteger('item_id')->nullable();
-            $table->foreign('production_id')->references('id')->on('production_centers')->onUpdate('cascade')->onDelete('cascade');
-            $table->foreign('item_id')->references('id')->on('items')->onUpdate('cascade')->onDelete('cascade');
+            $table->string('name')->nullable();
+            $table->integer('printer_code')->nullable();
+            $table->string('order_type')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
+
         });
     }
 
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('item__production__joins');
+        Schema::dropIfExists('production_centers');
     }
 };

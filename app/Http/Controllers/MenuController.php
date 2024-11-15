@@ -31,19 +31,30 @@ class MenuController extends Controller
             $validateMenu = Validator::make($request->all(), [
                 'name' => 'required|string|max:255'
             ]);
-    
+            
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        // dd($users);
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
             if ($validateMenu->fails()) {
                 // ** Create error alert and save notification **
+                if ($role != "admin" &&  $role != "cashier") {
                 $errorMessage = 'No se pudo crear el menú. Verifica la información ingresada e intenta nuevamente.';
     
                 broadcast(new NotificationMessage('alert', $errorMessage))->toOthers();
+                foreach ($usersRoles as $recipient) {
                 Notification::create([
-                    'user_id' => auth()->user()->id,
+                    'user_id' => $recipient->id,
                     'notification_type' => 'alert',
                     'notification' => $errorMessage,
-                    'admin_id' => auth()->user()->admin_id ?? auth()->user()->id,
-                    'role_id' => auth()->user()->role_id
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/digitalmenu'
                 ]);
+            }
     
                 return response()->json([
                     'success' => false,
@@ -51,6 +62,7 @@ class MenuController extends Controller
                     'errors' => $validateMenu->errors(),
                     'alert' => $errorMessage,
                 ], 401);
+            }
             }
     
             // Step 3: Get Admin ID based on Role
@@ -75,13 +87,17 @@ class MenuController extends Controller
             broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
     
             // ** Save the success notification to the database **
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $successMessage,
-                'admin_id' => $admin_id,
-                'role_id' => auth()->user()->role_id
-            ]);
+            foreach($users as $recipient){
+
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' =>$recipient->role_id,
+                    'path'=> '/digitalmenu'
+                ]);
+            }
     
             // Step 6: Return Success Response
             return response()->json([
@@ -97,13 +113,16 @@ class MenuController extends Controller
     
             // ** Broadcast and save the error notification **
             broadcast(new NotificationMessage('alert', $errorMessage))->toOthers();
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => auth()->user()->admin_id ?? auth()->user()->id,
-                'role_id' => auth()->user()->role_id
-            ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/digitalmenu'
+                ]);
+            }
     
             return response()->json([
                 'success' => false,
@@ -129,22 +148,33 @@ class MenuController extends Controller
         $validateMenu = Validator::make($request->all(), [
             'name' => 'required|string|max:255'
         ]);
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        // dd($users);
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
     
         if ($validateMenu->fails()) {
+            if (  $role != "cashier") {
             $errorMessage = 'No se pudo actualizar el menú. Verifica la información ingresada e intenta nuevamente.';
     
             // ** Broadcast the error notification **
             broadcast(new NotificationMessage('alert', $errorMessage))->toOthers();
     
             // ** Save the error notification to the database **
+            foreach ($usersRoles as $recipient) {
             Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => auth()->user()->id,
-                'role_id' => auth()->user()->role_id
+              'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/digitalmenu'
             ]);
-    
+        }
+        }
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
@@ -162,13 +192,24 @@ class MenuController extends Controller
             broadcast(new NotificationMessage('alert', $errorMessage))->toOthers();
     
             // ** Save the error notification to the database **
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => auth()->user()->id,
-                'role_id' => auth()->user()->role_id
-            ]);
+
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            //     'admin_id' => auth()->user()->id,
+            //     'role_id' => auth()->user()->role_id
+            // ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=> '/digitalmenu'
+                ]);
+            }
     
             return response()->json([
                 'success' => false,
@@ -188,13 +229,23 @@ class MenuController extends Controller
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
     
         // ** Save the success notification to the database **
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'notification',
-            'notification' => $successMessage,
-            'admin_id' => auth()->user()->id,
-            'role_id' => auth()->user()->role_id
-        ]);
+        foreach ($users as $recipient) {
+            Notification::create([
+                'user_id' => $recipient->id,
+                'notification_type' => 'notification',
+                'notification' => $successMessage,
+                'admin_id' => $admin_id,
+                'role_id' => $recipient->role_id,
+                'path'=> '/digitalmenu'
+            ]);
+        }
+        // Notification::create([
+        //     'user_id' => auth()->user()->id,
+        //     'notification_type' => 'notification',
+        //     'notification' => $successMessage,
+        //     'admin_id' => auth()->user()->id,
+        //     'role_id' => auth()->user()->role_id
+        // ]);
     
         // Step 5: Return Success Response
         return response()->json([
@@ -207,30 +258,63 @@ class MenuController extends Controller
 
     public function deleteMenu($id)
     {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress" &&  $role != "kitchen") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+    
         // Step 1: Find the Menu
         $menu = Menu::find($id);
+                
+        $admin_id = null;
+        if ($role == 'admin') {
+            $admin_id = auth()->user()->id;
+        } elseif (in_array($role, ['cashier', 'waitress', 'kitchen'])) {
+            $admin_id = auth()->user()->admin_id;
+        }
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        // dd($users);
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
         if (is_null($menu)) {
+            if ($role != "admin" &&  $role != "cashier") {
             $errorMessage = 'No se pudo eliminar el menú. Verifica si el menú está asociado a otros registros e intenta nuevamente.';
     
             // ** Broadcast the error notification **
             broadcast(new NotificationMessage('alert', $errorMessage))->toOthers();
     
             // ** Save the error notification to the database **
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => auth()->user()->id,
-                'role_id' => auth()->user()->role_id
-            ]);
-    
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            //     'admin_id' => auth()->user()->id,
+            //     'role_id' => auth()->user()->role_id
+            // ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                     'path'=> '/digitalmenu'
+                ]);
+            }
             return response()->json([
                 'message' => 'Menu not found',
                 'alert' => $errorMessage
             ], 404);
         }
+        }
     
         // Step 2: Try to Delete the Menu
+
         try {
             $menuName = $menu->name;  // Capture menu name before deletion
             $menu->delete();
@@ -241,13 +325,23 @@ class MenuController extends Controller
             broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
     
             // ** Save the success notification to the database **
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'notification',
-                'notification' => $successMessage,
-                'admin_id' => auth()->user()->id,
-                'role_id' => auth()->user()->role_id
-            ]);
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'notification',
+            //     'notification' => $successMessage,
+            //     'admin_id' => auth()->user()->id,
+            //     'role_id' => auth()->user()->role_id
+            // ]);
+            foreach($users as $recipient){
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' =>$recipient->role_id,
+                     'path'=> '/digitalmenu'
+                ]);
+            }
     
             return response()->json([
                 'message' => 'Menu deleted successfully',
@@ -257,18 +351,28 @@ class MenuController extends Controller
         } catch (\Exception $e) {
             // Handle exceptions like foreign key constraints or other integrity issues
             $errorMessage = 'No se pudo eliminar el menú. Verifica si el menú está asociado a otros registros e intenta nuevamente.';
-    
+
             // ** Broadcast the error notification **
             broadcast(new NotificationMessage('alert', $errorMessage))->toOthers();
     
             // ** Save the error notification to the database **
-            Notification::create([
-                'user_id' => auth()->user()->id,
-                'notification_type' => 'alert',
-                'notification' => $errorMessage,
-                'admin_id' => auth()->user()->id,
-                'role_id' => auth()->user()->role_id
-            ]);
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            //     'admin_id' => auth()->user()->id,
+            //     'role_id' => auth()->user()->role_id
+            // ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                     'path'=> '/digitalmenu'
+                ]);
+            }
     
             return response()->json([
                 'message' => 'Menu deletion failed',
@@ -373,13 +477,16 @@ class MenuController extends Controller
                 ->leftJoin('menus', 'item__menu__joins.menu_id', '=', 'menus.id')
                 ->select('menus.*')
                 ->whereIn('item__menu__joins.menu_id', $request->menu_ids)  // Filter by menu_ids
-                ->where('menus.admin_id', $admin_id)  // Filter by the authenticated admin's ID
+                ->where('menus.admin_id', $admin_id)// Filter by the authenticated admin's ID
+                ->whereNull('menus.deleted_at')
                 ->distinct()  // Ensure unique menu records
                 ->get();
+                dd($menus);
         } else {
             // Prepare the query for fetching all menus for the admin
             $menus = DB::table(table: 'menus')
                 ->where('admin_id', $admin_id)  // Filter by the authenticated admin's ID
+                    ->whereNull('deleted_at')  // Only get records where deleted_at is null
                 ->get();
         }
     
@@ -389,6 +496,7 @@ class MenuController extends Controller
                 ->leftJoin('items', 'item__menu__joins.item_id', '=', 'items.id')
                 ->select('items.*')
                 ->where('item__menu__joins.menu_id', $menu->id)
+                 ->whereNull('items.deleted_at')
                 ->get();
             
                 
@@ -405,18 +513,104 @@ class MenuController extends Controller
         ], 200);
     }
     
-
-    public function deleteItem($menuId, $itemId)
+  public function deleteItem($menuId, $itemId)
     {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        if ($role != "admin" && $role != "cashier" && $role != "waitress" &&  $role != "kitchen") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised'
+            ], 401);
+        }
+        
         $menu = Menu::findOrFail($menuId);
         $item = $menu->items()->find($itemId);
+        $admin_id = null;
+        if ($role == 'admin') {
+            $admin_id = auth()->user()->id;
+        } elseif (in_array($role, ['cashier', 'waitress', 'kitchen'])) {
+            $admin_id = auth()->user()->admin_id;
+        }
+        $users = User::where('admin_id', $admin_id)->orWhere('id', $admin_id)->get();
+        // dd($users);
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+        if (is_null($menu)) {
+            if ($role != "admin" &&  $role != "cashier") {
+            $errorMessage = 'No se pudo eliminar el artículo del menú. Verifica la información e intenta nuevamente';
+    
+            // ** Broadcast the error notification **
+            broadcast(new NotificationMessage('alert', $errorMessage))->toOthers();
+    
+            // ** Save the error notification to the database **
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'alert',
+            //     'notification' => $errorMessage,
+            //     'admin_id' => auth()->user()->id,
+            //     'role_id' => auth()->user()->role_id
+            // ]);
+            foreach ($usersRoles as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'alert',
+                    'notification' => $errorMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' => $recipient->role_id,
+                    'path'=>'/digitalmenu'
+                ]);
+            }
+            return response()->json([
+                'message' => 'Menu not found',
+                'alert' => $errorMessage
+            ], 404);
+        }
+        }
 
         if ($item) {
             $menu->items()->detach($itemId);
-            return response()->json(['message' => 'Menu item removed successfully'], 200);
+            $successMessage = "El artículo {$item->name} ha sido eliminado exitosamente del menú {$menu->name}";
+    
+            // ** Broadcast the success notification **
+            broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+    
+            // ** Save the success notification to the database **
+            // Notification::create([
+            //     'user_id' => auth()->user()->id,
+            //     'notification_type' => 'notification',
+            //     'notification' => $successMessage,
+            //     'admin_id' => auth()->user()->id,
+            //     'role_id' => auth()->user()->role_id
+            // ]);
+            foreach($users as $recipient){
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'notification_type' => 'notification',
+                    'notification' => $successMessage,
+                    'admin_id' => $admin_id,
+                    'role_id' =>$recipient->role_id,
+                     'path'=>'/digitalmenu'
+                ]);
+            }
+            return response()->json(['message' => 'Menu item removed successfully', 'notification' => $successMessage], 200);
         }
 
         return response()->json(['message' => 'Item not found in the menu'], 404);
     }
+
+    // public function deleteItem($menuId, $itemId)
+    // {
+    //     $menu = Menu::findOrFail($menuId);
+    //     $item = $menu->items()->find($itemId);
+
+    //     if ($item) {
+    //         $menu->items()->detach($itemId);
+    //         return response()->json(['message' => 'Menu item removed successfully'], 200);
+    //     }
+
+    //     return response()->json(['message' => 'Item not found in the menu'], 404);
+    // }
 
 }

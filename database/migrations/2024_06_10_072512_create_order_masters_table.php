@@ -24,15 +24,12 @@ return new class extends Migration
             $table->string('delivery_cost')->nullable();
             $table->string('customer_name')->nullable();
             $table->string('person')->nullable();
-            $table->string('reason')->nullable();
-            $table->unsignedBigInteger('admin_id')->nullable();
             // $table->string('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->foreign('table_id')->references('id')->on('restauranttables')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
             $table->foreign('box_id')->references('id')->on('boxs')->onUpdate('cascade')->onDelete('cascade');
-            $table->foreign('admin_id')->references('id')->on('users')->onUpdate('cascade')->onDelete('cascade');
         });
     }
 

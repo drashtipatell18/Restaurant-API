@@ -21,4 +21,8 @@ class Item extends Model
     {
         return $this->hasMany(ReturnItem::class, 'item_id');
     }
+      public function family()
+    {
+        return $this->hasMany(Family::class, 'family_id');
+    }
 }

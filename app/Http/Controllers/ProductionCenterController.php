@@ -33,6 +33,7 @@ class ProductionCenterController extends Controller
                 'user_id' => auth()->user()->id,
                 'notification_type' => 'alert',
                 'notification' => $errorMessage,
+                 'path'=>'/productioncenter'
             ]);
 
             return response()->json([
@@ -45,7 +46,8 @@ class ProductionCenterController extends Controller
             'name' => 'required|string|max:255',
             'printer_code' => 'nullable|integer',
         ]);
-
+        $user = auth()->user();
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
         if ($validator->fails()) {
             $errorMessage = 'No se pudo crear el centro de producción. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
@@ -53,6 +55,9 @@ class ProductionCenterController extends Controller
                 'user_id' => auth()->user()->id,
                 'notification_type' => 'alert',
                 'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' =>  $user->role_id,
+                'path'=>'/productioncenter'
             ]);
 
 
@@ -67,7 +72,8 @@ class ProductionCenterController extends Controller
         $productionCenter = ProductionCenter::create([
             'name' => $request->name,
             'printer_code' => $request->printer_code,
-            'admin_id' => $request->admin_id
+            'admin_id' => $request->admin_id,
+            'role_id' =>  $user->role_id
         ]);
 
         $successMessage = "La familia {$productionCenter->name} ha sido creada exitosamente.";
@@ -76,6 +82,9 @@ class ProductionCenterController extends Controller
             'user_id' => auth()->user()->id,
             'notification_type' => 'notification',
             'notification' => $successMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' =>  $user->role_id,
+            'path'=>'/productioncenter'
         ]);
         return response()->json([
             'success' => true,
@@ -96,6 +105,7 @@ class ProductionCenterController extends Controller
                 'user_id' => auth()->user()->id,
                 'notification_type' => 'alert',
                 'notification' => $errorMessage,
+                'path'=>'/productioncenter'
             ]);
 
             return response()->json([
@@ -110,6 +120,8 @@ class ProductionCenterController extends Controller
             'item_ids.*' => 'integer|exists:items,id',
             'production_id' => 'required|exists:production_centers,id'
         ]);
+        $user = auth()->user();
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
 
         if ($validateRequest->fails()) {
             $errorMessage = 'No se pudo agregar el artículo al centro de producción. Verifica la información ingresada e intenta nuevamente.';
@@ -118,6 +130,9 @@ class ProductionCenterController extends Controller
                 'user_id' => auth()->user()->id,
                 'notification_type' => 'alert',
                 'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' =>  $user->role_id,
+                'path'=>'/productioncenter'
             ]);
             return response()->json([
                 'success' => false,
@@ -130,7 +145,8 @@ class ProductionCenterController extends Controller
             Item_Production_Join::create([
                 'production_id' => $production->id,
                 'item_id' => $item_id,
-                'admin' => $request->admin_id,
+                'admin_id' => $request->admin_id,
+                'role_id' =>  $user->role_id
             ]);
         }
 
@@ -141,7 +157,10 @@ class ProductionCenterController extends Controller
     }
     public function updateProductionCenter(Request $request, $id)
     {
+        
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        $user = auth()->user();
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
         if ($role != "admin") {
             $errorMessage = 'No se pudo crear el centro de producción. Verifica la información ingresada e intenta nuevamente.';
             broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
@@ -149,6 +168,9 @@ class ProductionCenterController extends Controller
                 'user_id' => auth()->user()->id,
                 'notification_type' => 'alert',
                 'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' =>  $user->role_id,
+                'path'=>'/productioncenter'
             ]);
 
             return response()->json([
@@ -169,6 +191,9 @@ class ProductionCenterController extends Controller
                 'user_id' => auth()->user()->id,
                 'notification_type' => 'alert',
                 'notification' => $errorMessage,
+                'admin_id' => $request->admin_id,
+                'role_id' =>  $user->role_id,
+                'path'=>'/productioncenter'
             ]);
 
             return response()->json([
@@ -180,31 +205,40 @@ class ProductionCenterController extends Controller
         }
 
         $productionCenter = ProductionCenter::find($id);   
-        $errorMessage = 'No se pudo eliminar el centro de producción. Verifica si el centro está asociado a otros registros e intenta nuevamente.';
-        broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
-        Notification::create([
-            'user_id' => auth()->user()->id,
-            'notification_type' => 'alert',
-            'notification' => $errorMessage,
-        ]);
-        if (!$productionCenter) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Production Center not found',
+        if(is_null($productionCenter))
+        {
+            $errorMessage = 'No se pudo eliminar el centro de producción. Verifica si el centro está asociado a otros registros e intenta nuevamente.';
+            broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+            Notification::create([
+                'user_id' => auth()->user()->id,
+                'notification_type' => 'alert',
                 'notification' => $errorMessage,
-            ], 404);
+                'admin_id' => $request->admin_id,
+                'role_id' =>  $user->role_id,
+                'path'=>'/productioncenter'
+            ]);
+            if (!$productionCenter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Production Center not found',
+                    'notification' => $errorMessage,
+                ], 404);
+            }
         }
 
         $productionCenter->update([
             'name' => $request->name,
             'printer_code' => $request->printer_code,
         ]);
-        $successMessage = "El centro de producción { $productionCenter->name } ha sido actualizado exitosamente";
+        $successMessage = "El centro de producción {$productionCenter->name} ha sido actualizado exitosamente";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
         Notification::create([
             'user_id' => auth()->user()->id,
             'notification_type' => 'notification',
             'notification' => $successMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' =>  $user->role_id,
+             'path'=>'/productioncenter'
         ]);
 
         return response()->json([
@@ -215,15 +249,70 @@ class ProductionCenterController extends Controller
         ], 200);
     }
 
-    public function destroyProductionCenter($id)
+    // public function destroyProductionCenter(Request $request,$id)
+    // {
+    //     $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+    //     $user = auth()->user();
+    //     $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+
+    //     $productionCenter = ProductionCenter::find($id);
+    //     $errorMessage = 'No se pudo eliminar el centro de producción. Verifica si el centro está asociado a otros registros e intenta nuevamente.';
+    //     broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
+    //     Notification::create([
+    //         'user_id' => auth()->user()->id,
+    //         'notification_type' => 'alert',
+    //         'notification' => $errorMessage,
+    //         'admin_id' => $request->admin_id,
+    //         'role_id' =>  $user->role_id
+    //     ]);
+    //     if (!$productionCenter) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Production Center not found',
+    //             'notification' => $errorMessage,
+    //         ], 404);
+    //     }
+        
+    //      $itemProductionJoin = Item_Production_Join::where('production_id', $id)->delete();
+
+    //     $productionCenter->delete();
+
+    //     $successMessage = "El centro de producción { $productionCenter->name } ha sido eliminado del sistema.";
+
+    //     broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
+    //     Notification::create([
+    //         'user_id' => auth()->user()->id,
+    //         'notification_type' => 'notification',
+    //         'notification' => $successMessage,
+    //         'admin_id' => $request->admin_id,
+    //         'role_id' =>  $user->role_id
+    //     ]);
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Production Center deleted successfully.',
+    //         'notification' => $successMessage,
+    //     ], 200);
+    // }
+    
+    
+    public function destroyProductionCenter(Request $request,$id)     
     {
+        $role = Role::where('id', Auth()->user()->role_id)->first()->name;
+        $user = auth()->user();
+        $admin_id = ($role == 'admin') ? auth()->user()->id : auth()->user()->admin_id;
+
         $productionCenter = ProductionCenter::find($id);
+       
         $errorMessage = 'No se pudo eliminar el centro de producción. Verifica si el centro está asociado a otros registros e intenta nuevamente.';
         broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
         Notification::create([
             'user_id' => auth()->user()->id,
             'notification_type' => 'alert',
             'notification' => $errorMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' =>  $user->role_id,
+             'path'=>'/productioncenter'
         ]);
         if (!$productionCenter) {
             return response()->json([
@@ -232,6 +321,8 @@ class ProductionCenterController extends Controller
                 'notification' => $errorMessage,
             ], 404);
         }
+        
+        $itemProductionJoin = Item_Production_Join::where('production_id', $id)->delete();
 
         $productionCenter->delete();
 
@@ -242,6 +333,9 @@ class ProductionCenterController extends Controller
             'user_id' => auth()->user()->id,
             'notification_type' => 'notification',
             'notification' => $successMessage,
+            'admin_id' => $request->admin_id,
+            'role_id' =>  $user->role_id,
+             'path'=>'/productioncenter'
         ]);
 
         return response()->json([
@@ -250,6 +344,7 @@ class ProductionCenterController extends Controller
             'notification' => $successMessage,
         ], 200);
     }
+    
     public function ProductionCentersearch(Request $request)
     {
         $Ids = $request->input('ids', []);

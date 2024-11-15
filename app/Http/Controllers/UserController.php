@@ -7,6 +7,7 @@ use App\Models\Boxs;
 use App\Models\OrderDetails;
 use App\Models\OrderMaster;
 use App\Models\User;
+use App\Models\GroupForChat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Mail\RegistrationConfirmation;
@@ -22,44 +23,12 @@ use App\Models\Notification;
 use App\Events\NotificationMessage;
 
 
+
 class UserController extends Controller
 {
-    // public function index()
-    // {
-    //     // if (auth()->user()->role == 'admin') {
-    //     //     $users = User::all();
-    //     //     // dd($users);
-    //     // } else {
-    //     //     $userAdminId = auth()->user()->admin_id;
-    //     //     $userId = auth()->user()->id;
-    //     //     $users = User::where('admin_id', $userAdminId)
-    //     //                 ->orWhere('id', $userId)
-    //     //                 ->get();
-    //     // }
-    //        $users = User::where('admin_id',auth()->user()->id)->get();
-
-    //     // Decrypt passwords for non-admin users (for demonstration purposes only; not secure in production)
-    //     foreach ($users as $user) {
-    //         $encryptedPassword = $user->password;
-    //         $decryption_iv = '1234567891011121';
-    //         $decryption_key = "GeeksforGeeks";
-    //         $ciphering = "AES-128-CTR";
-    //         $options = 0;
-
-    //         // Decrypt the password
-    //         $decryptedPassword = openssl_decrypt($encryptedPassword, $ciphering, $decryption_key, $options, $decryption_iv);
-
-    //         // If decryption is successful, update the password field (for demonstration purposes)
-    //         if ($decryptedPassword !== false) {
-    //             $user->password = mb_convert_encoding($decryptedPassword, 'UTF-8', 'UTF-8');
-    //         }
-    //     }
-
-    //     // Return the users as a JSON response
-    //     return response()->json($users, 200, [], JSON_UNESCAPED_UNICODE);
-    // }
-     public function index()
+    public function index()
     {
+       
         if ( auth()->user()->role->name == 'admin') {
             $userAdminId = auth()->user()->id;
             $users = User::where('admin_id', $userAdminId)
@@ -70,13 +39,14 @@ class UserController extends Controller
             $userAdminId = auth()->user()->admin_id;
             $userId = auth()->user()->id;
             $users = User::where('admin_id', $userAdminId)
-                        ->orWhere('id', $userId)
+                        ->orWhere('id', $userAdminId)
                         ->get();
         }
         // $users = User::where('admin_id',auth()->user()->id)->get();
 
         // Decrypt passwords for non-admin users (for demonstration purposes only; not secure in production)
         foreach ($users as $user) {
+              unset($user->password);
             $encryptedPassword = $user->password;
             $decryption_iv = '1234567891011121';
             $decryption_key = "GeeksforGeeks";
@@ -86,16 +56,15 @@ class UserController extends Controller
             // Decrypt the password
             $decryptedPassword = openssl_decrypt($encryptedPassword, $ciphering, $decryption_key, $options, $decryption_iv);
 
-            // If decryption is successful, update the password field (for demonstration purposes)
-            if ($decryptedPassword !== false) {
-                $user->password = mb_convert_encoding($decryptedPassword, 'UTF-8', 'UTF-8');
-            }
+            // // If decryption is successful, update the password field (for demonstration purposes)
+            // if ($decryptedPassword !== false) {
+            //     $user->password = mb_convert_encoding($decryptedPassword, 'UTF-8', 'UTF-8');
+            // }
         }
 
         // Return the users as a JSON response
         return response()->json($users, 200, [], JSON_UNESCAPED_UNICODE);
     }
-
 
 
     public function storeUser(Request $request)
@@ -112,7 +81,7 @@ class UserController extends Controller
 
         // Handle validation errors
         if ($validator->fails()) {
-            $passwordMismatchMessage = "No se pudo completar el registro. Verifica la información ingresada e intenta nuevamente.";
+            $passwordMismatchMessage = "No se pudo completar el registro. Verifica la informaci��n ingresada e intenta nuevamente.";
             broadcast(new NotificationMessage('notification', $passwordMismatchMessage))->toOthers();
             Notification::create([
                 'user_id' => $request->id,
@@ -167,15 +136,51 @@ class UserController extends Controller
             'password' => $encryption,
             'image' => $filename,
             'status' => 'Activa',
-            'activeStatus'=>$request->activeStatus
-
+            'admin_id'=>$request->admin_id
         ];
+       
 
         if ($request->role_id != 1) {
             $userData['admin_id'] = auth()->user()->id; 
         }
 
         $user = User::create($userData);
+        if($user->role_id==1){
+            $groupData=[
+                "name"=>$user->name."'s Group",
+                "admin_id"=>$user->id
+                ];
+                $abc = GroupForChat::create($groupData);
+                
+                 $group = GroupForChat::find($abc->id);
+                  
+                    DB::table('user_group_joins')->insert([
+                        'group_id' => $group->id,
+                        'group_for_chat_id' => $group->id,
+                        'user_id' => $user->id, // Insert the admin (newly created user)
+                        'admin_id' => $group->admin_id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+        
+        }
+        
+        if ($request->role_id != 1)
+        {
+            $groupForAdmin = GroupForChat::where('admin_id', $user->admin_id)->first();
+            DB::table('user_group_joins')->insert([
+                'group_id' => $groupForAdmin->id,
+                'group_for_chat_id' => $groupForAdmin->id,
+                'user_id' => $user->id, // Insert the admin (newly created user)
+                'admin_id' => $groupForAdmin->admin_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+      
+         
 
 
         // Check if 'invite' parameter is present in request
@@ -202,7 +207,7 @@ class UserController extends Controller
                     'user_id' => $user->id,
                     'notification_type' => 'notification',
                     'notification' => $successMessage,
-                    'admin_id' => $adminId,
+                    'admin_id' => $user->id,
                     'role_id' => $user->role_id
                 ]);
                 
@@ -221,7 +226,8 @@ class UserController extends Controller
             'user_id' => $user->id,
             'notification_type' => 'notification',
             'notification' => $successMessage,
-            'admin_id' => $user->admin_id
+            'admin_id' => $user->admin_id,
+            'role_id' => $user->role_id
         ]);
         // Return JSON response with success message and user data
         return response()->json([
@@ -344,6 +350,7 @@ class UserController extends Controller
         $updateData = [
             'name' => $request->name,
             'email' => $request->email,
+                 'activeStatus'=>$request ->activeStatus
         ];
     
         if ($request->filled('role_id')) {
@@ -365,7 +372,8 @@ class UserController extends Controller
             );
             $updateData['password'] = $encryption;
         }
-    
+        
+       $users->update($updateData);
         if ($request->has('invite')) {
             $users->remember_token = Str::random(40);
             $users->save();
@@ -379,8 +387,8 @@ class UserController extends Controller
             ], 200);
         }
 
-        $request->activeStatus ?? $users->activeStatus;
-        $users->update($updateData);
+    
+        // $users->update($updateData);
     
 
 
@@ -419,19 +427,21 @@ class UserController extends Controller
         $authUser = auth()->user();
         $cashier_id = $authUser->id;
         $role = $authUser->role_id;
+   
 
-        if ($role == 1) { // Admin
-            $user = User::where('admin_id' ,auth()->user()->id)->find($id);
-        } else if ($role == 2) { // Cashier
+            $user = User::find($id);
+        // if ($role == 1) { // Admin
+        // } else if ($role == 2) { // Cashier
         
-            $cashierRecord = User::find($cashier_id);
-            $cashIcd = $cashierRecord->admin_id;
-    
+        //     $cashierRecord = User::find($cashier_id);
+            
+        //     $cashIcd = $cashierRecord->admin_id;
         
-            $user = User::where('admin_id', $cashIcd)->find($id);
-        } else {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        //     $user = User::where('admin_id', $cashIcd)->find($id);
+        //   dd($cashIcd,$id,$cashierRecord);
+        // } else {
+        //     return response()->json(['message' => 'Unauthorized'], 403);
+        // }
         
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
@@ -454,9 +464,9 @@ class UserController extends Controller
         $options = 0;
         $decryption = openssl_decrypt($encryption, $ciphering, $decryption_key, $options, $decryption_iv);
 
-        $user->password = $decryption;
-        $user->confirm_password = $decryption;
-
+        // $user->password = $decryption;
+        // $user->confirm_password = $decryption;
+  unset($user->password);
         return response()->json([$user, 200]);
     }
 
@@ -934,7 +944,7 @@ public function getPopularProducts(Request $request)
     )
     ->join('items', 'order_details.item_id', '=', 'items.id')
     ->where('order_details.admin_id', $adminId) // Filter by admin_id
-    ->groupBy('order_details.item_id', 'items.name', 'items.image','order_details.amount')
+    ->groupBy('order_details.item_id', 'items.name', 'items.image', 'order_details.amount')
     ->orderBy('order_count', 'desc');
 
     // Apply the filter based on the duration
@@ -979,7 +989,6 @@ public function getBoxEntry(Request $request)
 
     $adminId = $request->input('admin_id'); // Get admin_id from the request
     $boxEntry = [];
-
     // Get all boxes
     $boxes = Boxs::all();
 
@@ -988,6 +997,7 @@ public function getBoxEntry(Request $request)
         // Initialize the query for BoxLogs for the current box and filter by admin_id
         $logs = BoxLogs::where('box_id', $box->id)
             ->where('admin_id', $adminId); // Filter by admin_id
+            
 
         // Apply filtering based on the duration
         if ($request->input('duration') == "month") {
@@ -1018,6 +1028,8 @@ public function getBoxEntry(Request $request)
             ];
         }
     }
+    // dd($boxEntry);
+
 
     // Return the box entries with their logs
     return response()->json([

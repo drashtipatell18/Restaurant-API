@@ -50,7 +50,8 @@ class Chat implements ShouldBroadcast
                 'name' => $this->username,
                 'message' => $this->message,
             ]);
-            return new PresenceChannel('group.' . $this->group_id);
+            // return new PresenceChannel('group.' . $this->group_id);
+            return new Channel('group.' . $this->group_id);
         } else {
             return new PrivateChannel('chat.' . $this->sender_id . '.' . $this->receiver_id);
             // return new Channel('chat.'  . $this->receiver_id);
