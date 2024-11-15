@@ -225,7 +225,7 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
 
     // notofication
  
-    Route::post('/notification/getAll', [NotificationController::class, 'getAll']);
+    Route::post('/notification/getAll', [NotificationController::class, 'getAllNotification']);
   
 });
 
