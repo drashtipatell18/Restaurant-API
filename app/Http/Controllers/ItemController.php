@@ -413,7 +413,7 @@ class ItemController extends Controller
     }
 
 
-    public function getAll()
+    public function getAllItem()
     {
         $user = auth()->user();
 

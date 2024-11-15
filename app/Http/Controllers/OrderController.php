@@ -495,7 +495,7 @@ class OrderController extends Controller
     }
 
 
-    public function getAll(Request $request)
+    public function getAllOrder(Request $request)
     {
         // $role = Role::where('id',Auth()->user()->role_id)->first()->name;
         // if($role != "admin")

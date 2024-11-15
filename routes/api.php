@@ -137,7 +137,7 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
     Route::get('/single-table/{id}',[SectorController::class,'getTableSingle']); //new
     
     // Items
-    Route::get('/item/getAll', [ItemController::class, 'getAll']);
+    Route::get('/item/getAll', [ItemController::class, 'getAllItem']);
     Route::get('/item/getAllDeletedAt', [ItemController::class, 'getAllDeletedAt']);
     Route::get('/item/getSingle/{id}', [ItemController::class, 'getSingleItem']);
 
@@ -165,7 +165,7 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
     Route::delete('/order/delete/{id}', [OrderController::class, 'deleteOrder']);
     Route::delete('/order/deleteSingle/{id}', [OrderController::class, 'deleteSingle']);
 
-    Route::post('/order/getAll', [OrderController::class, 'getAll']);
+    Route::post('/order/getAll', [OrderController::class, 'getAllOrder']);
     Route::post('/order/getAllKds', [OrderController::class, 'getAllKds']);
     Route::post('/order/getSingle/{id}', [OrderController::class, 'getSingle']);
 
