@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
 
-
 class ChatAppController extends Controller
 {
 // Selected Box
@@ -83,7 +82,45 @@ class ChatAppController extends Controller
         ]);
     }
 
-    public function broadcastChat(Request $request)
+    // public function broadcastChat(Request $request)
+    // {
+    //     $request->validate([
+    //         'msg' => 'required',
+    //     ]);
+
+    //     $sender = auth()->user();
+    //     if (!$sender) {
+    //         return response()->json(['error' => 'Unauthorized'], 401);
+    //     }
+
+    //     $chat = new Chats;
+    //     $chat->sender_id = $sender->id;
+    //     $chat->message = $request->msg;
+
+    //     // If it's a group message
+    //     if ($request->group_id) {
+    //         $chat->group_id = $request->group_id;
+    //         $chat->save();
+
+    //         broadcast(new Chat($sender->id, null, $sender->name, $request->msg, $request->group_id));
+
+    //         return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat]);
+    //     }
+
+    //     // If it's a private message
+    //     if ($request->receiver_id) {
+    //         $chat->receiver_id = $request->receiver_id;
+    //         $chat->save();
+
+    //         broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null))->toOthers();
+
+    //         return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat]);
+    //     }
+
+    //     return response()->json(['status' => 'error', 'message' => 'Failed to send message'], 400);
+    // }
+    
+        public function broadcastChat(Request $request)
     {
         $request->validate([
             'msg' => 'required',
@@ -117,7 +154,8 @@ class ChatAppController extends Controller
                     'notification_type' => 'notification',
                     'notification' => $successMessage,
                     'admin_id' => $request->admin_id,
-                    'role_id' => $sender->role_id
+                    'role_id' => $sender->role_id,
+                    'path'=>'/home_mess'
                 ]);
     
                 return response()->json(['status' => 'success', 'message' => 'Group message sent successfully', 'data' => $chat,'notification'=>$successMessage]);
@@ -131,7 +169,8 @@ class ChatAppController extends Controller
                         'notification_type' => 'alert',
                         'notification' => $errorMessage,
                         'admin_id' => $request->admin_id,
-                        'role_id' => $sender->role_id
+                        'role_id' => $sender->role_id,
+                         'path'=>'/home_mess'
                     ]);
                     return response()->json(['status' => 'error', 'alert' => $errorMessage], 500);
             }
@@ -150,11 +189,12 @@ class ChatAppController extends Controller
                 $successMessage = "Has recibido un nuevo mensaje de {$sender->name}: {$request->msg}";
                 broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
                 Notification::create([
-                    'user_id' => auth()->user()->id,
+                    'user_id' => $request->receiver_id,
                     'notification_type' => 'notification',
                     'notification' => $successMessage,
                     'admin_id' => $request->admin_id,
-                    'role_id' => $sender->role_id
+                    'role_id' => $sender->role_id,
+                     'path'=>'/home_mess'
                 ]);
                 return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat,'notification'=>$successMessage]);
             }
@@ -163,11 +203,12 @@ class ChatAppController extends Controller
                 $errorMessage = "No se pudo enviar el mensaje a {$receiver->name}. Verifica la información e intenta nuevamente.";
                 broadcast(new NotificationMessage('notification', $errorMessage))->toOthers();
                 Notification::create([
-                    'user_id' => auth()->user()->id,
+                    'user_id' => $request->receiver_id,
                     'notification_type' => 'alert',
                     'notification' => $errorMessage,
                     'admin_id' => $request->admin_id,
-                    'role_id' => $sender->role_id
+                    'role_id' => $sender->role_id,
+                     'path'=>'/home_mess'
                 ]);
                 return response()->json(['status' => 'error', 'alert' => $errorMessage], 500);
             }
@@ -235,15 +276,15 @@ class ChatAppController extends Controller
         ]);
     }
 
-    // public function chatUsers()
+    //   public function chatUsers()
     // {
     //     $user = Auth::user();
     //     if (!$user) {
     //         return response()->json(['error' => 'User not authenticated'], 401);
     //     }
-    
+
     //     $allUsers = User::where('id', '!=', $user->id)->get();
-    
+
     //     $usersWithMessages = $allUsers->map(function ($otherUser) use ($user) {
     //         $messages = Chats::where(function ($query) use ($user, $otherUser) {
     //             $query->where('sender_id', $user->id)
@@ -251,10 +292,8 @@ class ChatAppController extends Controller
     //         })->orWhere(function ($query) use ($user, $otherUser) {
     //             $query->where('sender_id', $otherUser->id)
     //                   ->where('receiver_id', $user->id);
-    //         })->orderBy('created_at', 'desc')
-            
-    //           ->get();
-    
+    //         })->orderBy('created_at', 'desc')->get();
+
     //         return [
     //             'id' => $otherUser->id,
     //             'name' => $otherUser->name,
@@ -262,14 +301,16 @@ class ChatAppController extends Controller
     //             'messages' => $messages
     //         ];
     //     });
-    
+
     //     // Get the authenticated user's messages
     //     $userMessages = Chats::where('sender_id', $user->id)
-    //                            ->orWhere('receiver_id', $user->id)
-    //                            ->orderBy('created_at', 'desc')
-                              
-    //                            ->get();
-    
+    //                           ->orWhere('receiver_id', $user->id)
+    //                           ->orderBy('created_at', 'desc')
+    //                           ->get();
+
+    //     // Include group chats in the response
+    //     $groupChats = Chats::whereNotNull('group_id')->orderBy('created_at', 'desc')->get();
+
     //     return response()->json([
     //         'status' => 'success',
     //         'user' => [
@@ -279,19 +320,21 @@ class ChatAppController extends Controller
     //             'messages' => $userMessages
     //         ],
     //         'groups' => $user->groups,
-    //         'users' => $usersWithMessages
+    //         'users' => $usersWithMessages,
+    //         'groupChats' => $groupChats
     //     ]);
     // }
-
-
+    
+    
     public function chatUsers()
     {
         $user = Auth::user();
         if (!$user) {
             return response()->json(['error' => 'User not authenticated'], 401);
         }
-    
-        $allUsers = User::where('id', '!=', $user->id)->get();
+            $adminId = request()->input('admin_id');
+        // $allUsers = User::where('id', '!=', $user->id)->get();
+          $allUsers = User::where('id', '!=', $user->id)->where('admin_id',$adminId) ->orWhere('id', $adminId)->get();
     
         $usersWithMessages = $allUsers->map(function ($otherUser) use ($user) {
             $messages = Chats::where(function ($query) use ($user, $otherUser) {
@@ -313,11 +356,18 @@ class ChatAppController extends Controller
         });
     
         // Get the authenticated user's messages
-        $userMessages = Chats::where('sender_id', $user->id)
+        // $userMessages = Chats::where('sender_id', $user->id)
+        //                       ->orWhere('receiver_id', $user->id)
+        //                       ->orderBy('created_at', 'desc')
+        //                       ->get();
+                               
+          $userMessages = Chats::where('sender_id', $user->id)
                                ->orWhere('receiver_id', $user->id)
                                ->orderBy('created_at', 'desc')
+                               ->orWhere('admin_id',$adminId)
                                ->get();
                             
+          
           $userGroups = $user->groups->map(function ($group) {
             $messages = Chats::where('group_id', $group->id)
                              ->orderBy('created_at', 'desc')
@@ -344,6 +394,9 @@ class ChatAppController extends Controller
             'users' => $usersWithMessages
         ]);
     }
+    
+    
+    
 
     public function logout(Request $request)
     {
@@ -352,7 +405,7 @@ class ChatAppController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $user->status = false; // Mark user as offline
+        $user->activeStatus = false; // Mark user as offline
         $user->save();
 
         Auth::logout();
@@ -360,7 +413,37 @@ class ChatAppController extends Controller
         return response()->json(['status' => 'success', 'message' => 'Logged out successfully']);
     }
 
-    public function storeGroup(Request $request)
+    // public function storeGroup(Request $request)
+    // {
+    //     // Validate the incoming request data
+    //     $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+    //     ]);
+
+    //     // Create a new group
+    //     $group = new GroupForChat();
+    //     $group->name = $request->input('name');
+    //     if ($request->hasFile('photo')) {
+    //         $file = $request->file('photo');
+    //         $destinationPath = public_path('group_photos');
+
+    //         if (!file_exists($destinationPath)) {
+    //             mkdir($destinationPath, 0755, true);
+    //         }
+
+    //         $fileName = time() . '-' . $file->getClientOriginalName();
+    //         $file->move($destinationPath, $fileName);
+
+    //         $group->photo = $fileName;
+    //     }
+
+    //     $group->save();
+
+    //     return response()->json(['success' => true, 'group' => $group]);
+    // }
+    
+     public function storeGroup(Request $request)
     {
         // Validate the incoming request data
         $request->validate([
@@ -393,7 +476,46 @@ class ChatAppController extends Controller
     }
 
 
-    public function addUserToGroup(Request $request)
+    // public function addUserToGroup(Request $request)
+    // {
+    //     // Validate the request
+    //     $request->validate([
+    //         'group_id' => 'required|exists:group_for_chats,id',
+    //         'user_ids' => 'required|array',
+    //         'user_ids.*' => 'exists:users,id',
+    //     ]);
+
+    //     $group = GroupForChat::find($request->group_id);
+
+    //     if (!$group) {
+    //         return response()->json(['status' => 'error', 'message' => 'Group not found']);
+    //     }
+
+    //     // Attach each user to the group
+    //     // $group->users()->syncWithoutDetaching($request->user_ids);
+    //     // Attach each user to the group using a loop
+    //     foreach ($request->user_ids as $user_id) {
+    //         // Check if the user is already in the group to avoid duplicates
+    //         $exists = DB::table('user_group_joins')
+    //             ->where('group_id', $request->group_id)
+    //             ->where('user_id', $user_id)
+    //             ->exists();
+
+    //         if (!$exists) {
+    //             DB::table('user_group_joins')->insert([
+    //                 'group_id' => $request->group_id,
+    //                 'group_for_chat_id' => $request->group_id,
+    //                 'user_id' => $user_id,
+    //                 'created_at' => now(),
+    //                 'updated_at' => now(),
+    //             ]);
+    //         }
+    //     }
+
+    //     return response()->json(['status' => 'success', 'message' => 'Users added to group']);
+    // }
+
+  public function addUserToGroup(Request $request)
     {
         // Validate the request
        
@@ -454,25 +576,52 @@ class ChatAppController extends Controller
 
         return response()->json(['status' => 'success', 'message' => 'User removed from group']);
     }
-    public function markAsRead(Request $request)
+    // public function markAsRead(Request $request)
+    // {
+    //     $chatIds = $request->input('chat_id');
+    //     $userId = auth()->id();
+    
+    //     if (!is_array($chatIds)) {
+    //         $chatIds = [$chatIds]; // Convert single ID to an array
+    //     }
+    
+    //     foreach ($chatIds as $chatId) {
+    //         $chat = Chats::find($chatId);
+    
+    //         if (!$chat) {
+    //             continue; // Skip if chat not found
+    //         }
+    
+    //         $chat->read_by = json_encode("yes"); // Directly set the field to 'yes'
+    //         $chat->save();
+    //     }
+    
+    //     return response()->json(['status' => 'success', 'message' => 'Chats marked as read successfully.', 'chat' => $chat]);
+    // }
+    
+     public function markAsRead(Request $request)
     {
         $chatIds = $request->input('chat_id');
         $userId = auth()->id();
+       
 
         $sender = auth()->user();
-        $adminId = $sender->role_id == 1 ? $sender->id : $sender->admin_id;
+        // $adminId = $sender->role_id == 1 ? $sender->id : $sender->admin_id;
+        $adminId = $request->input('admin_id');
     
         if (!is_array($chatIds)) {
             $chatIds = [$chatIds]; // Convert single ID to an array
         }
-    
+    //   dd($chatIds);
         foreach ($chatIds as $chatId) {
+ ;
             $chat = Chats::find($chatId);
             if($chat->group_id)
             {
                 $group = GroupForChat::find($chat->group_id);
                 $groupName = $group->name ?? 'the group';
-
+$sender = $chat->sender;
+// dd($sender);
                 $successMessage = "Has marcado el mensaje del grupo {$group->name} como leído.";
                 broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
                 Notification::create([
@@ -480,7 +629,8 @@ class ChatAppController extends Controller
                     'notification_type' => 'notification',
                     'notification' => $successMessage,
                     'admin_id' => $request->admin_id,
-                    'role_id' => $sender->role_id
+                    'role_id' => $sender->role_id,
+                     'path'=>'/home_mess'
                     
                 ]);
                 $chat->read_by = json_encode("yes"); // Directly set the field to 'yes'
@@ -493,6 +643,7 @@ class ChatAppController extends Controller
                 ]);
 
             }
+            // print_r($chat);
             if($chat->receiver_id)
             {
                 // dd("mark as reciver");
@@ -505,11 +656,12 @@ class ChatAppController extends Controller
                         'notification_type' => 'notification',
                         'notification' => $successMessage,
                         'admin_id' => $request->admin_id,
-                        'role_id' => $sender->role_id
+                        'role_id' => $sender->role_id,
+                         'path'=>'/home_mess'
                     ]);
                     $chat->read_by = json_encode("yes"); // Directly set the field to 'yes'
                     $chat->save();
-                    return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat,'notification'=>$successMessage]);
+                    // return response()->json(['status' => 'success', 'message' => 'Message sent successfully', 'data' => $chat,'notification'=>$successMessage]);
                 }
                 catch (\Exception $e) {
                     $errorMessage = "No se pudo marcar el mensaje de {$sender->name} como leído. Intenta nuevamente.";
@@ -519,7 +671,8 @@ class ChatAppController extends Controller
                         'notification_type' => 'alert',
                         'notification' => $errorMessage,
                         'admin_id' => $request->admin_id,
-                        'role_id' => $sender->role_id
+                        'role_id' => $sender->role_id,
+                         'path'=>'/home_mess'
                     ]);
                     return response()->json(['status' => 'error', 'alert' => $errorMessage], 500);
                 }
