@@ -779,7 +779,7 @@ class SectorController extends Controller
             'success' => true,
             'message' => 'Sector and Tables updated successfully.',
             'sector' => $sector,
-            'tables' => $tables,
+            // 'tables' => $tables,
             'notification' => $successMessage
         ], 200);
     }
