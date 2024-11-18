@@ -426,33 +426,34 @@ class OrderController extends Controller
 
         $order = OrderMaster::find($request->input('order_id'));
         $kds = kds::where('order_id', $request->input('order_id'))->first();
-        if (!$kds) {
-            return response()->json([
-                'success' => false,
-                'message' => 'KDS record not found.',
-            ], 404);
+        if ($kds) {
+            // return response()->json([
+            //     'success' => false,
+            //     'message' => 'KDS record not found.',
+            // ], 404);
+            $kds->update([
+                'order_id' => $order->id, // Corrected to use $order->id
+                'box_id' => $order->box_id,
+                'user_id' => $order->user_id,
+                'admin_id' => $order->admin_id,
+                'finished_at' => $order->finished_at,
+                'order_type' => $order->order_type,
+                'payment_type' => $order->payment_type,
+                'status' => $order->status,
+                'tip' => $order->tip,
+                'discount' => $order->discount,
+                'delivery_cost' => $order->delivery_cost,
+                'customer_name' => $order->customer_name,
+                'person' => $order->person,
+                'reason' => $order->reason,
+                'transaction_code' => $order->transaction_code,
+                'notes' => $order->notes,
+                'table_id' => $order->table_id,
+            ]);
         }
 
         // Update KDS record
-        $kds->update([
-            'order_id' => $order->id, // Corrected to use $order->id
-            'box_id' => $order->box_id,
-            'user_id' => $order->user_id,
-            'admin_id' => $order->admin_id,
-            'finished_at' => $order->finished_at,
-            'order_type' => $order->order_type,
-            'payment_type' => $order->payment_type,
-            'status' => $order->status,
-            'tip' => $order->tip,
-            'discount' => $order->discount,
-            'delivery_cost' => $order->delivery_cost,
-            'customer_name' => $order->customer_name,
-            'person' => $order->person,
-            'reason' => $order->reason,
-            'transaction_code' => $order->transaction_code,
-            'notes' => $order->notes,
-            'table_id' => $order->table_id,
-        ]);
+       
         // Generate and update unique transaction code if requested
         if ($request->input('transaction_code', false)) {
             do {
