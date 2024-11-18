@@ -16,7 +16,7 @@ class NotificationController extends Controller
     {
         return view('storeuser');
     }
-    public function getAll(Request $request)
+    public function getAllNotification(Request $request)
     {
         // Check for both admin_id and user_id
         $notifications = Notification::where(function ($query) use ($request) {
