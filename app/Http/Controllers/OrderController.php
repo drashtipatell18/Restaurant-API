@@ -193,7 +193,7 @@ class OrderController extends Controller
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
-                // 'notes' => $order_detail['notes'],
+                'notes' => $order_detail['notes'],
                 'quantity' => $order_detail['quantity'],
                 'admin_id' => $request->admin_id
                                                 
