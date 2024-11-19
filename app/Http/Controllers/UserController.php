@@ -166,26 +166,23 @@ class UserController extends Controller
         
         }
         
-        if ($request->role_id != 1) {
+        if ($request->role_id != 1)
+        {
             $groupForAdmin = GroupForChat::where('admin_id', $user->admin_id)->first();
-            
-            // Check if a group is found for the admin
-            if ($groupForAdmin) {
-                DB::table('user_group_joins')->insert([
-                    'group_id' => $groupForAdmin->id,
-                    'group_for_chat_id' => $groupForAdmin->id,
-                    'user_id' => $user->id, // Insert the admin (newly created user)
-                    'admin_id' => $groupForAdmin->admin_id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            } else {
-                // Handle the case where no group is found
-                // You might want to create a group or log the issue
-                throw new \Exception("No group found for admin ID: {$user->admin_id}");
-            }
+            DB::table('user_group_joins')->insert([
+                'group_id' => $groupForAdmin->id,
+                'group_for_chat_id' => $groupForAdmin->id,
+                'user_id' => $user->id, // Insert the admin (newly created user)
+                'admin_id' => $groupForAdmin->admin_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
         
+      
+         
+
+
         // Check if 'invite' parameter is present in request
         if ($request->has('invite')) {
 
