@@ -237,7 +237,7 @@ class ItemController extends Controller
             $image->move(public_path('images'), $filename);
 
             $item->image = $filename;
-        }else if ($request->image === null) {
+        }else if ($request->image == null) {
             $item->image = null;
         }
         if ($request->has('description')) {
