@@ -49,12 +49,12 @@
     <p>Para establecer su contraseña, haga clic en el siguiente enlace:</p>
     
     <p>
-        <a href="https://dev.cyproapp.com/enlaceAdmin/pass/{{$user->id}}">Establecer su Contraseña</a>
+        <a href="https://dev.cyprosolution.com/enlaceAdmin/pass/{{$user->id}}">Establecer su Contraseña</a>
     </p>
 
     <p>Si el enlace anterior no funciona, copie y pegue la siguiente URL en su navegador:</p>
     
-    <p>https://dev.cyproapp.com/enlaceAdmin/pass/{{$user->id}}</p>
+    <p>https://dev.cyprosolution.com/enlaceAdmin/pass/{{$user->id}}</p>
 
     <p>Este enlace caducará en 24 horas por razones de seguridad.</p>
 
