@@ -5,21 +5,21 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmación de registro de usuario</title>
+    <title>Confirmaci贸n de registro de usuario</title>
 </head>
 
 <body>
     <p>Hola {{ $user->name }}!</p>
 <br><br>
-    <p>We wanted to inform you that your login credentials for Cyproapp have been updated by our team.</p>
+    <p>Te hemos dado acceso a nuestro portal para que puedas gestionar tu viaje con nosotros y conocer todas las posibilidades que ofrece Cyproapp.</p>
+    <p>Si quieres iniciar sesi贸n en tu cuenta, haz clic en el siguiente enlace: <a href="https://dev.cyprosolution.com">https://dev.cyprosolution.com</a></p>
     <p>Congratulations! Your registration for the Restaurant Website is confirmed.</p>
-    <p>Updated Credentials:</p>
     <p>Credenciales:</p>
     <p>Correo: {{ $user->email }} </p>
 
-    <p>Contraseña : {{$plainPassword }}</p>
+    <p>Contrase帽a : {{$plainPassword }}</p>
     <p>
-    ¡Disfruta!
+    隆Disfruta!
     </p>
     <br><br><br>
 <p>
