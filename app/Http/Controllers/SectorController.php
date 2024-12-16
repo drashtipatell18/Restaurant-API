@@ -78,18 +78,20 @@ class SectorController extends Controller
         ]);
 
  
+        $lastTableNumber = Table::where('admin_id', $admin_id)->max('table_no');
+        $nextTableNumber = $lastTableNumber ? $lastTableNumber + 1 : 1;
 
         $tables = [];
-
+       
         for ($i = 0; $i < $request->input('noOfTables'); $i++) {
             $table = Table::create([
                 'user_id' => Auth()->user()->id,
                 'sector_id' => $sector->id,
                 'admin_id' => $sector->admin_id,
                 'name' => 'Mesa ' . ($i + 1),
-                'table_no' => $i + 1,
+                'table_no' => $nextTableNumber
             ]);
-            
+            $nextTableNumber++;
 
             array_push($tables, $table);
         }
@@ -508,10 +510,11 @@ class SectorController extends Controller
         $lastTableName = Table::all()->where('sector_id', $request->sector_id)->last();
 
         $lastTable = explode(' ', $lastTableName->name);
-        $lastNo = $lastTable[1];
-        $lastTableNo = $lastTableName->table_no;
-       
         
+        $lastNo = $lastTable[1];
+        // $lastTableNo = $lastTableName->table_no;
+       
+        $lastTableNo = $lastTable ? $lastTableName->table_no : 0;
 
         $tables = [];
 
@@ -521,7 +524,8 @@ class SectorController extends Controller
                 'sector_id' => $request->sector_id,
                 'admin_id' => $request->admin_id,
                 'name' => 'Mesa ' . (++$lastNo),
-                'table_no'=>++$lastTableNo
+                // 'table_no'=>++$lastTableNo
+                'table_no' => $lastTableNo + $i + 1
             ]);
 
             array_push($tables, $table);
