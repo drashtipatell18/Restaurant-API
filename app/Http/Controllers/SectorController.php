@@ -511,11 +511,10 @@ class SectorController extends Controller
             }
         }
 
-        $lastTableName = Table::where('sector_id', $request->sector_id)
-        ->orderBy('table_no', 'desc') // Order by table number in descending order
-        ->last();
+        $lastTableName = Table::orderBy('table_no', 'desc')->first();
 
         $lastTableNo = $lastTableName ? $lastTableName->table_no : 0;
+       
 
         // $lastTableName = Table::all()->where('sector_id', $request->sector_id)->last();
         // $lastTable = explode(' ', $lastTableName->name);
