@@ -80,6 +80,7 @@ class SectorController extends Controller
  
         $lastTableNumber = Table::where('admin_id', $admin_id)->max('table_no');
         $nextTableNumber = $lastTableNumber ? $lastTableNumber + 1 : 1;
+     
 
         $tables = [];
        
@@ -210,6 +211,8 @@ class SectorController extends Controller
             $tableCount = Table::where('sector_id', $sector->id)
                 ->where('admin_id', $sector->admin_id) // Replace $adminId with the actual admin ID variable
                 ->count();
+
+             
             return [
                 'id' => $sector->id,
                 'name' => $sector->name,
@@ -259,6 +262,7 @@ class SectorController extends Controller
                 ->where('admin_id', $sector->admin_id)
 
                 ->get(['id', 'name', 'status','table_no']);
+               
             $tableData = [];
 
             // Loop through each table
@@ -507,17 +511,20 @@ class SectorController extends Controller
             }
         }
 
-        $lastTableName = Table::all()->where('sector_id', $request->sector_id)->last();
+        $lastTableName = Table::where('sector_id', $request->sector_id)
+        ->orderBy('table_no', 'desc') // Order by table number in descending order
+        ->first();
 
+        $lastTableNo = $lastTableName ? $lastTableName->table_no : 0;
+
+        // $lastTableName = Table::all()->where('sector_id', $request->sector_id)->last();
         $lastTable = explode(' ', $lastTableName->name);
-        
         $lastNo = $lastTable[1];
         // $lastTableNo = $lastTableName->table_no;
        
-        $lastTableNo = $lastTable ? $lastTableName->table_no : 0;
+       
 
         $tables = [];
-
         for ($i = 0; $i < $request->noOfTables; $i++) {
             $table = Table::create([
                 'user_id' => Auth()->user()->id,
@@ -525,7 +532,7 @@ class SectorController extends Controller
                 'admin_id' => $request->admin_id,
                 'name' => 'Mesa ' . (++$lastNo),
                 // 'table_no'=>++$lastTableNo
-                'table_no' => $lastTableNo + $i + 1
+                'table_no' => $lastTableNo
             ]);
 
             array_push($tables, $table);
