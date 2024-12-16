@@ -518,21 +518,23 @@ class SectorController extends Controller
         $lastTableNo = $lastTableName ? $lastTableName->table_no : 0;
 
         // $lastTableName = Table::all()->where('sector_id', $request->sector_id)->last();
-        $lastTable = explode(' ', $lastTableName->name);
-        $lastNo = $lastTable[1];
+        // $lastTable = explode(' ', $lastTableName->name);
+        // $lastNo = $lastTable[1];
         // $lastTableNo = $lastTableName->table_no;
        
        
 
         $tables = [];
         for ($i = 0; $i < $request->noOfTables; $i++) {
+            $lastTableNo++;
             $table = Table::create([
                 'user_id' => Auth()->user()->id,
                 'sector_id' => $request->sector_id,
                 'admin_id' => $request->admin_id,
-                'name' => 'Mesa ' . (++$lastNo),
+                // 'name' => 'Mesa ' . (++$lastNo),
                 // 'table_no'=>++$lastTableNo
-                'table_no' => $lastTableNo
+                'name' => 'Mesa ' . $lastTableNo,
+                'table_no' => $lastTableNo 
             ]);
 
             array_push($tables, $table);
