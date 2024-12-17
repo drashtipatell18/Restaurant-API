@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
+use App\Models\Restauranttable;
 
 class SectorController extends Controller
 {
@@ -78,7 +79,9 @@ class SectorController extends Controller
         ]);
 
  
-        $lastTableNumber = Table::where('admin_id', $admin_id)->max('table_no');
+        $lastTableNumber = Table::where('admin_id', $admin_id)
+        ->max(DB::raw('CAST(table_no AS UNSIGNED)'));
+    
         $nextTableNumber = $lastTableNumber ? $lastTableNumber + 1 : 1;
      
 
@@ -89,7 +92,9 @@ class SectorController extends Controller
                 'user_id' => Auth()->user()->id,
                 'sector_id' => $sector->id,
                 'admin_id' => $sector->admin_id,
-                'name' => 'Mesa ' . ($i + 1),
+                // 'name' => 'Mesa ' . ($i + 1),
+                // 'table_no' => $nextTableNumber
+                'name' => 'Mesa ' . ($nextTableNumber),
                 'table_no' => $nextTableNumber
             ]);
             $nextTableNumber++;
@@ -511,16 +516,17 @@ class SectorController extends Controller
             }
         }
 
-        $lastTableName = Table::orderBy('table_no', 'desc')->first();
-
-        $lastTableNo = $lastTableName ? $lastTableName->table_no : 0;
-       
+        // $lastTableName = Table::orderBy('table_no', 'desc')->first();
+        // $lastTableNo = $lastTableName ? $lastTableName->table_no : 0;
+    
 
         // $lastTableName = Table::all()->where('sector_id', $request->sector_id)->last();
         // $lastTable = explode(' ', $lastTableName->name);
         // $lastNo = $lastTable[1];
         // $lastTableNo = $lastTableName->table_no;
        
+        $lastTableNo = Table::where('admin_id', $admin_id)
+        ->max(DB::raw('CAST(table_no AS UNSIGNED)'));
        
 
         $tables = [];
@@ -539,7 +545,7 @@ class SectorController extends Controller
             array_push($tables, $table);
         }
 
-        $successMessage = "La mesa $request->noOfTables ha sido creada exitosamente en el sector $table->name.";
+        $successMessage = "La mesa $request->noOfTables ha sido creada exitosamente en el sector .";
         broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
         foreach ($usersRoles as $recipient) {
 
