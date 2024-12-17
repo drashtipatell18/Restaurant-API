@@ -519,7 +519,7 @@ class BoxController extends Controller
         } else {
             // dd(Auth::user()->admin_id);
             // dd(1);
-            $hasKDSOrders = kds::where('admin_id', $admin_id)->get();
+            $hasKDSOrders = kds::where('admin_id', $admin_id)->where('box_id', $request->box_id)->orWhereNull('box_id')->get();
             // dd($hasKDSOrders);
             if ($hasKDSOrders->isNotEmpty()) { // Check if there are any KDS orders
                 $boxLog->close_time = Carbon::now(); // Set close time if KDS orders exist
