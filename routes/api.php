@@ -99,6 +99,9 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
     Route::get('/get-boxlogs/{id}', [BoxController::class, 'GetAllBoxLog']);
     Route::get('/box/orderReport/{id}', [BoxController::class, 'BoxReportMonthWise']);
 
+
+    Route::post('/boxLogFinalAmount', [BoxController::class, 'BoxLogFinalAmount']);
+
     // Family Route
     Route::post('/family/create', [FamilyController::class, 'createFamily']);
     Route::post('/family/update/{id}', [FamilyController::class, 'updateFamily']);

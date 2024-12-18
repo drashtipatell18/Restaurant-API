@@ -193,7 +193,7 @@ class OrderController extends Controller
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
-                'notes' => $order_detail['notes'],
+                // 'notes' => $order_detail['notes'],
                 'quantity' => $order_detail['quantity'],
                 'admin_id' => $request->admin_id
                                                 
@@ -203,16 +203,27 @@ class OrderController extends Controller
 
             array_push($response['order_details'], $orderDetail);
         }
-        if ($role == "cashier") {
+        if ($role == "cashier" || $role == "admin") {
             $box = Boxs::where('user_id', Auth::user()->id)->latest()->first();
             // dd($box);
             $log = BoxLogs::where('box_id', $box->id)->latest()->first();
             // dd($box->id);
-            $log->collected_amount += $totalAmount;
+            // $log->collected_amount += $totalAmount;
+            // if (empty($log->order_master_id)) {
+            //     $log->order_master_id = $order->id;
+            // } else {
+            //     $log->order_master_id .= "," . $order->id;
+            // }
+
+
             if (empty($log->order_master_id)) {
-                $log->order_master_id = $order->id;
+                $log->order_master_id = $order->id; // If no value exists, store the order_id directly
             } else {
-                $log->order_master_id .= "," . $order->id;
+                // Check if the order_id is already in the list
+                $existingOrderIds = explode(',', $log->order_master_id);
+                if (!in_array($order->id, $existingOrderIds)) {
+                    $log->order_master_id .= "," . $order->id; // Append only if not already present
+                }
             }
 
             // if(empty($log->payment_id))
@@ -1256,7 +1267,7 @@ foreach ($usersCancelOrder as $recipient) {
             // If no order details provided, fetch existing ones for the response
             $responseData['order_details'] = $order->orderDetails;
         }
-        if ($role == "cashier") {
+        if ($role == "cashier" || $role == "admin") {
             $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
             $log = BoxLogs::where('box_id', $box->id)->latest()->first();
 

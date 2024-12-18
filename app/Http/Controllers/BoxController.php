@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Notification;
 use App\Events\NotificationMessage;
+use DB;
 
 class BoxController extends Controller
 {
@@ -650,4 +651,71 @@ class BoxController extends Controller
 
         return response()->json([$orders, 200]);
     }
+
+
+    public function BoxLogFinalAmount(Request $request)
+    {
+        // Validate incoming request parameters
+        $request->validate([
+            'box_id' => 'required|integer|exists:box_logs,box_id',  // Ensures that box_id exists in box_logs table
+            'admin_id' => 'nullable|integer', // Optional, as it can default to the authenticated admin
+        ]);
+        $role = Role::where('id', auth()->user()->role_id)->first()->name;
+
+        // Check if the user is either an admin or cashier
+        if ($role != "admin" && $role != "cashier") {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorised',
+            ], 401);
+        }
+        $admin_id = ($role == 'admin') ? ($request->admin_id ?? auth()->user()->id) : auth()->user()->admin_id;
+
+        $usersRoles = User::where('admin_id', $admin_id)
+        ->whereIn('role_id', [1, 2])
+        ->orWhere('id', $admin_id)
+        ->get();
+
+
+        $box_id = $request->box_id;
+        $admin_id  = $request->admin_id;
+
+        $boxLog = DB::table('box_logs')
+        ->where('box_id', $box_id)
+        ->where('admin_id', $admin_id)
+        ->whereNull('close_amount')
+        ->whereNull('close_time')
+        ->first();
+
+        if (!$boxLog) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No open box log found for the given box_id.',
+            ], 404);
+        }
+
+        $paymentIds = explode(',', $boxLog->payment_id);
+
+        $payments = DB::table('payments')
+        ->whereIn('id', $paymentIds)
+        ->get();
+
+
+        $totalAmount = 0; // Initialize total amount
+        $finalAmounts = [];
+        foreach ($payments as $payment) {
+            $paymentTotal = $payment->amount - $payment->return; // Subtract return from amount
+            $finalAmounts[] = $paymentTotal; // Store individual payment total in the array
+            $totalAmount += $paymentTotal; // Add to the total amount
+        }
+    
+        return response()->json([
+            'success' => true,
+            'message' => 'Calculation successful.',
+            'finalAmounts' => $finalAmounts,
+            'total_amount' => $totalAmount,
+        ]);
+        
+    }
+
 }
