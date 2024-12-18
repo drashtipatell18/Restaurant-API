@@ -39,7 +39,7 @@ class ItemController extends Controller
             'name' => 'required|string|max:255',
 
             'production_center_id' => 'required|exists:production_centers,id',
-            'cost_price' => 'required|numeric|min:1',
+            'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
@@ -178,7 +178,7 @@ class ItemController extends Controller
         $validateRequest = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'production_center_id' => 'required|exists:production_centers,id',
-            'cost_price' => 'required|numeric|min:1',
+            'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:1',
             'family_id' => 'required|exists:families,id',
             'sub_family_id' => 'required|exists:subfamilies,id',
