@@ -34,6 +34,7 @@ class OrderController extends Controller
 
     public function placeOrder(Request $request)
     {
+        // dd($request->all());
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
         if ($role != "admin" && $role != "cashier" && $role != "waitress") {
             return response()->json([
@@ -204,9 +205,23 @@ class OrderController extends Controller
             array_push($response['order_details'], $orderDetail);
         }
         if ($role == "cashier" || $role == "admin") {
-            $box = Boxs::where('user_id', Auth::user()->id)->latest()->first();
-            // dd($box);
-            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+            $box = Boxs::where('id', $request->order_master['box_id'])->latest()->first();
+           
+            if ($box) {
+                $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+                if($log){
+                    if (empty($log->order_master_id)) {
+                        $log->order_master_id = $order->id; // If no value exists, store the order_id directly
+                    } else {
+                        // Check if the order_id is already in the list
+                        $existingOrderIds = explode(',', $log->order_master_id);
+                        if (!in_array($order->id, $existingOrderIds)) {
+                            $log->order_master_id .= "," . $order->id; // Append only if not already present
+                        }
+                    }
+                }
+            }
+           
             // dd($box->id);
             // $log->collected_amount += $totalAmount;
             // if (empty($log->order_master_id)) {
@@ -216,15 +231,15 @@ class OrderController extends Controller
             // }
 
 
-            if (empty($log->order_master_id)) {
-                $log->order_master_id = $order->id; // If no value exists, store the order_id directly
-            } else {
-                // Check if the order_id is already in the list
-                $existingOrderIds = explode(',', $log->order_master_id);
-                if (!in_array($order->id, $existingOrderIds)) {
-                    $log->order_master_id .= "," . $order->id; // Append only if not already present
-                }
-            }
+            // if (empty($log->order_master_id)) {
+            //     $log->order_master_id = $order->id; // If no value exists, store the order_id directly
+            // } else {
+            //     // Check if the order_id is already in the list
+            //     $existingOrderIds = explode(',', $log->order_master_id);
+            //     if (!in_array($order->id, $existingOrderIds)) {
+            //         $log->order_master_id .= "," . $order->id; // Append only if not already present
+            //     }
+            // }
 
             // if(empty($log->payment_id))
             // {
@@ -1268,15 +1283,31 @@ foreach ($usersCancelOrder as $recipient) {
             $responseData['order_details'] = $order->orderDetails;
         }
         if ($role == "cashier" || $role == "admin") {
-            $box = Boxs::where('user_id', Auth::user()->id)->get()->first();
-            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+            $box = Boxs::where('id', $orderUpdateData['box_id'])->latest()->first();
+            
 
-            // $log->collected_amount += $totalAmount;
-            if (empty($log->order_master_id)) {
-                $log->order_master_id = $order->id;
-            } else {
-                $log->order_master_id .= "," . $order->id;
+            if($box)
+            {
+                $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+
+                if($log)
+                {
+                    if (empty($log->order_master_id)) {
+                        $log->order_master_id = $order->id;
+                    } else {
+                        $log->order_master_id .= "," . $order->id;
+                    }
+                }
+
             }
+            
+
+
+            // if (empty($log->order_master_id)) {
+            //     $log->order_master_id = $order->id;
+            // } else {
+            //     $log->order_master_id .= "," . $order->id;
+            // }
 
             // if(empty($log->payment_id))
             // {
