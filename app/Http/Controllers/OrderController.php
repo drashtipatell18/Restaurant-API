@@ -204,53 +204,56 @@ class OrderController extends Controller
 
             array_push($response['order_details'], $orderDetail);
         }
-        if ($role == "cashier" || $role == "admin") {
-            $box = Boxs::where('id', $request->order_master['box_id'])->latest()->first();
-            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
-               
-                if (empty($log->order_master_id)) {
-                    $log->order_master_id = $order->id; // If no value exists, store the order_id directly
-                } else {
-                    // Check if the order_id is already in the list
-                    $existingOrderIds = explode(',', $log->order_master_id);
-                    if (!in_array($order->id, $existingOrderIds)) {
-                        $log->order_master_id .= "," . $order->id; // Append only if not already present
+        if(isset($request->order_master['box_id'])){
+            if ($role == "cashier" || $role == "admin" ) {
+                $box = Boxs::where('id', $request->order_master['box_id'])->latest()->first();
+                $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+                   
+                    if (empty($log->order_master_id)) {
+                        $log->order_master_id = $order->id; // If no value exists, store the order_id directly
+                    } else {
+                        // Check if the order_id is already in the list
+                        $existingOrderIds = explode(',', $log->order_master_id);
+                        if (!in_array($order->id, $existingOrderIds)) {
+                            $log->order_master_id .= "," . $order->id; // Append only if not already present
+                        }
                     }
-                }
+                   
+                
                
-            
-           
-            // dd($box->id);
-            // $log->collected_amount += $totalAmount;
-            // if (empty($log->order_master_id)) {
-            //     $log->order_master_id = $order->id;
-            // } else {
-            //     $log->order_master_id .= "," . $order->id;
-            // }
-
-
-            // if (empty($log->order_master_id)) {
-            //     $log->order_master_id = $order->id; // If no value exists, store the order_id directly
-            // } else {
-            //     // Check if the order_id is already in the list
-            //     $existingOrderIds = explode(',', $log->order_master_id);
-            //     if (!in_array($order->id, $existingOrderIds)) {
-            //         $log->order_master_id .= "," . $order->id; // Append only if not already present
-            //     }
-            // }
-
-            // if(empty($log->payment_id))
-            // {
-            //     $log->payment_id .= "," . $order->payment_type;
-            // }
-            // else
-            // {
-            //     $log->payment_id .= "," . $order->payment_id;
-            // }
-
-
-            $log->save();
+                // dd($box->id);
+                // $log->collected_amount += $totalAmount;
+                // if (empty($log->order_master_id)) {
+                //     $log->order_master_id = $order->id;
+                // } else {
+                //     $log->order_master_id .= "," . $order->id;
+                // }
+    
+    
+                // if (empty($log->order_master_id)) {
+                //     $log->order_master_id = $order->id; // If no value exists, store the order_id directly
+                // } else {
+                //     // Check if the order_id is already in the list
+                //     $existingOrderIds = explode(',', $log->order_master_id);
+                //     if (!in_array($order->id, $existingOrderIds)) {
+                //         $log->order_master_id .= "," . $order->id; // Append only if not already present
+                //     }
+                // }
+    
+                // if(empty($log->payment_id))
+                // {
+                //     $log->payment_id .= "," . $order->payment_type;
+                // }
+                // else
+                // {
+                //     $log->payment_id .= "," . $order->payment_id;
+                // }
+    
+    
+                $log->save();
+            }
         }
+        
 
         $kdsOrder = kds::create([
             'order_id' => $order->id,
