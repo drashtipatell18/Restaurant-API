@@ -206,21 +206,19 @@ class OrderController extends Controller
         }
         if ($role == "cashier" || $role == "admin") {
             $box = Boxs::where('id', $request->order_master['box_id'])->latest()->first();
-           
-            if ($box) {
-                $log = BoxLogs::where('box_id', $box->id)->latest()->first();
-                if($log){
-                    if (empty($log->order_master_id)) {
-                        $log->order_master_id = $order->id; // If no value exists, store the order_id directly
-                    } else {
-                        // Check if the order_id is already in the list
-                        $existingOrderIds = explode(',', $log->order_master_id);
-                        if (!in_array($order->id, $existingOrderIds)) {
-                            $log->order_master_id .= "," . $order->id; // Append only if not already present
-                        }
+            $log = BoxLogs::where('box_id', $box->id)->latest()->first();
+               
+                if (empty($log->order_master_id)) {
+                    $log->order_master_id = $order->id; // If no value exists, store the order_id directly
+                } else {
+                    // Check if the order_id is already in the list
+                    $existingOrderIds = explode(',', $log->order_master_id);
+                    if (!in_array($order->id, $existingOrderIds)) {
+                        $log->order_master_id .= "," . $order->id; // Append only if not already present
                     }
                 }
-            }
+               
+            
            
             // dd($box->id);
             // $log->collected_amount += $totalAmount;
