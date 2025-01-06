@@ -708,12 +708,15 @@ class BoxController extends Controller
             $finalAmounts[] = $paymentTotal; // Store individual payment total in the array
             $totalAmount += $paymentTotal; // Add to the total amount
         }
+        // dd($paymentIds);
     
         return response()->json([
             'success' => true,
             'message' => 'Calculation successful.',
             'finalAmounts' => $finalAmounts,
             'total_amount' => $totalAmount,
+            'payment'=>$boxLog->payment_id,
+            'order'=>$boxLog->order_master_id
         ]);
         
     }
