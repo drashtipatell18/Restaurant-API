@@ -632,12 +632,7 @@ class OrderController extends Controller
 
 
         $role = Role::where('id', Auth()->user()->role_id)->first()->name;
-        if ($role != "admin" && $role != "cashier") {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorised'
-            ], 401);
-        }
+     
         $adminId = $request->admin_id;
         // $order = OrderMaster::find($id)->where('admin_id', $adminId)->get();
         $adminId = $user->role_id == 1 ? $user->id : $user->admin_id;
