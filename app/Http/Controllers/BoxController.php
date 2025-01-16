@@ -440,7 +440,8 @@ class BoxController extends Controller
                 'box_id' => $request->input('box_id'),
                 'open_amount' => $request->input('open_amount'),
                 'open_by' => Auth::user()->id,
-                'open_time' => Carbon::now(),
+                // 'open_time' => Carbon::now(),
+                'open_time' => Carbon::now('Etc/GMT+5'),
                 'collected_amount' => 0,
                'admin_id'=>$request->admin_id
             ]);
@@ -495,7 +496,8 @@ class BoxController extends Controller
                 'open_amount' => $request->input('open_amount'),
                 'admin_id' => $request->input('admin_id'),
                 'open_by' => Auth::user()->id,
-                'open_time' => Carbon::now(),
+                // 'open_time' => Carbon::now(),
+                'open_time' => Carbon::now('Etc/GMT+5'),
                 'collected_amount' => 0
             ]);
 
@@ -560,7 +562,7 @@ class BoxController extends Controller
             $boxLog->close_amount = $request->input('close_amount');
             $boxLog->close_by = Auth::user()->id;
             $boxLog->cash_amount = $request->input('cash_amount');
-            $boxLog->close_time = Carbon::now();
+            $boxLog->close_time =  Carbon::now('Etc/GMT+5');
 
             $boxLog->save();
 
