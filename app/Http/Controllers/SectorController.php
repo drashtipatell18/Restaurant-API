@@ -611,6 +611,11 @@ class SectorController extends Controller
 // dd($orderDetails);
             $total = 0;
             foreach ($orderDetails as $detail) {
+                $item = Item::find($detail->item_id);
+                if ($item) {
+                    // Add product_id to the order detail
+                    $detail->production_center_id = $item->production_center_id ;
+                }
                 $detail->total = $detail->quantity * $detail->amount;
                 $total += $detail->total;
             }

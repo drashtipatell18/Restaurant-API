@@ -520,11 +520,12 @@ class UserController extends Controller
     
         // Initialize the query for orders and filter by admin_id
         $orders = OrderMaster::query()->where('admin_id', $adminId);
+        $year = $request->input('year'); // Get the year input
     
         // Apply filters based on the 'duration'
         if ($request->has('duration')) {
             if ($request->input('duration') == "month" && $request->has('month')) {
-                $orders->whereMonth('created_at', $request->input('month'));
+                $orders->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
             } elseif ($request->input('duration') == "day" && $request->has('day')) {
                 $orders->whereDate('created_at', $request->input('day'));
             } elseif ($request->input('duration') == "week") {
@@ -649,12 +650,13 @@ class UserController extends Controller
     $orders = OrderMaster::where('admin_id', $adminId); // Filter by the logged-in admin's ID
     $payment = Payment::where('admin_id', $adminId);    // Filter payments by the same admin_id
     $orderDetails = OrderDetails::where('admin_id', $adminId); // Same admin_id for order details
+    $year = $request->input('year'); // Get the year input
 
     // Step 5: Apply the duration-based filtering for day, week, or month
     if ($request->input('duration') == "month") {
-        $orders->whereMonth('created_at', $request->input('month'));
-        $orderDetails->whereMonth('created_at', $request->input('month'));
-        $payment->whereMonth('created_at', $request->input('month'));
+        $orders->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
+        $orderDetails->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
+        $payment->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
     } elseif ($request->input('duration') == "day") {
         $orders->whereDate('created_at', $request->input('day'));
         $orderDetails->whereDate('created_at', $request->input('day'));
@@ -781,10 +783,10 @@ class UserController extends Controller
     // Initialize the query for orders, filter by admin_id
     $orders = OrderMaster::query()->where('admin_id', $adminId);
     // dd($orders);
-
+    $year = $request->input('year'); // Get the year input
     // Filter by month, day, or week based on the 'duration' input
     if ($request->input('duration') == "month") {
-        $orders->whereMonth('created_at', $request->input('month'));
+        $orders->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
     } elseif ($request->input('duration') == "day") {
         $orders->whereDate('created_at', $request->input('day'));
     } elseif ($request->input('duration') == "week") {
@@ -825,9 +827,10 @@ class UserController extends Controller
     
     $adminId = $request->admin_id;
     $orderDetails = OrderDetails::query()->where('admin_id', $adminId);
+    $year = $request->input('year'); // Get the year input
 
     if ($request->input('duration') == "month") {
-        $orderDetails = $orderDetails->whereMonth('created_at', $request->input('month'));
+        $orderDetails = $orderDetails->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
     } elseif ($request->input('duration') == "day") {
         $orderDetails = $orderDetails->whereDate('created_at', $request->input('day'));
     } elseif ($request->input('duration') == "week") {
@@ -920,7 +923,7 @@ public function getPopularProducts(Request $request)
 
     // Get the admin_id from the request
     $adminId = $request->admin_id;
-
+    $year = $request->input('year'); // Get the year input
     // Check if admin_id exists in the OrderDetails table
     $adminExists = OrderDetails::where('admin_id', $adminId)->exists();
     if (!$adminExists) {
@@ -945,7 +948,7 @@ public function getPopularProducts(Request $request)
 
     // Apply the filter based on the duration
     if ($request->input('duration') == "month") {
-        $orderDetailsQuery->whereMonth('order_details.created_at', $request->input('month'));
+        $orderDetailsQuery->whereYear('order_details.created_at', $year)->whereMonth('order_details.created_at', $request->input('month'));
     } elseif ($request->input('duration') == "day") {
         $orderDetailsQuery->whereDate('order_details.created_at', $request->input('day'));
     } elseif ($request->input('duration') == "week") {
@@ -984,6 +987,7 @@ public function getBoxEntry(Request $request)
     }
 
     $adminId = $request->input('admin_id'); // Get admin_id from the request
+    $year = $request->input('year'); // Get the year input
     $boxEntry = [];
     // Get all boxes
     $boxes = Boxs::all();
@@ -997,7 +1001,7 @@ public function getBoxEntry(Request $request)
 
         // Apply filtering based on the duration
         if ($request->input('duration') == "month") {
-            $logs->whereMonth('created_at', $request->input('month'));
+            $logs->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
         } elseif ($request->input('duration') == "day") {
             $logs->whereDate('created_at', $request->input('day'));
         } elseif ($request->input('duration') == "week") {
@@ -1054,6 +1058,7 @@ public function cancelOrders(Request $request)
     }
     // Get the admin_id from the request
     $adminId = $request->input('admin_id');
+    $year = $request->input('year'); // Get the year input
     // Query to get cancelled orders for the specific admin_id
     $orders = OrderMaster::where('status', 'cancelled')
     ->where('admin_id', $adminId); // Filter by admin_id
@@ -1061,7 +1066,7 @@ public function cancelOrders(Request $request)
 
     // Apply filters based on the 'duration'
     if ($request->input('duration') == "month") {
-        $orders->whereMonth('created_at', $request->input('month'));
+        $orders->whereYear('created_at', $year)->whereMonth('created_at', $request->input('month'));
     } elseif ($request->input('duration') == "week") {
         $orders->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
     } elseif ($request->input('duration') == "day") {
