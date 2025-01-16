@@ -615,6 +615,7 @@ class SectorController extends Controller
                 if ($item) {
                     // Add product_id to the order detail
                     $detail->production_center_id = $item->production_center_id ;
+                    $detail->name = $item->name;
                 }
                 $detail->total = $detail->quantity * $detail->amount;
                 $total += $detail->total;
