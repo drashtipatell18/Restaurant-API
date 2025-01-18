@@ -13,7 +13,7 @@
 <br><br>
     <p>Te hemos dado acceso a nuestro portal para que puedas gestionar tu viaje con nosotros y conocer todas las posibilidades que ofrece Cyproapp.</p>
     <p>Si quieres iniciar sesión  en tu cuenta, haz clic en el siguiente enlace: <a href="https://dev.cyprosolution.com">https://dev.cyprosolution.com</a></p>
-    <p>Congratulations! Your registration for the Restaurant Website is confirmed.</p>
+    <p>¡Felicitaciones! Su registro en el sitio web del restaurante está confirmado.</p>
     <p>Credenciales:</p>
     <p>Correo: {{ $user->email }} </p>
 
