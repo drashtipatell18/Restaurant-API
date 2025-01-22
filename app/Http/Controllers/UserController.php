@@ -781,7 +781,9 @@ class UserController extends Controller
     // dd($adminId);
 
     // Initialize the query for orders, filter by admin_id
-    $orders = OrderMaster::query()->where('admin_id', $adminId);
+    $orders = Payment::query()->where('admin_id', $adminId);
+    // $orders = OrderMaster::query()->where('admin_id', $adminId);
+    
     // dd($orders);
     $year = $request->input('year'); // Get the year input
     // Filter by month, day, or week based on the 'duration' input
@@ -796,13 +798,34 @@ class UserController extends Controller
     }
 
     // Count orders by payment type
+    // $paymentMethods = [
+    //     'admin_id' => $adminId,
+    //     'cash' => (clone $orders)->where('payment_type', 'cash')->count(),
+    //     'debit' => (clone $orders)->where('payment_type', 'debit')->count(),
+    //     'credit' => (clone $orders)->where('payment_type', 'credit')->count(),
+    //     'transfer' => (clone $orders)->where('payment_type', 'transfer')->count()
+    // ];
+
     $paymentMethods = [
         'admin_id' => $adminId,
-        'cash' => (clone $orders)->where('payment_type', 'cash')->count(),
-        'debit' => (clone $orders)->where('payment_type', 'debit')->count(),
-        'credit' => (clone $orders)->where('payment_type', 'credit')->count(),
-        'transfer' => (clone $orders)->where('payment_type', 'transfer')->count()
+        'cash' => [
+            'count' => (clone $orders)->where('type', 'cash')->count(),
+            'total_amount' => (clone $orders)->where('type', 'cash')->sum(DB::raw('amount - `return`'))
+        ],
+        'debit' => [
+            'count' => (clone $orders)->where('type', 'debit')->count(),
+            'total_amount' => (clone $orders)->where('type', 'debit')->sum(DB::raw('amount - `return`'))
+        ],
+        'credit' => [
+            'count' => (clone $orders)->where('type', 'credit')->count(),
+            'total_amount' => (clone $orders)->where('type', 'credit')->sum(DB::raw('amount - `return`'))
+        ],
+        'transfer' => [
+            'count' => (clone $orders)->where('type', 'transfer')->count(),
+            'total_amount' => (clone $orders)->where('type', 'transfer')->sum(DB::raw('amount - `return`'))
+        ]
     ];
+    
 
     // Return the payment methods data as a JSON response
     return response()->json(['payment_methods' => $paymentMethods], 200);
@@ -1307,5 +1330,32 @@ public function cancelOrders(Request $request)
             'message' => 'User status updated successfully',
             'user' => $user,
         ], 200);
+    }
+
+    public function updatePrinterCode(Request $request, $id)
+    {
+       // Validate the request
+        $validator = Validator::make($request->all(), [
+           'printer_code' => 'required|max:11'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation fails',
+                'error' => $validator->errors()
+            ], 401);
+        }
+        $user = User::find($id);
+        if (is_null($user)) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+        $user->printer_code = $request->printer_code;
+        $user->save();
+        return response()->json([
+            'success' => true,
+            'message' => 'User status updated successfully',
+            'user' => $user,
+        ], 200);
+
     }
 }

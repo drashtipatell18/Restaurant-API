@@ -230,7 +230,8 @@ class PaymentController extends Controller
             ]),
             [
                 'admin_id' => $request->admin_id,
-                'type' => implode(',', $request->type) // Convert array to string
+                'type' => implode(',', $request->type) ,// Convert array to string
+                'credit_amount' => $request->input('credit_amount', 0)
             ]
         ));
     

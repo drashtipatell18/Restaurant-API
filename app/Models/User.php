@@ -26,7 +26,8 @@ class User extends Authenticatable
         'image',
         'activeStatus',
         'admin_id',
-        'status'
+        'status',
+        'printer_code'
     ];
 
     /**

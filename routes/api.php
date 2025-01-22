@@ -66,6 +66,8 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
     Route::get('/getCasherUser', [UserController::class, 'getCasherUser']);
     Route::post('/user/update-status/{id}', [UserController::class, 'updateUserStatus']); //new
 
+    Route::post('/user/update-printercode/{id}', [UserController::class, 'updatePrinterCode']); //new
+
 
      // Menu Routes
     Route::post('/menu/create', [MenuController::class, 'createMenu']);

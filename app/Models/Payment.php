@@ -10,5 +10,5 @@ class Payment extends Model
 {
     use HasFactory,SoftDeletes;
     protected $table = 'payments';
-    protected $fillable = ['order_master_id','rut','firstname','lastname','admin_id','business_name','ltda','tour','address','email','phone','type','amount','return','tax'];
+    protected $fillable = ['order_master_id','rut','firstname','lastname','admin_id','business_name','ltda','tour','address','email','phone','type','amount','return','credit_amount','tax'];
 }
