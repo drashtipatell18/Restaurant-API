@@ -194,7 +194,7 @@ class OrderController extends Controller
                 'item_id' => $order_detail['item_id'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
-                // 'notes' => $order_detail['notes'],
+                'notes' => $order_detail['notes'],
                 'quantity' => $order_detail['quantity'],
                 'admin_id' => $request->admin_id
                                                 
@@ -389,7 +389,8 @@ class OrderController extends Controller
                 'quantity' => $order_detail['quantity'],
                 'amount' => $item->sale_price,
                 'cost' => $item->cost_price,
-                'admin_id' => $request->admin_id
+                'admin_id' => $request->admin_id,
+                'notes' => $order_detail['notes'] ?? null // Use notes from order_detail
             ]);
 
             array_push($responseData['order_details'], $detail);
@@ -576,6 +577,7 @@ class OrderController extends Controller
     }
     public function getAllKds(Request $request)
     {
+       
         // $role = Role::where('id',Auth()->user()->role_id)->first()->name;
         // if($role != "admin")
         // {
