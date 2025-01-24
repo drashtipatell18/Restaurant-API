@@ -110,7 +110,8 @@ class AuthController extends Controller
             'access_token' => $token,
             'role' => Role::find($user->role_id)->name,
             'notification' => $successMessage,
-            'admin_id' => $user->admin_id
+            'admin_id' => $user->admin_id,
+            'printer_code'=>$user->printer_code
         ]);
     }
 
