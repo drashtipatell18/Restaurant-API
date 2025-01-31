@@ -253,7 +253,7 @@ class BoxController extends Controller
                 ]);
             }
 
-            return response()->json(['message' => 'Box not found', 'alert' => $errorMessage], 404);
+            return response()->json(['message' => 'caja no encontrada', 'alert' => $errorMessage], 404);
         }
         $boxs->delete();
 

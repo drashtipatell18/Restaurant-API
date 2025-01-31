@@ -114,7 +114,7 @@ class OrderController extends Controller
             if (!$box) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Box not found'
+                    'message' => 'caja no encontrada'
                 ], 403);
             }
 
