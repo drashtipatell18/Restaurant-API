@@ -185,6 +185,7 @@ class ChatAppController extends Controller
 
             try{
                 broadcast(new Chat($sender->id, $request->receiver_id, $sender->name, $request->msg, null,$request->admin_id));
+                
         // Reciver Message Reciver
                 $successMessage = "Has recibido un nuevo mensaje de {$sender->name}: {$request->msg}";
                 broadcast(new NotificationMessage('notification', $successMessage))->toOthers();
