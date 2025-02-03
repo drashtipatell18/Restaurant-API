@@ -209,7 +209,7 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
    // Chat Application Dhruvish == Backend Route
     Route::post('/chat/broadcast', [ChatAppController::class, 'broadcastChat'])->name('broadcast.chat');
     Route::post('/chat/logout', [ChatAppController::class, 'logout'])->name('chat.logout');
-    Route::get('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
+    Route::post('/chat/messages', [ChatAppController::class, 'getMessages'])->name('chat.messages');
    
     Route::get('/chat/user', [ChatAppController::class, 'chatUsers']);
     Route::post('/chat/user', [ChatAppController::class, 'chatUsers']);
